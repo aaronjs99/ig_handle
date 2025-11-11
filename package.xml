@@ -1,13 +1,20 @@
 <?xml version="1.0"?>
 <package format="2">
   <name>ig_handle</name>
-  <version>1.0.0</version>
+  <version>1.0.1</version>
   <description>ig-handle: a handheld inspector gadget</description>
-  <license>BSD</license>
+  
+  <author email="aaronjs@g.ucla.edu">Aaron John Sabu</author>
   <author email="adthoms@ucla.edu">Alexander Thoms</author>
   <author email="gearle@uwaterloo.ca">Gabriel Earle</author>
+  <maintainer email="aaronjs@g.ucla.edu">Aaron John Sabu</maintainer>
   <maintainer email="adthoms@ucla.edu">Alex Thoms</maintainer>
   <maintainer email="gearle@uwaterloo.ca">Gabe Earle</maintainer>
 
+  <license>MIT</license>
+  
   <buildtool_depend>catkin</buildtool_depend>
+  
+  <exec_depend>rospy</exec_depend>
+  <exec_depend>std_msgs</exec_depend>
 </package>

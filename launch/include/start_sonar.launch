@@ -1,5 +1,37 @@
+<!-- ig_handle/launch/include/start_sonar.launch -->
 <launch>
+  <arg name="use_vm"         default="false"/>
+  <arg name="bridge_adapter" default="br0"/>
+  <arg name="headless"       default="true"/>
+  <arg name="udp_port"       default="4040"/>
+  <arg name="scan_topic"     default="/sonar/scan"/>
+  <arg name="bind_ip"        default="192.168.0.3"/>
+  <arg name="udp_dest_ip"    default="192.168.0.3"/>
+
+  <node pkg="ig_handle" type="run_deltat.sh" name="deltat_tx" output="screen"
+        args="$(arg udp_dest_ip) $(arg udp_port)" />
+
+  <!-- Option A: legacy VM + relay (only if use_vm=true) -->
+  <group if="$(arg use_vm)">
+    <node pkg="dt100_driver" type="dt100_vm.bash" name="dt100_vm_node" output="screen">
+      <param name="bridge_adapter" value="$(arg bridge_adapter)"/>
+      <param name="headless" value="$(arg headless)"/>
+    </node>
+
+    <!-- If you still need the relay, keep it. Otherwise you can remove this node. -->
+    <node pkg="dt100_driver" type="dt100_relay" name="dt100_relay" output="screen"/>
+  </group>
+
+  <!-- Common: UDP receiver that publishes /sonar/scan -->
+  <node pkg="ig_handle" type="dt100_rx.py" name="dt100_rx" output="screen">
+    <param name="port" value="$(arg udp_port)"/>
+    <param name="topic" value="$(arg scan_topic)"/>
+    <param name="bind_ip" value="$(arg bind_ip)"/>
+  </node>
+</launch>
+
+<!-- <launch>
   <include file="$(find dt100_driver)/launch/dt100_driver.launch">
     <arg name="bridge_adapter" default="br0" />
   </include>
-</launch>
+</launch> -->

@@ -1,3 +1,4 @@
+<!-- ig_handle/launch/collect_raw_data.launch -->
 <launch>
   <arg name="robot" default="heron"/>
   <arg name="output" default="~/bags"/>

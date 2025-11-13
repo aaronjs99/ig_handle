@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# ig_handle/scripts/run_deltat.sh
 set -euo pipefail
 PKG_DIR="$(rospack find ig_handle)"
 BIN_DIR="$PKG_DIR/scripts/deltat"
@@ -12,8 +13,6 @@ echo "Starting DeltaT with INI: $INI"
 echo "UDP_DEST_IP override:     ${UDP_DEST_IP:-<none>}"
 echo "UDP_PORT override:        ${UDP_PORT:-<none>}"
 
-# Rewrite the two blocks: print header, print the ONE desired line,
-# then skip ALL old lines in that block until a blank line or EOF.
 tmp="$(mktemp)"
 awk -v ip="$UDP_DEST_IP" -v port="$UDP_PORT" '
   BEGIN{inA=0; inP=0}

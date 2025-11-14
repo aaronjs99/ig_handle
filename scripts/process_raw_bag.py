@@ -279,7 +279,7 @@ def main(args):
     parser.add_argument(
         '--time_restamp_topics', default=["/imu/time", "/cam/time", "/cam/time", "/cam/time", "/cam/time"], type=str, nargs='+', help='list of time reference topics corresponding to restamped sensor data message topics')
     parser.add_argument(
-        '--data_interp_topics', default=["/DT100/sonar_scans"], type=str, nargs='+', help='list of sensor data message topics to be interpolated')
+        '--data_interp_topics', default=["/sonar/scan"], type=str, nargs='+', help='list of sensor data message topics to be interpolated')
     parser.add_argument(
         '--time_interp_topics', default=["/pps/time"], type=str, nargs='+', help='list of time reference topics corresponding to interpolated sensor data message topics')
     parser.add_argument(

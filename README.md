@@ -125,7 +125,7 @@ For **ig-heron** and **ig-husky**, the following additional topics are recorded:
 | /lidar_v/velodyne_packets | velodyne_msgs/VelodyneScan  |
 | /lidar_v/velodyne_points  | sensor_msgs/PointCloud2     |
 
-Further, **ig-heron** records `/DT100/sonar_scans` topics of message type `sensor_msgs/PointCloud2`, while **ig-husky** records `/thermal/image_raw/compressed` topics of message type `sensor_msgs/CompressedImage`. If additional topics are desired, `record_bag.sh` can be modified accordingly.
+Further, **ig-heron** records `/sonar/scan` topics of message type `sensor_msgs/PointCloud2`, while **ig-husky** records `/thermal/image_raw/compressed` topics of message type `sensor_msgs/CompressedImage`. If additional topics are desired, `record_bag.sh` can be modified accordingly.
 
 ### Raw Data Processing
 Raw data is processed using `scripts/process_raw_bag.py`. Its description and interface follows.

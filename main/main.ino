@@ -1,6 +1,5 @@
 #include <ros.h>
 #include <sensor_msgs/TimeReference.h>
-
 #include <RTClib.h>
 #include <TimeLib.h>
 
@@ -10,9 +9,9 @@
 #define GPSERIAL Serial1  // LiDAR: GPS Serial Receive (White)
 #define PPS_OUT 2         // LiDAR: GPS Sync Pulse (Yellow)
 #define PPS_IN 3          // RTC: PPS Signal (SQW)
-#define CAM_OUT 4         // Cam: Line 0 (Black)
-#define CAM_OPEN_IN 5     // Cam: Line 1 (White)
-#define CAM_CLOSE_IN 6    // Cam: Line 1 (White)
+#define CAM_OUT 10        // Cam: Line 0 (Black)
+#define CAM_OPEN_IN 29    // Cam: Line 1 (White)
+#define CAM_CLOSE_IN 30   // Cam: Line 1 (White)
 #define IMU_OUT 7         // IMU: SynchIn (Blue)
 #define IMU_IN 8          // IMU: SynchOut (Pink)
 

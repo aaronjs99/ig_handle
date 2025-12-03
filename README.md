@@ -205,3 +205,6 @@ sudo cp ~/catkin_ws/src/ig_handle/config/99-ig_handle_udev.rules /etc/udev/rules
 sudo udevadm control --reload-rules && sudo service udev restart && sudo udevadm trigger
 sudo adduser $USER dialout
 ```
+
+## ROS 2
+This package has been ported to ROS 2 on the `ros2` branch.

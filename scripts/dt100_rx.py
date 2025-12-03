@@ -5,11 +5,12 @@ import rospy
 from std_msgs.msg import Header
 from std_msgs.msg import UInt8MultiArray
 
+
 def run():
     rospy.init_node("dt100_rx")
-    
-    port    = rospy.get_param("~port", 4040)
-    topic   = rospy.get_param("~topic", "/sonar/scan")
+
+    port = rospy.get_param("~port", 4040)
+    topic = rospy.get_param("~topic", "/sonar/scan")
     bind_ip = rospy.get_param("~bind_ip", "192.168.0.3")
 
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -32,6 +33,7 @@ def run():
             pub.publish(msg)
         except socket.timeout:
             pass
+
 
 if __name__ == "__main__":
     run()

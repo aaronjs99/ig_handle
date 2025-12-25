@@ -2,7 +2,7 @@
 <launch>
   <arg name="use_vm"         default="false"/>
   <arg name="bridge_adapter" default="br0"/>
-  <arg name="headless"       default="true"/>
+  <arg name="headless"       default="false"/>
   <arg name="udp_port"       default="4040"/>
   <arg name="scan_topic"     default="/sonar/scan"/>
   <arg name="bind_ip"        default="192.168.0.3"/>

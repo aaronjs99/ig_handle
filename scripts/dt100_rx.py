@@ -1,5 +1,11 @@
 #!/usr/bin/env python3
 # ig_handle/scripts/dt100_rx.py
+"""
+Imagenex DT100 Sonar Receiver
+-----------------------------
+Listens for raw UDP packets from the Imagenex DT100 multibeam sonar.
+Publishes raw byte data to a ROS topic for downstream processing.
+"""
 import socket, struct
 import rospy
 from std_msgs.msg import Header

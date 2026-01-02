@@ -1,3 +1,12 @@
+"""
+IG Handle Bag Post-Processor
+----------------------------
+Utility script to post-process raw rosbag files recorded by the IG Handle system.
+Handles:
+- Restamping sensor data with precise timing topics
+- Interpolating low-frequency data (like sonar)
+- Clipping and cleaning bag segments
+"""
 import rospy
 import rosbag
 import sys

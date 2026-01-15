@@ -7,6 +7,7 @@ Handles:
 - Interpolating low-frequency data (like sonar)
 - Clipping and cleaning bag segments
 """
+
 import rospy
 import rosbag
 import sys

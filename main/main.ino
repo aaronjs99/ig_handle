@@ -119,6 +119,8 @@ void setup() {
     - Publishes the IMU sample timestamp to /imu_time
 */
 void loop() {
+  nh.spinOnce(); // Handle ROS communication at the start
+
   // publish PPS time as a reference for soft-synch
   if (pub_pps_time) {
     pps_time_pub.publish(&pps_time_msg);

@@ -14,40 +14,16 @@ echo "UDP_DEST_IP override:     ${UDP_DEST_IP:-<none>}"
 echo "UDP_PORT override:        ${UDP_PORT:-<none>}"
 
 tmp="$(mktemp)"
-awk -v ip="$UDP_DEST_IP" -v port="$UDP_PORT" '
-  BEGIN{inA=0; inP=0}
-  # Rebuild UDPAddress block
-  /^UDPAddress:[[:space:]]*$/ {
-    print "UDPAddress:";
-    if (ip!="") print ip; else { inA=1; }  # if no override, fall through to keep old lines
-    # If we printed override, skip old lines in the block:
-    if (ip!="") { while ( (getline line) > 0 ) {
-        if (line ~ /^[[:space:]]*$/) { print ""; break }  # keep the blank separator
-        # otherwise swallow old address lines
-      }
-      next
-    }
-    next
-  }
-  # Rebuild UDPPort block
-  /^UDPPort:[[:space:]]*$/ {
-    print "UDPPort:";
-    if (port!="") print port; else { inP=1; }
-    if (port!="") { while ( (getline line) > 0 ) {
-        if (line ~ /^[[:space:]]*$/) { print ""; break }
-      }
-      next
-    }
-    next
-  }
-  # If no override was provided, and we are inside a block, keep only numeric lines
-  inA && /^[0-9.]+$/ { print; next }
-  inA && /^[[:space:]]*$/ { print ""; inA=0; next }
-  inP && /^[0-9]+$/ { print; next }
-  inP && /^[[:space:]]*$/ { print ""; inP=0; next }
-
-  { print }
-' "$INI" > "$tmp"
+# Simple sed-based replacement that preserves all other lines
+cp "$INI" "$tmp"
+if [ -n "$UDP_DEST_IP" ]; then
+  # Replace the line after UDPAddress: with the new IP
+  sed -i '/^UDPAddress:$/{ n; s/.*/'"$UDP_DEST_IP"'/; }' "$tmp"
+fi
+if [ -n "$UDP_PORT" ]; then
+  # Replace the line after UDPPort: with the new port
+  sed -i '/^UDPPort:$/{ n; s/.*/'"$UDP_PORT"'/; }' "$tmp"
+fi
 mv "$tmp" "$INI"
 
 echo "----- INI just before exec -----"

@@ -1,10 +1,15 @@
 #!/usr/bin/env python3
 # ig_handle/scripts/dt100_rx.py
-"""
-Imagenex DT100 Sonar Receiver
------------------------------
-Listens for raw UDP packets from the Imagenex DT100 multibeam sonar.
-Publishes raw byte data to a ROS topic for downstream processing.
+"""Imagenex DT100 Driver: Raw UDP Packet Interceptor.
+--------------------------------------------------
+
+Lightweight Network Receiver for the Imagenex DT100 Multibeam Profiling Sonar.
+This node binds to the proprietary sonar subnet, intercepts UDP datagrams
+broadcast by the sonar head (83P format), and publishes them as raw byte arrays
+to ROS.
+
+This raw stream is typically recorded for offline processing or parsed real-time
+by a downstream decoder (not included here) to produce PointCloud2.
 """
 import socket, struct
 import rospy

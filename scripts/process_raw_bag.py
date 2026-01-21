@@ -1,11 +1,23 @@
-"""
-IG Handle Bag Post-Processor
-----------------------------
-Utility script to post-process raw rosbag files recorded by the IG Handle system.
-Handles:
-- Restamping sensor data with precise timing topics
-- Interpolating low-frequency data (like sonar)
-- Clipping and cleaning bag segments
+"""Offline Bag Post-Processor: Sensor Synchronization & Restamping.
+--------------------------------------------------------------
+
+This script is the critical "backend" of the `ig-handle` data pipeline.
+Raw files recorded by `collect_raw_data.launch` contain sensor data with
+"arrival time" timestamps (software time) which are subject to USB/Ethernet
+latency and jitter.
+
+This tool repairs the data integrity by:
+1.  **Hardware Restamping**: Replaces software arrival times with precise
+    Hardware Clock (PPS/Teensy) reference times recorded on parallel topics.
+    -   Example: Replaces `/imu/data` stamp with time from `/imu/time`.
+2.  **Clock Drift Correction**: (Implied) By aligning to the PPS signal.
+3.  **Soft-Sync Interpolation**: For sensors without hardware triggers (e.g. Sonar),
+    it interpolates their timestamps against the steady PPS clock.
+4.  **Signal Dropout Detection**: Automatically validates packet counts against
+    trigger counts and warns of integrity loss (cable faults).
+
+Output:
+A "Science-Ready" bag file suitable for high-precision SLAM (LIO-SAM, VINS-Fusion).
 """
 
 import rospy

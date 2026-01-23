@@ -5,9 +5,9 @@
 **IG-Handle** is an open-source, hardware-synchronized multi-modal orchestration layer. It is designed to facilitate the acquisition of high-fidelity LiDAR-visual-inertial data while ensuring strict temporal alignment across disparate sensor streams. The system is architecture to minimize epistemic uncertainty in robotic perception via precise microcontroller-driven synchronization.
 
 The standard configuration integrates:
- - One [Velodyne Puck](https://velodyneLiDAR.com/products/puck/) LiDAR (Spatial geometry)
+ - Two [Velodyne VLP-16](https://velodyneLiDAR.com/products/vlp-16/) LiDARs (Spatial geometry)
  - Two [FLIR Blackfly S USB3](https://www.flir.com/products/blackfly-s-usb3/) monochrome cameras (Visual context)
- - One [Xsens MTi-30 AHRS](https://www.xsens.com/hubfs/Downloads/usermanual/MTi_usermanual.pdf) IMU (Intertial state)
+ - One [Xsens MTi-30 AHRS](https://www.xsens.com/hubfs/Downloads/usermanual/MTi_usermanual.pdf) IMU (Inertial state)
 
 ## Methodological Synthesis
 

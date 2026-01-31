@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """Offline Bag Post-Processor: Sensor Synchronization & Restamping.
 --------------------------------------------------------------
 

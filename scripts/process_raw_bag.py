@@ -63,6 +63,20 @@ def topic_to_dict(bag: rosbag.Bag, topics: list, type="msg") -> dict:
 
 
 class IgPostProcess:
+    """
+    Handle post-processing of raw bag files to create science-ready datasets.
+
+    Performs timestamp synchronization (restamping) and interpolation.
+
+    Attributes:
+        bag (rosbag.Bag): Input bag file.
+        out_bag (rosbag.Bag): Output bag file.
+        data_restamp_topics (List[str]): Topics to restamp using hardware reference times.
+        time_restamp_topics (List[str]): Reference time topics for restamping.
+        data_interp_topics (List[str]): Topics to interpolate (e.g. Sonar).
+        time_interp_topics (List[str]): Reference time topics for interpolation (e.g. PPS).
+    """
+
     def __init__(self, args):
         # get args
         self.bag = rosbag.Bag(args.bag)
@@ -145,7 +159,13 @@ class IgPostProcess:
 
     def restamp(self):
         """
-        restamp data_restamp_topics via time_restamp_topics
+        Restamp data messages with precise hardware clock times.
+
+        Logic:
+        1. Matches data messages to time reference messages (FIFO).
+        2. Replaces the header.stamp of the data message with the reference time.
+        3. Clips messages based on start/end times and user clips.
+        4. Detects signal dropout by comparing message counts.
         """
 
         # main restamp loop
@@ -251,7 +271,10 @@ class IgPostProcess:
 
     def interpolate(self):
         """
-        interpolate data_interp_topics via time_interp_topics
+        Interpolate timestamps for soft-synchronized sensors (e.g., Sonar).
+
+        Uses linear interpolation between PPS pulses to derive the correct
+        timestamp for data messages that arrive between hardware triggers.
         """
 
         # main interpolation loop

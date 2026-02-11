@@ -21,5 +21,4 @@ rosbag record -O $bagDir/raw.bag \
   /lidar_h/velodyne_points \
   /lidar_v/velodyne_packets \
   /lidar_v/velodyne_points \
-  /DT100/sonar_scans \
   /sonar/scan 

@@ -1,25 +1,50 @@
 <launch>
-  <!-- Start handle -->
-  <include file="$(find ig_handle)/launch/robots/handle.launch" />
+  <arg name="use_cameras_f1f2" default="false" />
+  <arg name="use_cameras_f3f4" default="false" />
+  
+  <arg name="topic_imu"        default="/sensors/imu/data"/>
+  <arg name="topic_lidar_h"    default="/sensors/lidar/horizontal/points"/>
+  <arg name="topic_lidar_v"    default="/sensors/lidar/vertical/points"/>
+  <arg name="topic_cam_f1_raw" default="/sensors/camera/front/image_raw"/>
+  <arg name="topic_cam_f2_raw" default="/sensors/camera/f2/image_raw"/>
+  <arg name="topic_cam_f3_raw" default="/sensors/camera/f3/image_raw"/>
+  <arg name="topic_cam_f4_raw" default="/sensors/camera/f4/image_raw"/>
+  <arg name="topic_sonar"      default="/sensors/sonar/scan"/>
 
-  <!-- Start lidar -->
+  <!-- Start handle (passes primary sensors and F1/F2) -->
+  <include file="$(find ig_handle)/launch/robots/handle.launch">
+    <arg name="use_cameras_f1f2" value="$(arg use_cameras_f1f2)"/>
+    <arg name="topic_imu"        value="$(arg topic_imu)"/>
+    <arg name="topic_lidar_h"    value="$(arg topic_lidar_h)"/>
+    <arg name="topic_cam_f1_raw" value="$(arg topic_cam_f1_raw)"/>
+    <arg name="topic_cam_f2_raw" value="$(arg topic_cam_f2_raw)"/>
+  </include>
+
+  <!-- Start vertical lidar -->
   <include file="$(find ig_handle)/launch/sensors/start_lidar.launch">
-      <arg name="name" value="lidar_v" />
+      <arg name="name"      value="lidar_v" />
       <arg name="device_ip" value="192.168.1.202" />
-      <arg name="port" value="2369" />
-      <arg name="frame_id" value="lidar_v_link" />
+      <arg name="port"      value="2369" />
+      <arg name="frame_id"  value="lidar_v_link" />
+      <arg name="topic"     value="$(arg topic_lidar_v)"/>
   </include>
 
   <!-- Start sonar -->
-  <include file="$(find ig_handle)/launch/sensors/start_sonar.launch" />
+  <include file="$(find ig_handle)/launch/sensors/start_sonar.launch">
+      <arg name="topic"     value="$(arg topic_sonar)"/>
+  </include>
 
-  <!-- Start cameras -->
-  <!-- <include file="$(find ig_handle)/launch/sensors/start_cam.launch">
-      <arg name="camera_name" value="F3" />
-      <arg name="camera_serial" value="0" />
-  </include> -->
-  <!-- <include file="$(find ig_handle)/launch/sensors/start_cam.launch">
-      <arg name="camera_name" value="F4" />
-      <arg name="camera_serial" value="0" />
-  </include> -->
+  <!-- Start heron auxiliary cameras (optional) -->
+  <group if="$(arg use_cameras_f3f4)">
+    <include file="$(find ig_handle)/launch/sensors/start_cam.launch">
+        <arg name="camera_name"   value="F3" />
+        <arg name="camera_serial" value="0" />
+        <arg name="topic"         value="$(arg topic_cam_f3_raw)"/>
+    </include>
+    <include file="$(find ig_handle)/launch/sensors/start_cam.launch">
+        <arg name="camera_name"   value="F4" />
+        <arg name="camera_serial" value="0" />
+        <arg name="topic"         value="$(arg topic_cam_f4_raw)"/>
+    </include>
+  </group>
 </launch>

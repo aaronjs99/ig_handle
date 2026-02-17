@@ -22,7 +22,7 @@ def run():
 
     port = rospy.get_param("~port", 4040)
     topic = rospy.get_param("~topic", "/sonar/scan")
-    bind_ip = rospy.get_param("~bind_ip", "192.168.0.3")
+    bind_ip = rospy.get_param("~bind_ip", "0.0.0.0")
 
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)

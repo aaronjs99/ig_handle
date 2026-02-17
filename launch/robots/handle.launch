@@ -1,25 +1,39 @@
 <launch>
+  <arg name="use_cameras_f1f2" default="false"
+       doc="Enable stereo cameras F1 + F2 (handle base pair)"/>
+  <arg name="topic_imu"        default="/sensors/imu/data"/>
+  <arg name="topic_lidar_h"    default="/sensors/lidar/horizontal/points"/>
+  <arg name="topic_cam_f1_raw" default="/sensors/camera/front/image_raw"/>
+  <arg name="topic_cam_f2_raw" default="/sensors/camera/f2/image_raw"/>
+
   <!-- Start rosserial -->
   <include file="$(find ig_handle)/launch/core/start_rosserial.launch" />
 
   <!-- Start IMU -->
-  <include file="$(find ig_handle)/launch/sensors/start_imu.launch" />
+  <include file="$(find ig_handle)/launch/sensors/start_imu.launch">
+    <arg name="topic" value="$(arg topic_imu)"/>
+  </include>
 
-  <!-- Start lidar -->
+  <!-- Start lidar (Horizontal) -->
   <include file="$(find ig_handle)/launch/sensors/start_lidar.launch">
-      <arg name="name" value="lidar_h" />
+      <arg name="name"     value="lidar_h" />
       <arg name="device_ip" value="192.168.1.201" />
-      <arg name="port" value="2368" />
-      <arg name="frame_id" value="lidar_h_link" />
+      <arg name="port"      value="2368" />
+      <arg name="frame_id"  value="lidar_h_link" />
+      <arg name="topic"     value="$(arg topic_lidar_h)"/>
   </include>
 
-  <!-- Start cameras -->
-  <!--  <include file="$(find ig_handle)/launch/sensors/start_cam.launch">
-      <arg name="camera_name" value="F1" />
-      <arg name="camera_serial" value="22181623" />
-  </include>
-  <include file="$(find ig_handle)/launch/sensors/start_cam.launch">
-      <arg name="camera_name" value="F2" />
-      <arg name="camera_serial" value="22181616" />
-  </include> -->
+  <!-- Start cameras (optional) -->
+  <group if="$(arg use_cameras_f1f2)">
+    <include file="$(find ig_handle)/launch/sensors/start_cam.launch">
+        <arg name="camera_name"   value="F1" />
+        <arg name="camera_serial" value="22181623" />
+        <arg name="topic"         value="$(arg topic_cam_f1_raw)"/>
+    </include>
+    <include file="$(find ig_handle)/launch/sensors/start_cam.launch">
+        <arg name="camera_name"   value="F2" />
+        <arg name="camera_serial" value="22181616" />
+        <arg name="topic"         value="$(arg topic_cam_f2_raw)"/>
+    </include>
+  </group>
 </launch>

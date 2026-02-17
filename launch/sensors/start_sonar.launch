@@ -4,8 +4,8 @@
   <arg name="bridge_adapter" default="br0"/>
   <arg name="headless"       default="false"/>
   <arg name="udp_port"       default="4040"/>
-  <arg name="scan_topic"     default="/sonar/scan"/>
-  <arg name="bind_ip"        default="192.168.0.3"/>
+  <arg name="topic"          default="/sensors/sonar/scan"/>
+  <arg name="bind_ip"        default="0.0.0.0"/>
   <arg name="udp_dest_ip"    default="192.168.0.3"/>
 
   <node pkg="ig_handle" type="run_deltat.sh" name="deltat_tx" output="screen"
@@ -22,16 +22,10 @@
     <node pkg="dt100_driver" type="dt100_relay" name="dt100_relay" output="screen"/>
   </group>
 
-  <!-- Common: UDP receiver that publishes /sonar/scan -->
+  <!-- Common: UDP receiver that publishes to modular topic -->
   <node pkg="ig_handle" type="dt100_rx.py" name="dt100_rx" output="screen">
     <param name="port" value="$(arg udp_port)"/>
-    <param name="topic" value="$(arg scan_topic)"/>
+    <param name="topic" value="$(arg topic)"/>
     <param name="bind_ip" value="$(arg bind_ip)"/>
   </node>
 </launch>
-
-<!-- <launch>
-  <include file="$(find dt100_driver)/launch/dt100_driver.launch">
-    <arg name="bridge_adapter" default="br0" />
-  </include>
-</launch> -->

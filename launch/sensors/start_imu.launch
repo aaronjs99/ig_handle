@@ -1,6 +1,8 @@
 <launch>
+  <arg name="topic" default="/imu/data"/>
   <node name="xsens_mti_node" pkg="xsens_mti_driver" type="xsens_mti_node" output="screen">
     <param name="port" value="/dev/serial/by-id/usb-Xsens_MTi-30_AHRS_0368319D-if01-port0"/>
     <rosparam command="load" file="$(find xsens_mti_driver)/param/xsens_mti_node.yaml" />
+    <remap from="imu/data" to="$(arg topic)"/>
   </node>
 </launch>

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# ig_handle/scripts/run_deltat.sh
+# ig_handle/scripts/sonar/run_deltat.sh
 set -euo pipefail
 PKG_DIR="$(rospack find ig_handle)"
 BIN_DIR="$PKG_DIR/scripts/sonar/deltat"

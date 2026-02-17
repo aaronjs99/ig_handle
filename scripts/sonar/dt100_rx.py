@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# ig_handle/scripts/dt100_rx.py
+# ig_handle/scripts/sonar/dt100_rx.py
 """Imagenex DT100 Driver: Raw UDP Packet Interceptor.
 --------------------------------------------------
 

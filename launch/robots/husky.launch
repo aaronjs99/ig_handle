@@ -1,0 +1,28 @@
+<launch>
+  <!-- Start handle -->
+  <include file="$(find ig_handle)/launch/robots/handle.launch" />
+
+  <!-- Start lidar -->
+  <include file="$(find ig_handle)/launch/sensors/start_lidar.launch">
+      <arg name="name" value="lidar_v" />
+      <arg name="device_ip" value="192.168.1.202" />
+      <arg name="port" value="2369" />
+      <arg name="frame_id" value="lidar_v_link" />
+  </include>
+
+  <!-- Start cameras -->
+  <include file="$(find ig_handle)/launch/sensors/start_cam.launch">
+      <arg name="camera_name" value="F3" />
+      <arg name="camera_serial" value="0" />
+  </include>
+  <include file="$(find ig_handle)/launch/sensors/start_cam.launch">
+      <arg name="camera_name" value="F4" />
+      <arg name="camera_serial" value="0" />
+  </include>
+
+  <!-- Start husky -->
+  <include file="$(find ig_handle)/launch/core/start_husky.launch" />
+
+  <!-- Start thermal -->
+  <include file="$(find ig_handle)/launch/sensors/start_thermal.launch" />
+</launch>

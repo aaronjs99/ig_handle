@@ -9,13 +9,13 @@ latency and jitter.
 
 This tool repairs the data integrity by:
 1.  **Hardware Restamping**: Replaces software arrival times with precise
-    Hardware Clock (PPS/Teensy) reference times recorded on parallel topics.
-    -   Example: Replaces `/imu/data` stamp with time from `/imu/time`.
+  Hardware Clock (PPS/Teensy) reference times recorded on parallel topics.
+  -   Example: Replaces `/imu/data` stamp with time from `/imu/time`.
 2.  **Clock Drift Correction**: (Implied) By aligning to the PPS signal.
 3.  **Soft-Sync Interpolation**: For sensors without hardware triggers (e.g. Sonar),
-    it interpolates their timestamps against the steady PPS clock.
+  it interpolates their timestamps against the steady PPS clock.
 4.  **Signal Dropout Detection**: Automatically validates packet counts against
-    trigger counts and warns of integrity loss (cable faults).
+  trigger counts and warns of integrity loss (cable faults).
 
 Output:
 A "Science-Ready" bag file suitable for high-precision SLAM (LIO-SAM, VINS-Fusion).
@@ -37,14 +37,14 @@ def topic_to_dict(bag: rosbag.Bag, topics: list, type="msg") -> dict:
     Return dictionary containing topics
 
     Args:
-        bag (rosbag.Bag): rosbag
-        topics (list): topics
-        type (string): type of information to store
-          "t" stores serialization time
-          "msg" stores messages
+      bag (rosbag.Bag): rosbag
+      topics (list): topics
+      type (string): type of information to store
+       "t" stores serialization time
+       "msg" stores messages
 
     Returns:
-        dictionary (dict): keys are monotonically increasing, values are topic lists
+      dictionary (dict): keys are monotonically increasing, values are topic lists
     """
     dictionary = dict()
     for i, topic in enumerate(topics):
@@ -69,12 +69,12 @@ class IgPostProcess:
     Performs timestamp synchronization (restamping) and interpolation.
 
     Attributes:
-        bag (rosbag.Bag): Input bag file.
-        out_bag (rosbag.Bag): Output bag file.
-        data_restamp_topics (List[str]): Topics to restamp using hardware reference times.
-        time_restamp_topics (List[str]): Reference time topics for restamping.
-        data_interp_topics (List[str]): Topics to interpolate (e.g. Sonar).
-        time_interp_topics (List[str]): Reference time topics for interpolation (e.g. PPS).
+      bag (rosbag.Bag): Input bag file.
+      out_bag (rosbag.Bag): Output bag file.
+      data_restamp_topics (List[str]): Topics to restamp using hardware reference times.
+      time_restamp_topics (List[str]): Reference time topics for restamping.
+      data_interp_topics (List[str]): Topics to interpolate (e.g. Sonar).
+      time_interp_topics (List[str]): Reference time topics for interpolation (e.g. PPS).
     """
 
     def __init__(self, args):

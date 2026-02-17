@@ -2,7 +2,7 @@
 # ig_handle/scripts/run_deltat.sh
 set -euo pipefail
 PKG_DIR="$(rospack find ig_handle)"
-BIN_DIR="$PKG_DIR/scripts/deltat"
+BIN_DIR="$PKG_DIR/scripts/sonar/deltat"
 BIN="$BIN_DIR/Linux_DeltaT_v1023_x86_64"
 INI="$BIN_DIR/Linux_DeltaT.INI"
 

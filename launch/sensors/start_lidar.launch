@@ -1,0 +1,16 @@
+<launch>
+  <arg name="name" default="velodyne" />
+  <arg name="device_ip" default="" />
+  <arg name="port" default="2368" />
+  <arg name="frame_id" default="velodyne" />
+  <arg name="gps_time" default="false" />
+
+  <group ns="$(arg name)">
+    <include file="$(find velodyne_pointcloud)/launch/VLP16_points.launch">
+      <arg name="device_ip" value="$(arg device_ip)" />
+      <arg name="frame_id" value="$(arg frame_id)" />
+      <arg name="gps_time" value="$(arg gps_time)" />
+      <arg name="port" value="$(arg port)" />
+    </include>
+  </group>
+</launch>

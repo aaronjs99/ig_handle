@@ -72,33 +72,33 @@ Once data collection is complete, kill the terminal session via `ctrl+c`.
 To collect data in the field with robots **ig-husky** and **ig-heron**, we recommend the following steps:
 1. Connect your laptop to the handle's computer over ethernet and manually assign your laptop an ip address on the LiDAR network (ex. `192.168.1.151`).
 2. SSH into the handle computer via:
-    ```bash
-    ssh ig-handle@192.168.1.150
-    ```
-    our build uses the password `beam`.
+  ```bash
+  ssh ig-handle@192.168.1.150
+  ```
+  our build uses the password `beam`.
 
 3. Start a screen session via:
-    ```bash
-    screen
-    ```
-    press `enter` to start the session.
+  ```bash
+  screen
+  ```
+  press `enter` to start the session.
 
 4. Collect raw data (comment out the robot not in use)
-    ```bash
-    roslaunch ig_handle collect_raw_data.launch \
-    robot:=husky # ig-husky
-    robot:=heron # ig-heron
-    ```
+  ```bash
+  roslaunch ig_handle collect_raw_data.launch \
+  robot:=husky # ig-husky
+  robot:=heron # ig-heron
+  ```
 5. Within the same terminal, press `ctrl+a` then `ctrl+d` to detach the screen process.
 6. Disconnect the ethernet cable and perform data collection.
 7. Once data collection is performed, reconnect the ethernet cable to the handle computer and end the screen process via:
-    ```bash
-    screen -r
-    ```
-    You may now end the data collection process normally via `ctrl+c`.
+  ```bash
+  screen -r
+  ```
+  You may now end the data collection process normally via `ctrl+c`.
 
 ### Raw Data Description
-In order to collect data, `collect_raw_data.launch` calls `record_bag.sh` found in `ig_handle/scripts/` and records topics specific to each robot.
+In order to collect data, `collect_raw_data.launch` calls `record_bag.sh` found in `ig_handle/scripts/pipeline/` and records topics specific to each robot.
 
 For **ig-handle**, the following topics are recorded:
 | Topic                     | message types               |
@@ -123,7 +123,7 @@ For **ig-heron** and **ig-husky**, the following additional topics are recorded:
 Further, **ig-heron** records `/sonar/scan` topics of message type `sensor_msgs/PointCloud2`, while **ig-husky** records `/thermal/image_raw/compressed` topics of message type `sensor_msgs/CompressedImage`. If additional topics are desired, `record_bag.sh` can be modified accordingly.
 
 ### Raw Data Processing
-Raw data is processed using `scripts/process_raw_bag.py`. Its description and interface follows.
+Raw data is processed using `scripts/pipeline/process_raw_bag.py`. Its description and interface follows.
 
 #### Description:
 This script:
@@ -135,12 +135,12 @@ Acknowledging camera and IMU sensor messages (i.e. `sensor_msgs/CompressedImage`
 #### Interface:
 The script's interface is accessed via:
 ```bash
-cd ~/catkin_ws/src/ig_handle/scripts
+cd ~/catkin_ws/src/ig_handle/scripts/pipeline
 python3 process_raw_bag.py --help
 ```
 The bagfile argument `--bag` needs to be set every time to find the input bag. The values for data and time topics are set correctly by default, so only specify those arguments if you have changed the data collection process. Below is an example of how to process collected raw data:
 ```bash
-cd ~/catkin_ws/src/ig_handle/scripts
+cd ~/catkin_ws/src/ig_handle/scripts/pipeline
 python3 process_raw_bag.py --bag ~/bags/YYYY_MM_DD_HH_MM_SS/raw.bag
 ```
 The script will output a rosbag called `output.bag` to the same folder specified via the `--bag` argument, which can then be passed to a SLAM algorithm. Note that in testing, we observe that a warm-up time of ~5 seconds is required for the LiDAR to synch with the RTC, and therefore recommend:
@@ -184,7 +184,7 @@ Once the ethernet adapters have been changed, you can apply these changes via:
 sudo cp ~/catkin_ws/src/ig_handle/config/01-ig_handle_netplan.yaml /etc/netplan/
 sudo netplan apply
 ```
-Note that you must also change the arg `bridge_adapter` in `launch/include/start_sonar.launch` to match the updated ethernet adapter for the sonar network.
+Note that you must also change the arg `bridge_adapter` in `launch/sensors/start_sonar.launch` to match the updated ethernet adapter for the sonar network.
 
 #### Internet Access:
 To gain access to the internet, we recommend manually connecting to a Wifi network.

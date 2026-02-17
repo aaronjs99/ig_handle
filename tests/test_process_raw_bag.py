@@ -6,7 +6,7 @@ import os
 import importlib
 
 # Add scripts to path
-SCRIPTS_DIR = os.path.join(os.path.dirname(__file__), "../scripts")
+SCRIPTS_DIR = os.path.join(os.path.dirname(__file__), "../scripts/pipeline")
 if SCRIPTS_DIR not in sys.path:
     sys.path.append(SCRIPTS_DIR)
 

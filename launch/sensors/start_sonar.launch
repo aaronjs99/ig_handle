@@ -1,4 +1,4 @@
-<!-- ig_handle/launch/include/start_sonar.launch -->
+<!-- ig_handle/launch/sensors/start_sonar.launch -->
 <launch>
   <arg name="use_vm"         default="false"/>
   <arg name="bridge_adapter" default="br0"/>

@@ -1,0 +1,9 @@
+<launch>
+  <node pkg="ig_handle" type="natnet_bridge.py" name="natnet_bridge" output="screen">
+    <param name="server_ip" value="192.168.1.199" />
+    <param name="client_ip" value="192.168.1.8" />
+    <param name="frame_id" value="motive_world" />
+    <param name="topic_prefix" value="/motive" />
+    <param name="publish_tf" value="true" />
+  </node>
+</launch>

@@ -1,9 +1,10 @@
 <launch>
    <!-- Determine this using rosrun spinnaker_camera_driver list_cameras.
-       If not specified, defaults to first camera found. -->
-  <arg name="camera_name"               default="F3" />
+     If not specified, defaults to first camera found. -->
+  <arg name="camera_name"               default="F1" />
   <arg name="camera_serial"             default="0" />
   <arg name="device_type"               default="USB3" /> <!-- USB3 or GigE -->
+  <arg name="config_file"               default="$(find ig_handle)/config/ig_handle_flir_config.yaml" />
 
   <group ns="$(arg camera_name)">
     <!-- Nodelet manager -->
@@ -18,7 +19,7 @@
       <param name="device_type"                     value="$(arg device_type)" />
 
       <!-- custom ig_hande config -->
-      <rosparam command="load" file="$(find ig_handle)/config/ig_handle_flir_config.yaml" />
+      <rosparam command="load" file="$(arg config_file)" />
     </node>
 
     <!-- Debayering nodelet -->

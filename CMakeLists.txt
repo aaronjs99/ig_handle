@@ -10,13 +10,16 @@ catkin_package()
 
 install(
   PROGRAMS 
-    scripts/run_deltat.sh
-    scripts/dt100_rx.py
+    scripts/sonar/run_deltat.sh
+    scripts/sonar/dt100_rx.py
+    scripts/mocap/natnet_bridge.py
+    scripts/pipeline/process_raw_bag.py
+    scripts/pipeline/record_bag.sh
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
 install(
-  DIRECTORY scripts/deltat/
+  DIRECTORY scripts/sonar/deltat/
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/scripts/deltat
   USE_SOURCE_PERMISSIONS
 )

@@ -10,7 +10,7 @@ latency and jitter.
 This tool repairs the data integrity by:
 1.  **Hardware Restamping**: Replaces software arrival times with precise
   Hardware Clock (PPS/Teensy) reference times recorded on parallel topics.
-  -   Example: Replaces `/imu/data` stamp with time from `/imu/time`.
+  -   Example: Replaces `/sensors/imu/data` stamp with time from `/sensors/imu/time`.
 2.  **Clock Drift Correction**: (Implied) By aligning to the PPS signal.
 3.  **Soft-Sync Interpolation**: For sensors without hardware triggers (e.g. Sonar),
   it interpolates their timestamps against the steady PPS clock.
@@ -347,11 +347,11 @@ def main(args):
     parser.add_argument(
         "--data_restamp_topics",
         default=[
-            "/imu/data",
-            "/F1/image_raw/compressed",
-            "/F2/image_raw/compressed",
-            "/F3/image_raw/compressed",
-            "/F4/image_raw/compressed",
+            "/sensors/imu/data",
+            "/sensors/camera/f1/image_raw/compressed",
+            "/sensors/camera/f2/image_raw/compressed",
+            "/sensors/camera/f3/image_raw/compressed",
+            "/sensors/camera/f4/image_raw/compressed",
         ],
         type=str,
         nargs="+",
@@ -359,21 +359,27 @@ def main(args):
     )
     parser.add_argument(
         "--time_restamp_topics",
-        default=["/imu/time", "/cam/time", "/cam/time", "/cam/time", "/cam/time"],
+        default=[
+            "/sensors/imu/time",
+            "/sensors/camera/time",
+            "/sensors/camera/time",
+            "/sensors/camera/time",
+            "/sensors/camera/time",
+        ],
         type=str,
         nargs="+",
         help="list of time reference topics corresponding to restamped sensor data message topics",
     )
     parser.add_argument(
         "--data_interp_topics",
-        default=["/sonar/scan"],
+        default=["/sensors/sonar/scan"],
         type=str,
         nargs="+",
         help="list of sensor data message topics to be interpolated",
     )
     parser.add_argument(
         "--time_interp_topics",
-        default=["/pps/time"],
+        default=["/sensors/pps/time"],
         type=str,
         nargs="+",
         help="list of time reference topics corresponding to interpolated sensor data message topics",

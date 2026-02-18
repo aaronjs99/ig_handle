@@ -14,6 +14,7 @@ install(
     scripts/sonar/dt100_rx.py
     scripts/mocap/natnet_bridge.py
     scripts/pipeline/process_raw_bag.py
+    scripts/pipeline/plot_odom.py
     scripts/pipeline/record_bag.sh
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )

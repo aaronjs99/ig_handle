@@ -8,8 +8,10 @@
   <arg name="laserscan" default="false"
        doc="Set true to enable the laserscan nodelet (unused by DLIO)" />
 
-  <group ns="$(arg name)">
+  <group ns="/sensors/lidar/$(arg name)">
     <!-- Manager + driver + transform -->
+    <remap from="velodyne_packets" to="packets"/>
+    <remap from="velodyne_points"  to="$(arg topic)"/>
     <include file="$(find velodyne_driver)/launch/nodelet_manager.launch">
       <arg name="device_ip" value="$(arg device_ip)"/>
       <arg name="frame_id"  value="$(arg frame_id)"/>
@@ -26,11 +28,6 @@
       <arg name="fixed_frame" value=""/>
       <arg name="target_frame" value=""/>
     </include>
-
-    <!-- Remap the output points to the desired modular topic -->
-    <!-- Usually velodyne transform nodelet publishes to velodyne_points in the namespace -->
-    <node pkg="topic_tools" type="relay" name="points_relay" 
-          args="velodyne_points $(arg topic)" />
 
     <!-- Laserscan nodelet (optional) -->
     <include if="$(arg laserscan)"

@@ -1,22 +1,27 @@
 # IG Handle: Multi-Modal Hardware-Synchronized Orchestration Layer
 
-## Abstract
+## Overview
 
-**IG-Handle** is an open-source, hardware-synchronized multi-modal orchestration layer. It is designed to facilitate the acquisition of high-fidelity LiDAR-visual-inertial data while ensuring strict temporal alignment across disparate sensor streams. The system is architecture to minimize epistemic uncertainty in robotic perception via precise microcontroller-driven synchronization.
+**IG-Handle** is an open-source, hardware-synchronized multi-modal orchestration layer for acquiring high-fidelity LiDAR-visual-inertial datasets with strict temporal alignment across sensor streams. Synchronization is driven by a microcontroller and hardware time references to reduce timing uncertainty in downstream perception and SLAM.
 
-The standard configuration integrates:
- - Two [Velodyne VLP-16](https://velodyneLiDAR.com/products/vlp-16/) LiDARs (Spatial geometry)
- - Two [FLIR Blackfly S USB3](https://www.flir.com/products/blackfly-s-usb3/) monochrome cameras (Visual context)
- - One [Xsens MTi-30 AHRS](https://www.xsens.com/hubfs/Downloads/usermanual/MTi_usermanual.pdf) IMU (Inertial state)
+### Standard sensor stack
 
-## Methodological Synthesis
+- **2× Velodyne VLP-16** LiDARs (spatial geometry)
+- **2× FLIR Blackfly S USB3** monochrome cameras (visual context)
+- **1× Xsens MTi-30 AHRS** IMU (inertial state)
 
-Synchronous data acquisition is orchestrated via a [DS3231 Real Time Clock (RTC)](https://www.adafruit.com/product/3013) and a Teensy 4.1 microcontroller, facilitating:
-   - **NMEA/PPS Temporal Alignment**: High-precision time-synchronization for LiDAR ranging (Accuracy: +/-2ppm).
-   - **Stereoscopic Triggering**: Deterministic analog strobe signals for dual-camera instances at 20 Hz.
-   - **High-Frequency IMU Sampling**: Digital interrupt-driven data acquisition at 200 Hz.
+## How synchronization works
 
-The architecture is inherently extensible, supporting recursive submodule integration for additional LiDAR sensors, thermal perception, and sonar-based bathymetry.
+Synchronous acquisition is orchestrated via a **DS3231 RTC** and a **Teensy 4.1**, enabling:
+
+- **NMEA/PPS temporal alignment** for LiDAR timing (RTC accuracy: ±2 ppm)
+- **Deterministic stereo triggering** for dual cameras at 20 Hz
+- **Interrupt-driven IMU sampling** at 200 Hz
+
+The architecture is extensible to additional LiDARs, thermal cameras, and sonar-based bathymetry.
+
+### References
+
 ```bibtex
 @article{thoms2023tightly,
   title={Tightly Coupled, Graph-Based DVL/IMU Fusion and Decoupled Mapping for SLAM-Centric Maritime Infrastructure Inspection},
@@ -26,180 +31,336 @@ The architecture is inherently extensible, supporting recursive submodule integr
   publisher={IEEE}
 }
 ```
-If you are interested in building your own **ig-handle**, the latest parts list, CAD models, electrical schematics, and build instructions can be found [here](https://drive.google.com/drive/folders/1DrAMQ9eQS1JjoDI4LWuoENaN7cZ9nRTC?usp=sharing). Note that our build uses the following [Intel NUC computer kit](https://drive.google.com/file/d/1mJj0qhpS1F2KvkGdUfzvh3qHi5qF908q/view?usp=sharing) with an 11th Gen Intel® CoreTM i7-1165G7 processor and 8GB of DDR4 RAM.
+
+- Parts list, CAD, schematics, and build instructions: [Google Drive folder](https://drive.google.com/drive/folders/1DrAMQ9eQS1JjoDI4LWuoENaN7cZ9nRTC?usp=sharing)
+- Reference compute: [Intel NUC kit details](https://drive.google.com/file/d/1mJj0qhpS1F2KvkGdUfzvh3qHi5qF908q/view?usp=sharing)
+
+---
 
 ## Installation
 
-For installation, please refer to the [Beam Installation Guide](https://github.com/BEAMRobotics/beam_robotics/wiki/Beam-Robotics-Installation-Guide). This guide covers the installation of dependencies (as required by **ig-handle** and supported robots **ig-husky** and **ig-heron**) on a clean Ubuntu 20.04 machine. We recommend setting your catkin workspace to the default directory `~/catkin_ws` as the commands documented in this README follow this convention.
+Follow the BEAM installation guide for a clean Ubuntu 20.04 machine:  
+[Beam Robotics Installation Guide](https://github.com/BEAMRobotics/beam_robotics/wiki/Beam-Robotics-Installation-Guide)
 
-## Collect Raw Data
+Recommended catkin workspace: `~/catkin_ws`
 
-**ig-handle** data is collected and saved to a rosbag via:
+---
+
+## Quickstart: collect raw data
+
 ```bash
 roslaunch ig_handle collect_raw_data.launch
 ```
-By default, rosbags are recorded in a timestamped folder as `raw.bag`. Use the `output` arg to specify an alternative parent directory for the timestamped folder. For example:
+
+- Output is a timestamped folder containing `raw.bag`.
+- Use `output` to set an alternative parent directory:
+
 ```bash
 roslaunch ig_handle collect_raw_data.launch output:=~/my_folder
 ```
-This command will record data to `~/my_folder/YYYY_MM_DD_HH_MM_SS/raw.bag`. Note that, when powered on, the LiDAR takes approximately 25-30 seconds to connect over LAN. Given this, wait 30 seconds after **ig-handle** is powered on to collect raw data.
 
-For each robot that integrates **ig-handle**, there is a launch file that starts data collection for **ig-handle** plus additional sensors (see Section **Raw Data Description** for details). These launch files are invoked with a launch argument called `robot`:
+This records to: `~/my_folder/YYYY_MM_DD_HH_MM_SS/raw.bag`
 
-**ig-heron** adds cameras `F3` and `F4`, LiDAR `lidar_v`, and the DT100 sonar. Data is collected via:
+> Note: after power-on, the LiDAR may take **25 to 30 seconds** to appear on the network. Wait about 30 seconds before recording.
+
+### Robot variants
+
+`collect_raw_data.launch` supports robot-specific bundles via `robot:=...`
+
+**ig-heron** adds cameras `F3/F4`, LiDAR `lidar_v`, and DT100 sonar:
+
 ```bash
 roslaunch ig_handle collect_raw_data.launch robot:=heron
 ```
-**ig-husky** adds cameras `F3` and `F4`, LiDAR `lidar_v`, and the Husky base and control packages. A [FLIR Boson Plus 640](https://www.flir.com/products/boson-plus/?model=22640A012&vertical=lwir&segment=oem) thermal camera is included, though is not tested. Data is collected via:
+
+**ig-husky** adds cameras `F3/F4`, LiDAR `lidar_v`, Husky base/control packages, and includes a thermal camera (not tested):
+
 ```bash
 roslaunch ig_handle collect_raw_data.launch robot:=husky
 ```
-Note that before using the launch files, create a bag directory via:
+
+Before using these launch files, create a bag directory:
+
 ```bash
 mkdir -p bags
 ```
 
-### Collect Raw Data in the Field
+---
 
-#### ig-handle
-To collect data in the field with **ig-handle**, we recommend connecting our [touch monitor](https://www.elotouch.com/touchscreen-monitors-1002l.html) through the outbound HDMI and USB ports on the handle box. Commands can be entered via the touch screen. To begin data collection, enter:
+## Field workflow
+
+### ig-handle only
+
+We recommend using the touch monitor connected to the handle computer.
+
 ```bash
 roslaunch ig_handle collect_raw_data.launch
 ```
-Once data collection is complete, kill the terminal session via `ctrl+c`.
 
-#### ig-husky and ig-heron
-To collect data in the field with robots **ig-husky** and **ig-heron**, we recommend the following steps:
-1. Connect your laptop to the handle's computer over ethernet and manually assign your laptop an ip address on the LiDAR network (ex. `192.168.1.151`).
-2. SSH into the handle computer via:
-  ```bash
-  ssh ig-handle@192.168.1.150
-  ```
-  our build uses the password `beam`.
+Stop recording with `ctrl+c`.
 
-3. Start a screen session via:
-  ```bash
-  screen
-  ```
-  press `enter` to start the session.
+### ig-husky and ig-heron
 
-4. Collect raw data (comment out the robot not in use)
-  ```bash
-  roslaunch ig_handle collect_raw_data.launch \
-  robot:=husky # ig-husky
-  robot:=heron # ig-heron
-  ```
-5. Within the same terminal, press `ctrl+a` then `ctrl+d` to detach the screen process.
-6. Disconnect the ethernet cable and perform data collection.
-7. Once data collection is performed, reconnect the ethernet cable to the handle computer and end the screen process via:
-  ```bash
-  screen -r
-  ```
-  You may now end the data collection process normally via `ctrl+c`.
+1. Connect your laptop to the handle computer over Ethernet and assign your laptop an IP on the LiDAR subnet (example: `192.168.1.151`).
 
-### Raw Data Description
-In order to collect data, `collect_raw_data.launch` calls `record_bag.sh` found in `ig_handle/scripts/pipeline/` and records topics specific to each robot.
+   > If your laptop is also on Wi-Fi using `192.168.1.0/24`, you may hit a subnet collision. See **System configuration → Networking → Avoiding Wi-Fi subnet collisions**.
 
-For **ig-handle**, the following topics are recorded:
-| Topic                     | message types               |
-| ------------------------- | --------------------------- |
-| /F1/image_raw/compressed  | sensor_msgs/CompressedImage |
-| /F2/image_raw/compressed  | sensor_msgs/CompressedImage |
-| /cam/time                 | sensor_msgs/TimeReference   |
-| /imu/data                 | sensor_msgs/Imu             |
-| /imu/time                 | sensor_msgs/TimeReference   |
-| /lidar_h/velodyne_packets | velodyne_msgs/VelodyneScan  |
-| /lidar_h/velodyne_points  | sensor_msgs/PointCloud2     |
-| /pps/time                 | sensor_msgs/TimeReference   |
+2. SSH into the handle computer:
 
-For **ig-heron** and **ig-husky**, the following additional topics are recorded:
-| Topic                     | message types               |
-| ------------------------- | --------------------------- |
-| /F3/image_raw/compressed  | sensor_msgs/CompressedImage |
-| /F4/image_raw/compressed  | sensor_msgs/CompressedImage |
-| /lidar_v/velodyne_packets | velodyne_msgs/VelodyneScan  |
-| /lidar_v/velodyne_points  | sensor_msgs/PointCloud2     |
+   ```bash
+   ssh ig-handle@192.168.1.<HANDLE_IP>
+   ```
 
-Further, **ig-heron** records `/sonar/scan` topics of message type `sensor_msgs/PointCloud2`, while **ig-husky** records `/thermal/image_raw/compressed` topics of message type `sensor_msgs/CompressedImage`. If additional topics are desired, `record_bag.sh` can be modified accordingly.
+   `<HANDLE_IP>` is the static IP assigned to the ig-handle host on the LiDAR subnet (example: `192.168.1.10`).
 
-### Raw Data Processing
-Raw data is processed using `scripts/pipeline/process_raw_bag.py`. Its description and interface follows.
+3. Start a `screen` session:
 
-#### Description:
-This script:
-1. restamps camera and IMU sensor messages with their appropriate time reference messages, and
-2. interpolates sonar messages against the reference PPS signal
+   ```bash
+   screen
+   ```
 
-Acknowledging camera and IMU sensor messages (i.e. `sensor_msgs/CompressedImage` and `sensor_msgs/Imu`) take longer to serialize than time reference messages (i.e. `/cam/time` and `/imu/time`), the script discards camera and IMU sensor messages before the first time reference (based on serialized time) and then proceeds to restamp sensor messages with time references using a first-in-first-out queue. In testing, we observe no camera and IMU signal dropout for periods typical for data collection (i.e. 5-10 min), permitting such a simple offline time-synchronization strategy. This script throws an error when signal dropout is detected, which may happen if connections become loose. Sometimes, dropout occurs after an extended period of data collection, and we provide an argument `--bag_end` which allows the user to process the bag *before* this dropout occurs. To see where dropout occurs, use `rosrun rqt_bag rqt_bag` to visualize the raw bag `raw.bag`. Further, the argument `--clip_restamp_topics` can be used to manually assign the time at which data and time topics are processed using a first-in-first-out queue to avoid errors in teensy startup.
+   Press `enter` to start the session.
 
-#### Interface:
-The script's interface is accessed via:
+4. Start recording (uncomment the robot you are using):
+
+   ```bash
+   roslaunch ig_handle collect_raw_data.launch \
+     robot:=husky  # ig-husky
+   # robot:=heron  # ig-heron
+   ```
+
+5. Detach: `ctrl+a`, then `ctrl+d`
+
+6. Disconnect the Ethernet cable and perform data collection.
+
+7. Reconnect Ethernet and reattach to end recording:
+
+   ```bash
+   screen -r
+   ```
+
+   Stop with `ctrl+c`.
+
+---
+
+## Raw data description
+
+`collect_raw_data.launch` invokes `ig_handle/scripts/pipeline/record_bag.sh` and records robot-specific topics.
+
+### ig-handle topics
+
+| Topic                                     | Message type                   |
+|-------------------------------------------|--------------------------------|
+| `/sensors/camera/f1/image_raw/compressed` | `sensor_msgs/CompressedImage`  |
+| `/sensors/camera/f2/image_raw/compressed` | `sensor_msgs/CompressedImage`  |
+| `/sensors/camera/time`                    | `sensor_msgs/TimeReference`    |
+| `/sensors/imu/data`                       | `sensor_msgs/Imu`              |
+| `/sensors/imu/time`                       | `sensor_msgs/TimeReference`    |
+| `/sensors/lidar/hori/packets`             | `velodyne_msgs/VelodyneScan`   |
+| `/sensors/lidar/hori/points`              | `sensor_msgs/PointCloud2`      |
+| `/sensors/pps/time`                       | `sensor_msgs/TimeReference`    |
+
+### Additional topics for ig-heron and ig-husky
+
+| Topic                                     | Message type                   |
+|-------------------------------------------|--------------------------------|
+| `/sensors/camera/f3/image_raw/compressed` | `sensor_msgs/CompressedImage`  |
+| `/sensors/camera/f4/image_raw/compressed` | `sensor_msgs/CompressedImage`  |
+| `/sensors/lidar/vert/packets`             | `velodyne_msgs/VelodyneScan`   |
+| `/sensors/lidar/vert/points`              | `sensor_msgs/PointCloud2`      |
+
+Additional sensors:
+- **ig-heron** records `/sensors/sonar/scan` as `sensor_msgs/PointCloud2`
+- **ig-husky** records `/sensors/camera/thermal/image_raw/compressed` as `sensor_msgs/CompressedImage`
+
+To add or remove topics, edit `ig_handle/scripts/pipeline/record_bag.sh`.
+
+---
+
+## Raw data processing
+
+Raw data is processed using: `scripts/pipeline/process_raw_bag.py`
+
+### What it does
+
+1. Restamps camera and IMU messages using their time reference messages
+2. Interpolates sonar messages against the PPS reference signal
+
+Because camera and IMU data messages may serialize later than their time references, the script discards messages before the first time reference (by serialized time), then restamps using a FIFO queue.
+
+The script throws an error when signal dropout is detected (for example, loose connections). If dropout occurs late in a long recording, process only the valid prefix using `--bag_end`.
+
+To inspect dropouts, visualize the raw bag with:
+
+```bash
+rosrun rqt_bag rqt_bag
+```
+
+### Interface
+
 ```bash
 cd ~/catkin_ws/src/ig_handle/scripts/pipeline
 python3 process_raw_bag.py --help
 ```
-The bagfile argument `--bag` needs to be set every time to find the input bag. The values for data and time topics are set correctly by default, so only specify those arguments if you have changed the data collection process. Below is an example of how to process collected raw data:
+
+Example:
+
 ```bash
 cd ~/catkin_ws/src/ig_handle/scripts/pipeline
 python3 process_raw_bag.py --bag ~/bags/YYYY_MM_DD_HH_MM_SS/raw.bag
 ```
-The script will output a rosbag called `output.bag` to the same folder specified via the `--bag` argument, which can then be passed to a SLAM algorithm. Note that in testing, we observe that a warm-up time of ~5 seconds is required for the LiDAR to synch with the RTC, and therefore recommend:
+
+Outputs `output.bag` in the same folder.
+
+> Note: LiDAR time sync may require a warm-up of about 5 seconds. We recommend starting playback at t=5 s:
+
 ```bash
 cd ~/bags/YYYY_MM_DD_HH_MM_SS/
 rosbag play --start=5 output.bag --pause
 ```
-when playing back the bag for the SLAM algorithm. Pressing the `enter` key will then continue playback.
 
-### Copy Data from Robots
-Once raw data has been collected and processed according to Section **Raw Data Processing**, copy the data over to your laptop (over ethernet) via:
+Press `enter` to continue playback.
+
+---
+
+## Copy data from robots
+
+After processing, copy data to your laptop over Ethernet:
+
 ```bash
 scp -r ~/bags/YYYY_MM_DD_HH_MM_SS user@192.168.1.XXX:~/bags/dir
 ```
-where:
-- `YYYY_MM_DD_HH_MM_SS` is the folder containing the data
-- `user` is the user name for your laptop
-- `192.168.1.XXX` is the ip address statically assigned to your laptop. This ip address is on the same subnet as the LiDAR network.
-- `~/bags/dir` is the directory on your laptop where you would like to copy the data
-for example:
+
+Where:
+- `YYYY_MM_DD_HH_MM_SS` is the folder containing the bag(s)
+- `user` is your laptop username
+- `192.168.1.XXX` is your laptop IP on the LiDAR subnet
+- `~/bags/dir` is the destination directory on your laptop
+
+Example:
+
 ```bash
 scp -r ~/bags/2023_10_15_03_56_54 alex@192.168.1.151:~/bags/ig-handle
 ```
 
-## Documentation
+---
 
-In addition to the build instructions found [here](https://drive.google.com/drive/folders/1DrAMQ9eQS1JjoDI4LWuoENaN7cZ9nRTC?usp=sharing), instructions on usage are provided.
+## System configuration
 
 ### Networking
-**ig-handle** requires **two** ethernet ports, one for the LiDAR network and one for the sonar network (see `config/01-ig_handle_netplan.yaml`):
-1. LiDAR network: The LiDAR network is configured to expect a `192.168.1.XXX` subnet (255.255.255.0 aka /24 mask), and therefore the network ip address is statically assigned to `192.168.1.150`. Note that in our build, the LiDARs are configured as `192.168.1.201` for LiDAR `lidar_h` and `192.168.1.202` for LiDAR `lidar_v`. The network switch inside of the handle box connects the LiDARs and an outboard ethernet port to the handle computer.
-2. Sonar network: The sonar network is configured specifically to the ip address `192.168.0.4` (255.255.255.0 aka /24 mask) as per the DT100's documentation (see the DT100's [user manual](https://github.com/BEAMRobotics/dt100_driver/blob/master/docs/user_manual.pdf))
 
-#### Manually Updating Netplan
-Following the installation guide found in Section **Installation**, `config/01-ig_handle_netplan.yaml` should be applied automatically. To update and apply the netplan manually for your computer, replace `enp2s0` and `enx000fc910b497` with the names of the ethernet adapters that you are using. You can find the names (eth0, enp0s1, etc.) via:
+IG-Handle uses dedicated IPv4 subnets for sensors:
+
+- **LiDAR subnet:** `192.168.1.0/24`  
+  Example device IPs: `192.168.1.201` (`lidar_h`), `192.168.1.202` (`lidar_v`)
+- **Sonar subnet:** `192.168.0.0/24`  
+  Example device IP: `192.168.0.2` (DT100)
+
+In our build, the LiDARs (and the outward-facing Ethernet port) connect to an internal switch. The host aggregates sensor Ethernet adapters using a Linux bridge (`br0`).
+
+**Default host addressing:** a single bridge (`br0`) is assigned both:
+- `192.168.1.10/24` (LiDAR)
+- `192.168.0.3/24` (sonar)
+
+Wi-Fi (`wlo1`) remains the default route for internet.
+
+#### Verify interface names
+
 ```bash
-ifconfig
+ip -br link
+ip -br addr
 ```
-Once the ethernet adapters have been changed, you can apply these changes via:
+
+You should see a `br0` interface and your Ethernet adapters (often named `enx...`) as bridge ports.
+
+#### Configure `br0` with NetworkManager (recommended)
+
+This configuration is persistent across reboots.
+
 ```bash
-sudo cp ~/catkin_ws/src/ig_handle/config/01-ig_handle_netplan.yaml /etc/netplan/
+# Put br0 in manual IPv4 mode with both static addresses
+sudo nmcli con modify br0 ipv4.method manual
+sudo nmcli con modify br0 ipv4.addresses "192.168.1.10/24"
+sudo nmcli con modify br0 +ipv4.addresses "192.168.0.3/24"
+
+# Ensure br0 never becomes a default route (Wi-Fi stays the internet path)
+sudo nmcli con modify br0 ipv4.never-default yes
+
+# De-prioritize br0 routes compared to Wi-Fi if subnets collide
+sudo nmcli con modify br0 ipv4.route-metric 5000
+
+# Pin LiDAR device IPs to br0 (important on collided Wi-Fi networks)
+sudo nmcli con modify br0 +ipv4.routes "192.168.1.201/32 0.0.0.0 10"
+sudo nmcli con modify br0 +ipv4.routes "192.168.1.202/32 0.0.0.0 10"
+
+# Apply changes
+sudo nmcli con down br0 || true
+sudo nmcli con up br0
+```
+
+#### Avoiding Wi-Fi subnet collisions (important)
+
+Some Wi-Fi networks also use `192.168.1.0/24`. If Wi-Fi is assigned an address like `192.168.1.x` while the LiDAR network is also `192.168.1.0/24`, Linux will have two routes to the same subnet and may send gateway traffic out the wrong interface.
+
+**Symptom:** Wi-Fi appears connected but cannot reach the gateway or internet.
+
+**Fix:** keep Wi-Fi as the default route, and pin the LiDAR IPs to `br0` using `/32` host routes (shown above).
+
+#### Sanity check
+
+After configuring networking, verify all paths:
+
+```bash
+ip route get 8.8.8.8         # via Wi-Fi gateway, dev wlo1
+ip route get 192.168.1.201   # dev br0, src 192.168.1.10
+ip route get 192.168.1.202   # dev br0, src 192.168.1.10
+ip route get 192.168.0.2     # dev br0, src 192.168.0.3
+```
+
+You can also confirm device reachability:
+
+```bash
+ping -c 3 192.168.1.201
+ping -c 3 192.168.1.202
+ping -c 3 192.168.0.2
+```
+
+#### Best practice (recommended for new builds)
+
+To avoid collisions entirely, consider using a less common private subnet for LiDAR devices (for example, `192.168.50.0/24` or `10.42.0.0/24`) and reconfigure sensor IPs accordingly.
+
+#### Advanced: netplan (headless systems only)
+
+An example netplan configuration is provided in `config/01-ig_handle_netplan.yaml` for systems using `systemd-networkd` (common on Ubuntu Server or headless installs).
+
+> Do not use netplan if NetworkManager is active.
+
+To use netplan:
+1. Update interface names in the YAML (see `ip -br link`).
+2. Copy into `/etc/netplan/` and apply:
+
+```bash
+sudo cp config/01-ig_handle_netplan.yaml /etc/netplan/
 sudo netplan apply
 ```
-Note that you must also change the arg `bridge_adapter` in `launch/sensors/start_sonar.launch` to match the updated ethernet adapter for the sonar network.
-
-#### Internet Access:
-To gain access to the internet, we recommend manually connecting to a Wifi network.
 
 ### Udev
-Udev rules are used in Ubuntu to create custom USB configurations when USB devices are plugged in. For example, in order to ensure the Teensy and IMU ports are always known, Udev rules are used to:
-1. create aliases when these devices are plugged in, and
-2. scan for devices plugged in with the correct idVendor and idProduct
 
-The installation process provided in Section **Installation** automates Udev rule creation. This process can be accomplished manually via:
+Udev rules create stable device aliases for USB peripherals (for example, `/dev/teensy` and `/dev/imu`) so device names do not change across reboots or replugging.
+
+To install the provided rules:
+
 ```bash
-sudo cp ~/catkin_ws/src/ig_handle/config/99-ig_handle_udev.rules /etc/udev/rules.d/
-sudo udevadm control --reload-rules && sudo service udev restart && sudo udevadm trigger
-sudo adduser $USER dialout
+sudo cp config/99-ig_handle_udev.rules /etc/udev/rules.d/
+sudo udevadm control --reload-rules
+sudo udevadm trigger
+sudo usermod -aG dialout $USER
 ```
 
+You must log out and back in (or reboot) for the `dialout` group change to take effect.
+
+---
+
 ## ROS 2
+
 This package has been ported to ROS 2 on the `ros2` branch.

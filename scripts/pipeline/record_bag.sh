@@ -8,17 +8,17 @@ mkdir -p $bagDir
 echo "Collecting ig_handle bag file..."
 echo "Saving to: $bagDir/raw.bag"
 rosbag record -O $bagDir/raw.bag \
-  /F1/image_raw/compressed \
-  /F2/image_raw/compressed \
-  /F3/image_raw/compressed \
-  /F4/image_raw/compressed \
-  /thermal/image_raw/compressed \
-  /cam/time \
-  /imu/data \
-  /imu/time \
-  /pps/time \
-  /lidar_h/velodyne_packets \
-  /lidar_h/velodyne_points \
-  /lidar_v/velodyne_packets \
-  /lidar_v/velodyne_points \
-  /sonar/scan 
+  /sensors/camera/f1/image_raw/compressed \
+  /sensors/camera/f2/image_raw/compressed \
+  /sensors/camera/f3/image_raw/compressed \
+  /sensors/camera/f4/image_raw/compressed \
+  /sensors/camera/thermal/image_raw/compressed \
+  /sensors/camera/time \
+  /sensors/imu/data \
+  /sensors/imu/time \
+  /sensors/pps/time \
+  /sensors/lidar/hori/packets \
+  /sensors/lidar/hori/points \
+  /sensors/lidar/vert/packets \
+  /sensors/lidar/vert/points \
+  /sensors/sonar/scan

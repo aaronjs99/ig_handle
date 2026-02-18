@@ -4,7 +4,7 @@
   <arg name="bridge_adapter" default="br0"/>
   <arg name="headless"       default="false"/>
   <arg name="udp_port"       default="4040"/>
-  <arg name="topic"          default="/sensors/sonar/scan"/>
+  <arg name="topic"          default="scan"/>
   <arg name="bind_ip"        default="0.0.0.0"/>
   <arg name="udp_dest_ip"    default="192.168.0.3"/>
 
@@ -18,14 +18,14 @@
       <param name="headless" value="$(arg headless)"/>
     </node>
 
-    <!-- If you still need the relay, keep it. Otherwise you can remove this node. -->
-    <node pkg="dt100_driver" type="dt100_relay" name="dt100_relay" output="screen"/>
   </group>
 
   <!-- Common: UDP receiver that publishes to modular topic -->
-  <node pkg="ig_handle" type="dt100_rx.py" name="dt100_rx" output="screen">
-    <param name="port" value="$(arg udp_port)"/>
-    <param name="topic" value="$(arg topic)"/>
-    <param name="bind_ip" value="$(arg bind_ip)"/>
-  </node>
+  <group ns="/sensors/sonar">
+    <node pkg="ig_handle" type="dt100_rx.py" name="driver" output="screen">
+      <param name="port" value="$(arg udp_port)"/>
+      <param name="topic" value="scan"/>
+      <param name="bind_ip" value="$(arg bind_ip)"/>
+    </node>
+  </group>
 </launch>

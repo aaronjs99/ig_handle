@@ -3,9 +3,9 @@
   <arg name="use_cameras_f3f4" default="false" />
   
   <arg name="topic_imu"        default="/sensors/imu/data"/>
-  <arg name="topic_lidar_h"    default="/sensors/lidar/horizontal/points"/>
-  <arg name="topic_lidar_v"    default="/sensors/lidar/vertical/points"/>
-  <arg name="topic_cam_f1_raw" default="/sensors/camera/front/image_raw"/>
+  <arg name="topic_lidar_h"    default="/sensors/lidar/hori/points"/>
+  <arg name="topic_lidar_v"    default="/sensors/lidar/vert/points"/>
+  <arg name="topic_cam_f1_raw" default="/sensors/camera/f1/image_raw"/>
   <arg name="topic_cam_f2_raw" default="/sensors/camera/f2/image_raw"/>
   <arg name="topic_cam_f3_raw" default="/sensors/camera/f3/image_raw"/>
   <arg name="topic_cam_f4_raw" default="/sensors/camera/f4/image_raw"/>

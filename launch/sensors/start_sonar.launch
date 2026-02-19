@@ -8,12 +8,12 @@
   <arg name="bind_ip"        default="0.0.0.0"/>
   <arg name="udp_dest_ip"    default="192.168.0.3"/>
 
-  <node pkg="ig_handle" type="run_deltat.sh" name="deltat_tx" output="screen"
+  <node pkg="ig_handle" type="run_deltat.sh" name="deltat_tx" output="log"
         args="$(arg udp_dest_ip) $(arg udp_port)" />
 
   <!-- Option A: legacy VM + relay (only if use_vm=true) -->
   <group if="$(arg use_vm)">
-    <node pkg="dt100_driver" type="dt100_vm.bash" name="dt100_vm_node" output="screen">
+    <node pkg="dt100_driver" type="dt100_vm.bash" name="dt100_vm_node" output="log">
       <param name="bridge_adapter" value="$(arg bridge_adapter)"/>
       <param name="headless" value="$(arg headless)"/>
     </node>
@@ -22,7 +22,7 @@
 
   <!-- Common: UDP receiver that publishes to modular topic -->
   <group ns="/sensors/sonar">
-    <node pkg="ig_handle" type="dt100_rx.py" name="driver" output="screen">
+    <node pkg="ig_handle" type="dt100_rx.py" name="driver" output="log">
       <param name="port" value="$(arg udp_port)"/>
       <param name="topic" value="scan"/>
       <param name="bind_ip" value="$(arg bind_ip)"/>

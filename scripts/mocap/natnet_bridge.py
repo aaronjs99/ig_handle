@@ -102,8 +102,17 @@ class NatNetBridge:
 def main():
     rospy.init_node("natnet_bridge", anonymous=False)
     bridge = NatNetBridge()
-    bridge.start()
-    rospy.spin()
+
+    while not rospy.is_shutdown():
+        try:
+            bridge.start()
+            break
+        except RuntimeError as e:
+            rospy.logwarn("[NatNetBridge] %s — retrying in 5s", e)
+            rospy.sleep(5.0)
+
+    if not rospy.is_shutdown():
+        rospy.spin()
 
 
 if __name__ == "__main__":

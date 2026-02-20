@@ -1,8 +1,12 @@
 <launch>
   <arg name="topic" default="/imu/data"/>
+  <arg name="port" default="/dev/imu"/>
+  <arg name="baudrate" default="115200"/>
+
   <group ns="/sensors/imu">
     <node name="driver" pkg="xsens_mti_driver" type="xsens_mti_node" output="screen">
-      <param name="port" value="/dev/serial/by-id/usb-Xsens_MTi-30_AHRS_0368319D-if01-port0"/>
+      <param name="port" value="$(arg port)"/>
+      <param name="baudrate" value="$(arg baudrate)"/>
       <rosparam command="load" file="$(find xsens_mti_driver)/param/xsens_mti_node.yaml" />
       <remap from="imu/data"             to="data"/>
       <remap from="imu/acceleration"     to="acceleration"/>

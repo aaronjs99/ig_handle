@@ -10,9 +10,11 @@
   <arg name="topic_cam_f3_raw" default="/sensors/camera/f3/image_raw"/>
   <arg name="topic_cam_f4_raw" default="/sensors/camera/f4/image_raw"/>
   <arg name="topic_thermal"    default="/sensors/thermal/image_raw"/>
+  <arg name="use_teensy"       default="false"/>
 
   <!-- Start handle (passes primary sensors and F1/F2) -->
   <include file="$(find ig_handle)/launch/robots/handle.launch">
+    <arg name="use_teensy"       value="$(arg use_teensy)"/>
     <arg name="use_cameras_f1f2" value="$(arg use_cameras_f1f2)"/>
     <arg name="topic_imu"        value="$(arg topic_imu)"/>
     <arg name="topic_lidar_h"    value="$(arg topic_lidar_h)"/>

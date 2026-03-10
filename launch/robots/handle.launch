@@ -18,7 +18,7 @@
   <!-- Start lidar (Horizontal) -->
   <include file="$(find ig_handle)/launch/sensors/start_lidar.launch">
       <arg name="name"     value="hori" />
-      <arg name="device_ip" value="192.168.1.201" />
+      <arg name="device_ip" value="192.168.50.201" />
       <arg name="port"      value="2368" />
       <arg name="frame_id"  value="lidar_h_link" />
       <arg name="topic"     value="$(arg topic_lidar_h)"/>
@@ -28,12 +28,12 @@
   <group if="$(arg use_cameras_f1f2)">
     <include file="$(find ig_handle)/launch/sensors/start_cam.launch">
         <arg name="camera_name"   value="F1" />
-        <arg name="camera_serial" value="22181623" />
+        <arg name="camera_serial" value="25110056" />
         <arg name="topic"         value="$(arg topic_cam_f1_raw)"/>
     </include>
     <include file="$(find ig_handle)/launch/sensors/start_cam.launch">
         <arg name="camera_name"   value="F2" />
-        <arg name="camera_serial" value="22181616" />
+        <arg name="camera_serial" value="25152257" />
         <arg name="topic"         value="$(arg topic_cam_f2_raw)"/>
     </include>
   </group>

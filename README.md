@@ -1,26 +1,29 @@
-# IG Handle: Hardware-Synchronized Multi-Modal Data Acquisition
+# IG Handle
 
-## Overview
+IG Handle is the synchronized sensing and data-collection layer for the SLAM
+GRANDE platform.
 
-**IG-Handle** is a hardware-synchronized orchestration layer for collecting tightly aligned LiDAR, visual, inertial, and sonar datasets for SLAM and perception research.
+Its job is straightforward: collect the raw sensor data the rest of the stack
+depends on, and make the timestamps trustworthy enough that perception and SLAM
+can use the data without guesswork.
 
-Synchronization is handled using hardware timing references to reduce timestamp drift across sensor streams.
+## Typical Sensor Stack
 
-### Standard sensor stack
+- horizontal and vertical LiDAR
+- multiple GigE cameras
+- IMU / AHRS
+- sonar
+- optional motion-capture link
 
-- 2 × Velodyne VLP-16 LiDARs
-- 4 × Forge FG-PGE GigE cameras
-- 1 × Xsens MTi-30 AHRS IMU
-- 1 × Imagenex sonar
-- Motion capture system via Wi-Fi
-
-The system runs on an onboard computer ("handle") that records synchronized ROS bags.
+The exact hardware can vary by platform, but the package is organized around the
+same core idea: synchronized acquisition on a dedicated onboard computer.
 
 ---
 
 ## System Architecture
 
-IG-Handle coordinates multiple sensors through a hardware timing system and a dedicated sensor network.
+IG Handle coordinates the sensors through a hardware timing system and a
+dedicated sensor network.
 
 ### Network Topology
 
@@ -95,11 +98,12 @@ graph LR
 
 ## Synchronization Architecture
 
-Hardware synchronization is implemented using:
+Hardware synchronization is implemented around:
+
 - **Teensy 4.1**
 - **DS3231 RTC**
 
-This provides:
+This provides deterministic timing for:
 
 | Signal | Purpose |
 | :--- | :--- |
@@ -119,8 +123,9 @@ This provides:
 
 ## Network Architecture
 
-The system uses dedicated IPv4 subnets for sensors.
-Multiple subnets are assigned to the same physical Ethernet interface.
+The sensing stack uses dedicated IPv4 subnets for the different device groups.
+Multiple subnets can be assigned to the same physical Ethernet interface when
+needed.
 
 | Network | Subnet | Devices |
 | :--- | :--- | :--- |
@@ -169,13 +174,13 @@ This allows launch files to reference sensors by name instead of IP.
 
 ## Recording Data
 
-**Start recording:**
+Start recording:
 
 ```bash
 roslaunch ig_handle collect_raw_data.launch
 ```
 
-**Output:**
+Output:
 `~/bags/YYYY_MM_DD_HH_MM_SS/raw.bag`
 
 ---
@@ -188,7 +193,7 @@ Connect to the handle computer through the sensor network:
 ssh ig-handle@192.168.50.10
 ```
 
-Start recording inside a `screen` session.
+For long captures, start the recorder inside `screen` or `tmux`.
 
 ---
 

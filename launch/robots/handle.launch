@@ -5,6 +5,8 @@
   <arg name="topic_lidar_h"    default="/sensors/lidar/hori/points"/>
   <arg name="topic_cam_f1_raw" default="/sensors/camera/f1/image_raw"/>
   <arg name="topic_cam_f2_raw" default="/sensors/camera/f2/image_raw"/>
+  <arg name="camera_f1_info_url" default="package://slam_grande/config/flir_left.yaml"/>
+  <arg name="camera_f2_info_url" default="package://slam_grande/config/flir_right.yaml"/>
   <arg name="use_teensy"       default="false"/>
 
   <!-- Start rosserial -->
@@ -28,12 +30,16 @@
   <group if="$(arg use_cameras_f1f2)">
     <include file="$(find ig_handle)/launch/sensors/start_cam.launch">
         <arg name="camera_name"   value="F1" />
+        <arg name="frame_id"      value="F1_optical" />
         <arg name="camera_serial" value="25110056" />
+        <arg name="camera_info_url" value="$(arg camera_f1_info_url)"/>
         <arg name="topic"         value="$(arg topic_cam_f1_raw)"/>
     </include>
     <include file="$(find ig_handle)/launch/sensors/start_cam.launch">
         <arg name="camera_name"   value="F2" />
+        <arg name="frame_id"      value="F2_optical" />
         <arg name="camera_serial" value="25152257" />
+        <arg name="camera_info_url" value="$(arg camera_f2_info_url)"/>
         <arg name="topic"         value="$(arg topic_cam_f2_raw)"/>
     </include>
   </group>

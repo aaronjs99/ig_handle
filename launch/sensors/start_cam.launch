@@ -1,8 +1,10 @@
 <launch>
   <arg name="camera_name"               default="F1" />
+  <arg name="frame_id"                  default="$(arg camera_name)" />
   <arg name="camera_serial"             default="25110056" />
   <arg name="device_type"               default="GigE" />
   <arg name="config_file"               default="$(find ig_handle)/config/ig_handle_flir_config.yaml" />
+  <arg name="camera_info_url"           default="" />
   <arg name="topic"                     default="image_raw"/>
 
   <group ns="$(arg camera_name)">
@@ -13,9 +15,12 @@
     <node pkg="nodelet" type="nodelet" name="spinnaker_camera_nodelet"
           args="load spinnaker_camera_driver/SpinnakerCameraNodelet camera_nodelet_manager" >
 
-      <param name="frame_id"                        value="$(arg camera_name)" />
+      <param name="frame_id"                        value="$(arg frame_id)" />
       <param name="serial"                          value="$(arg camera_serial)" />
       <param name="device_type"                     value="$(arg device_type)" />
+      <param if="$(eval arg('camera_info_url') != '')"
+             name="camera_info_url"
+             value="$(arg camera_info_url)" />
 
       <rosparam command="load" file="$(arg config_file)" />
       

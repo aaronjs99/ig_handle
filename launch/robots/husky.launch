@@ -9,6 +9,8 @@
   <arg name="topic_cam_f2_raw" default="/sensors/camera/f2/image_raw"/>
   <arg name="topic_cam_f3_raw" default="/sensors/camera/f3/image_raw"/>
   <arg name="topic_cam_f4_raw" default="/sensors/camera/f4/image_raw"/>
+  <arg name="camera_f1_info_url" default="package://slam_grande/config/flir_left.yaml"/>
+  <arg name="camera_f2_info_url" default="package://slam_grande/config/flir_right.yaml"/>
   <arg name="topic_thermal"    default="/sensors/thermal/image_raw"/>
   <arg name="use_teensy"       default="false"/>
 
@@ -20,6 +22,8 @@
     <arg name="topic_lidar_h"    value="$(arg topic_lidar_h)"/>
     <arg name="topic_cam_f1_raw" value="$(arg topic_cam_f1_raw)"/>
     <arg name="topic_cam_f2_raw" value="$(arg topic_cam_f2_raw)"/>
+    <arg name="camera_f1_info_url" value="$(arg camera_f1_info_url)"/>
+    <arg name="camera_f2_info_url" value="$(arg camera_f2_info_url)"/>
   </include>
 
   <!-- Start vertical lidar -->

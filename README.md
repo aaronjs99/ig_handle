@@ -9,10 +9,10 @@ can use the data without guesswork.
 
 ## Typical Sensor Stack
 
-- horizontal and vertical LiDAR
-- multiple GigE cameras
+- horizontal and vertical Velodyne VLP-16 LiDARs
+- four Forge IP67 GigE cameras on supported platforms
 - IMU / AHRS
-- sonar
+- Imagenex DT100 multibeam sonar
 - optional motion-capture link
 
 The exact hardware can vary by platform, but the package is organized around the
@@ -225,6 +225,11 @@ Additional sensors:
 - **ig-husky** records `/sensors/camera/thermal/image_raw/compressed` as `sensor_msgs/CompressedImage`
 
 To add or remove topics, edit `ig_handle/scripts/pipeline/record_bag.sh`.
+
+## Tests
+
+Package tests live under `tests/`, including the Teensy launcher and raw bag
+processing regressions used in the workspace test sweep.
 
 ---
 

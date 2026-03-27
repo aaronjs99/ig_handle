@@ -41,7 +41,9 @@ class TeensyLauncherTests(unittest.TestCase):
             "~port": "/dev/ttyUSB-test",
             "~baud": 57600,
         }
-        mock_rospy.get_param.side_effect = lambda name, default=None: params.get(name, default)
+        mock_rospy.get_param.side_effect = lambda name, default=None: params.get(
+            name, default
+        )
 
         with patch.object(teensy_launcher.os.path, "exists", return_value=True):
             with patch.object(teensy_launcher.subprocess, "call") as subprocess_call:

@@ -6,6 +6,7 @@
   <arg name="config_file"               default="$(find ig_handle)/config/ig_handle_flir_config.yaml" />
   <arg name="camera_info_url"           default="" />
   <arg name="topic"                     default="image_raw"/>
+  <arg name="camera_info_topic"         default="camera_info"/>
 
   <group ns="$(arg camera_name)">
     <!-- Nodelet manager -->
@@ -25,6 +26,7 @@
       <rosparam command="load" file="$(arg config_file)" />
       
       <remap from="image_raw" to="$(arg topic)"/>
+      <remap from="camera_info" to="$(arg camera_info_topic)"/>
     </node>
 
     <!-- Debayering nodelet -->

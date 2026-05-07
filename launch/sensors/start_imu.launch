@@ -10,6 +10,8 @@
       <param name="baudrate" value="$(arg baudrate)"/>
       <param name="scan_for_devices" value="$(arg scan_for_devices)"/>
       <rosparam command="load" file="$(find xsens_mti_driver)/param/xsens_mti_node.yaml" />
+      <param name="frame_id" value="imu_link"/>
+      <param name="pub_transform" value="false"/>
       <remap from="imu/data"             to="data"/>
       <remap from="imu/acceleration"     to="acceleration"/>
       <remap from="imu/angular_velocity" to="angular_velocity"/>

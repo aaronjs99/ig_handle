@@ -15,6 +15,8 @@
   <arg name="topic_cam_f2_raw" default="/sensors/camera/f2/image_raw"/>
   <arg name="topic_cam_f3_raw" default="/sensors/camera/f3/image_raw"/>
   <arg name="topic_cam_f4_raw" default="/sensors/camera/f4/image_raw"/>
+  <arg name="topic_cam_f1_info" default="/sensors/camera/f1/camera_info"/>
+  <arg name="topic_cam_f2_info" default="/sensors/camera/f2/camera_info"/>
   <arg name="topic_sonar"      default="/sensors/sonar/scan"/>
   <arg name="topic_thermal"    default="/sensors/thermal/image_raw"/>
   <arg name="camera_f1_info_url" default="package://slam_grande/config/flir_left.yaml"/>
@@ -35,7 +37,7 @@
   </include>
 
   <include if="$(arg use_lidar_v)" file="$(find ig_handle)/launch/sensors/start_lidar.launch">
-    <arg name="name"      value="lidar_v"/>
+    <arg name="name"      value="vert"/>
     <arg name="device_ip" value="192.168.50.202"/>
     <arg name="port"      value="2369"/>
     <arg name="frame_id"  value="lidar_v_link"/>
@@ -53,6 +55,7 @@
       <arg name="camera_serial"   value="25110056"/>
       <arg name="camera_info_url" value="$(arg camera_f1_info_url)"/>
       <arg name="topic"           value="$(arg topic_cam_f1_raw)"/>
+      <arg name="camera_info_topic" value="$(arg topic_cam_f1_info)"/>
     </include>
     <include file="$(find ig_handle)/launch/sensors/start_cam.launch">
       <arg name="camera_name"     value="F2"/>
@@ -60,6 +63,7 @@
       <arg name="camera_serial"   value="25152257"/>
       <arg name="camera_info_url" value="$(arg camera_f2_info_url)"/>
       <arg name="topic"           value="$(arg topic_cam_f2_raw)"/>
+      <arg name="camera_info_topic" value="$(arg topic_cam_f2_info)"/>
     </include>
   </group>
 

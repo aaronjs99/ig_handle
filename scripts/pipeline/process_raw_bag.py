@@ -18,7 +18,9 @@ This tool repairs the data integrity by:
   trigger counts and warns of integrity loss (cable faults).
 
 Output:
-A "Science-Ready" bag file suitable for high-precision SLAM (LIO-SAM, VINS-Fusion).
+A timestamp-restamped bag intended for downstream SLAM or calibration workflows.
+The output still assumes the calibration/extrinsics, required sensor streams,
+and backend-specific topic conventions are valid for the chosen SLAM package.
 """
 
 import rospy
@@ -64,7 +66,7 @@ def topic_to_dict(bag: rosbag.Bag, topics: list, type="msg") -> dict:
 
 class IgPostProcess:
     """
-    Handle post-processing of raw bag files to create science-ready datasets.
+    Handle timestamp post-processing for raw IG Handle bag files.
 
     Performs timestamp synchronization (restamping) and interpolation.
 

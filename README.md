@@ -18,6 +18,19 @@ can use the data without guesswork.
 The exact hardware can vary by platform, but the package is organized around the
 same core idea: synchronized acquisition on a dedicated onboard computer.
 
+## Current Integration Notes
+
+- The minimal SLAM sensor contract is horizontal LiDAR
+  `/sensors/lidar/hori/points` plus Xsens IMU `/sensors/imu/data`.
+- `robot:=handle` starts the primary horizontal LiDAR and IMU path.
+- `robot:=heron` starts the fuller IG-Heron sensor suite. In the current launch
+  files, vertical LiDAR and sonar are not independently gated by the top-level
+  `use_lidar_v` and `use_sonar` args, so verify the active launch profile before
+  assuming those devices are optional.
+- The stable udev aliases in `config/99-ig_handle_udev.rules` exist, but some
+  launch defaults still use `/dev/serial/by-id/...` paths. If a device serial
+  changes, check both the udev rule and the launch argument.
+
 ---
 
 ## System Architecture
@@ -197,8 +210,22 @@ For long captures, start the recorder inside `screen` or `tmux`.
 
 ---
 
-## Recorded Topics
-`collect_raw_data.launch` invokes `ig_handle/scripts/pipeline/record_bag.sh` and records robot-specific topics.
+## Runtime Topics vs Recorded Topics
+
+The live driver contract uses raw ROS topics. The recorder captures many camera
+streams through their `/compressed` transport to keep bags manageable. Do not
+confuse the two:
+
+| Live runtime topic | Type |
+| --- | --- |
+| `/sensors/camera/f1/image_raw` | `sensor_msgs/Image` |
+| `/sensors/camera/f2/image_raw` | `sensor_msgs/Image` |
+| `/sensors/imu/data` | `sensor_msgs/Imu` |
+| `/sensors/lidar/hori/points` | `sensor_msgs/PointCloud2` |
+| `/sensors/lidar/hori/packets` | `velodyne_msgs/VelodyneScan` |
+
+`collect_raw_data.launch` invokes `ig_handle/scripts/pipeline/record_bag.sh` and
+records robot-specific bag topics:
 
 | Topic                                     | Message type                   |
 |-------------------------------------------|--------------------------------|
@@ -221,15 +248,21 @@ For long captures, start the recorder inside `screen` or `tmux`.
 | `/sensors/lidar/vert/points`              | `sensor_msgs/PointCloud2`      |
 
 Additional sensors:
-- **ig-heron** records `/sensors/sonar/scan` as `sensor_msgs/PointCloud2`
-- **ig-husky** records `/sensors/camera/thermal/image_raw/compressed` as `sensor_msgs/CompressedImage`
+- **ig-heron** sonar driver currently publishes raw DT100 bytes on
+  `/sensors/sonar/scan` as `std_msgs/UInt8MultiArray`; downstream pointcloud
+  conversion is a separate contract and should be verified before consumers
+  treat this as `sensor_msgs/PointCloud2`.
+- **ig-husky** thermal live topic is `/sensors/thermal/image_raw`; compressed
+  capture should be verified from the active image transport before assuming a
+  `/compressed` bag topic exists.
 
 To add or remove topics, edit `ig_handle/scripts/pipeline/record_bag.sh`.
 
 ## Tests
 
-Package tests live under `tests/`, including the Teensy launcher and raw bag
-processing regressions used in the workspace test sweep.
+Package tests live under `tests/`. Current coverage is intentionally light and
+mostly checks launch/file contracts; it does not prove sensor timing,
+calibration, sonar decoding, or full raw-bag post-processing correctness.
 
 ---
 

@@ -27,11 +27,9 @@ same core idea: synchronized acquisition on a dedicated onboard computer.
 - `robot:=handle` is a sensor-only adapter. It uses the same maintained sensor
   suite wiring but does not start an autonomous robot base.
 - `robot:=husky` is an optional portability adapter. In this workspace it uses
-  the same maintained sensor suite wiring and does not start Husky base drivers;
-  sonar defaults off because the current Husky sensor assumption excludes sonar.
-- `use_cameras:=false` disables all configured platform cameras. The older
-  `use_cameras_f1f2` and `use_cameras_f3f4` args remain as compatibility aliases
-  for scripts that need per-pair control.
+  the same maintained sensor suite wiring as Heron and does not start Husky base
+  drivers.
+- `use_cameras:=false` disables all configured platform cameras.
 - The stable udev aliases in `config/99-ig_handle_udev.rules` exist, but some
   launch defaults still use `/dev/serial/by-id/...` paths. If a device serial
   changes, check both the udev rule and the launch argument.

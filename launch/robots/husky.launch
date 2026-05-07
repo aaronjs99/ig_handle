@@ -1,7 +1,15 @@
 <launch>
-  <arg name="use_cameras_f1f2" default="false" />
-  <arg name="use_cameras_f3f4" default="false" />
-  
+  <!-- Optional portability adapter. This workspace does not ship Husky base
+       dependencies, so no Husky motor/control stack is started here. The
+       sensor contract stays linked to the maintained IG sensor suite. -->
+  <arg name="use_cameras" default="true"/>
+  <arg name="use_cameras_f1f2" default="$(arg use_cameras)"/>
+  <arg name="use_cameras_f3f4" default="$(arg use_cameras)"/>
+  <arg name="use_lidar_h" default="true"/>
+  <arg name="use_lidar_v" default="true"/>
+  <arg name="use_sonar" default="false"/>
+  <arg name="use_teensy" default="false"/>
+
   <arg name="topic_imu"        default="/sensors/imu/data"/>
   <arg name="topic_lidar_h"    default="/sensors/lidar/hori/points"/>
   <arg name="topic_lidar_v"    default="/sensors/lidar/vert/points"/>
@@ -9,51 +17,27 @@
   <arg name="topic_cam_f2_raw" default="/sensors/camera/f2/image_raw"/>
   <arg name="topic_cam_f3_raw" default="/sensors/camera/f3/image_raw"/>
   <arg name="topic_cam_f4_raw" default="/sensors/camera/f4/image_raw"/>
+  <arg name="topic_sonar"      default="/sensors/sonar/scan"/>
   <arg name="camera_f1_info_url" default="package://slam_grande/config/flir_left.yaml"/>
   <arg name="camera_f2_info_url" default="package://slam_grande/config/flir_right.yaml"/>
-  <arg name="topic_thermal"    default="/sensors/thermal/image_raw"/>
-  <arg name="use_teensy"       default="false"/>
 
-  <!-- Start handle (passes primary sensors and F1/F2) -->
-  <include file="$(find ig_handle)/launch/robots/handle.launch">
-    <arg name="use_teensy"       value="$(arg use_teensy)"/>
+  <include file="$(find ig_handle)/launch/robots/sensor_suite.launch">
+    <arg name="use_cameras" value="$(arg use_cameras)"/>
     <arg name="use_cameras_f1f2" value="$(arg use_cameras_f1f2)"/>
-    <arg name="topic_imu"        value="$(arg topic_imu)"/>
-    <arg name="topic_lidar_h"    value="$(arg topic_lidar_h)"/>
+    <arg name="use_cameras_f3f4" value="$(arg use_cameras_f3f4)"/>
+    <arg name="use_lidar_h" value="$(arg use_lidar_h)"/>
+    <arg name="use_lidar_v" value="$(arg use_lidar_v)"/>
+    <arg name="use_sonar" value="$(arg use_sonar)"/>
+    <arg name="use_teensy" value="$(arg use_teensy)"/>
+    <arg name="topic_imu" value="$(arg topic_imu)"/>
+    <arg name="topic_lidar_h" value="$(arg topic_lidar_h)"/>
+    <arg name="topic_lidar_v" value="$(arg topic_lidar_v)"/>
     <arg name="topic_cam_f1_raw" value="$(arg topic_cam_f1_raw)"/>
     <arg name="topic_cam_f2_raw" value="$(arg topic_cam_f2_raw)"/>
+    <arg name="topic_cam_f3_raw" value="$(arg topic_cam_f3_raw)"/>
+    <arg name="topic_cam_f4_raw" value="$(arg topic_cam_f4_raw)"/>
+    <arg name="topic_sonar" value="$(arg topic_sonar)"/>
     <arg name="camera_f1_info_url" value="$(arg camera_f1_info_url)"/>
     <arg name="camera_f2_info_url" value="$(arg camera_f2_info_url)"/>
-  </include>
-
-  <!-- Start vertical lidar -->
-  <include file="$(find ig_handle)/launch/sensors/start_lidar.launch">
-      <arg name="name"      value="lidar_v" />
-      <arg name="device_ip" value="192.168.50.202" />
-      <arg name="port"      value="2369" />
-      <arg name="frame_id"  value="lidar_v_link" />
-      <arg name="topic"     value="$(arg topic_lidar_v)"/>
-  </include>
-
-  <!-- Start husky auxiliary cameras (optional) -->
-  <group if="$(arg use_cameras_f3f4)">
-    <include file="$(find ig_handle)/launch/sensors/start_cam.launch">
-        <arg name="camera_name"   value="F3" />
-        <arg name="camera_serial" value="25110061" />
-        <arg name="topic"         value="$(arg topic_cam_f3_raw)"/>
-    </include>
-    <include file="$(find ig_handle)/launch/sensors/start_cam.launch">
-        <arg name="camera_name"   value="F4" />
-        <arg name="camera_serial" value="25110065" />
-        <arg name="topic"         value="$(arg topic_cam_f4_raw)"/>
-    </include>
-  </group>
-
-  <!-- Start husky base -->
-  <include file="$(find ig_handle)/launch/core/start_husky.launch" />
-
-  <!-- Start thermal -->
-  <include file="$(find ig_handle)/launch/sensors/start_thermal.launch">
-      <arg name="topic"     value="$(arg topic_thermal)"/>
   </include>
 </launch>

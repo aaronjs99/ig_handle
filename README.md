@@ -22,11 +22,16 @@ same core idea: synchronized acquisition on a dedicated onboard computer.
 
 - The minimal SLAM sensor contract is horizontal LiDAR
   `/sensors/lidar/hori/points` plus Xsens IMU `/sensors/imu/data`.
-- `robot:=handle` starts the primary horizontal LiDAR and IMU path.
-- `robot:=heron` starts the fuller IG-Heron sensor suite. In the current launch
-  files, vertical LiDAR and sonar are not independently gated by the top-level
-  `use_lidar_v` and `use_sonar` args, so verify the active launch profile before
-  assuming those devices are optional.
+- `robot:=heron` is the primary boat adapter and starts the shared IG sensor
+  suite: four Forge IP67 cameras, horizontal and vertical LiDAR, IMU, and sonar.
+- `robot:=handle` is a sensor-only adapter. It uses the same maintained sensor
+  suite wiring but does not start an autonomous robot base.
+- `robot:=husky` is an optional portability adapter. In this workspace it uses
+  the same maintained sensor suite wiring and does not start Husky base drivers;
+  sonar defaults off because the current Husky sensor assumption excludes sonar.
+- `use_cameras:=false` disables all configured platform cameras. The older
+  `use_cameras_f1f2` and `use_cameras_f3f4` args remain as compatibility aliases
+  for scripts that need per-pair control.
 - The stable udev aliases in `config/99-ig_handle_udev.rules` exist, but some
   launch defaults still use `/dev/serial/by-id/...` paths. If a device serial
   changes, check both the udev rule and the launch argument.

@@ -4,7 +4,9 @@
   <arg name="bridge_adapter" default="br0"/>
   <arg name="headless"       default="false"/>
   <arg name="udp_port"       default="4040"/>
-  <arg name="topic"          default="scan"/>
+  <arg name="raw_topic"      default="/sensors/sonar/raw"/>
+  <arg name="cloud_topic"    default="/sensors/sonar/scan"/>
+  <arg name="frame_id"       default="sonar_link"/>
   <arg name="bind_ip"        default="0.0.0.0"/>
   <arg name="udp_dest_ip"    default="192.168.0.3"/>
 
@@ -20,12 +22,16 @@
 
   </group>
 
-  <!-- Common: UDP receiver that publishes to modular topic -->
-  <group ns="/sensors/sonar">
-    <node pkg="ig_handle" type="dt100_rx.py" name="driver" output="log">
-      <param name="port" value="$(arg udp_port)"/>
-      <param name="topic" value="scan"/>
-      <param name="bind_ip" value="$(arg bind_ip)"/>
-    </node>
-  </group>
+  <!-- Common: keep DT100 bytes raw, then publish a typed PointCloud2 adapter. -->
+  <node pkg="ig_handle" type="dt100_rx.py" name="dt100_raw_driver" output="log">
+    <param name="port" value="$(arg udp_port)"/>
+    <param name="topic" value="$(arg raw_topic)"/>
+    <param name="bind_ip" value="$(arg bind_ip)"/>
+  </node>
+
+  <node pkg="ig_handle" type="dt100_profile_to_cloud.py" name="dt100_profile_to_cloud" output="screen">
+    <param name="raw_topic" value="$(arg raw_topic)"/>
+    <param name="cloud_topic" value="$(arg cloud_topic)"/>
+    <param name="frame_id" value="$(arg frame_id)"/>
+  </node>
 </launch>

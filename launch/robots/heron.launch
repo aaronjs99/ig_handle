@@ -14,6 +14,7 @@
   <arg name="topic_cam_f2_raw" default="/sensors/camera/f2/image_raw"/>
   <arg name="topic_cam_f3_raw" default="/sensors/camera/f3/image_raw"/>
   <arg name="topic_cam_f4_raw" default="/sensors/camera/f4/image_raw"/>
+  <arg name="topic_sonar_raw"  default="/sensors/sonar/raw"/>
   <arg name="topic_sonar"      default="/sensors/sonar/scan"/>
   <arg name="camera_f1_info_url" default="package://slam_grande/config/flir_left.yaml"/>
   <arg name="camera_f2_info_url" default="package://slam_grande/config/flir_right.yaml"/>
@@ -31,6 +32,7 @@
     <arg name="topic_cam_f2_raw" value="$(arg topic_cam_f2_raw)"/>
     <arg name="topic_cam_f3_raw" value="$(arg topic_cam_f3_raw)"/>
     <arg name="topic_cam_f4_raw" value="$(arg topic_cam_f4_raw)"/>
+    <arg name="topic_sonar_raw" value="$(arg topic_sonar_raw)"/>
     <arg name="topic_sonar" value="$(arg topic_sonar)"/>
     <arg name="camera_f1_info_url" value="$(arg camera_f1_info_url)"/>
     <arg name="camera_f2_info_url" value="$(arg camera_f2_info_url)"/>

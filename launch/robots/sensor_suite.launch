@@ -17,6 +17,7 @@
   <arg name="topic_cam_f4_raw" default="/sensors/camera/f4/image_raw"/>
   <arg name="topic_cam_f1_info" default="/sensors/camera/f1/camera_info"/>
   <arg name="topic_cam_f2_info" default="/sensors/camera/f2/camera_info"/>
+  <arg name="topic_sonar_raw"  default="/sensors/sonar/raw"/>
   <arg name="topic_sonar"      default="/sensors/sonar/scan"/>
   <arg name="topic_thermal"    default="/sensors/thermal/image_raw"/>
   <arg name="camera_f1_info_url" default="package://slam_grande/config/flir_left.yaml"/>
@@ -45,7 +46,8 @@
   </include>
 
   <include if="$(arg use_sonar)" file="$(find ig_handle)/launch/sensors/start_sonar.launch">
-    <arg name="topic" value="$(arg topic_sonar)"/>
+    <arg name="raw_topic" value="$(arg topic_sonar_raw)"/>
+    <arg name="cloud_topic" value="$(arg topic_sonar)"/>
   </include>
 
   <group if="$(arg use_cameras)">

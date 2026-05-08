@@ -251,10 +251,11 @@ records robot-specific bag topics:
 | `/sensors/lidar/vert/points`              | `sensor_msgs/PointCloud2`      |
 
 Additional sensors:
-- **ig-heron** sonar driver currently publishes raw DT100 bytes on
-  `/sensors/sonar/scan` as `std_msgs/UInt8MultiArray`; downstream pointcloud
-  conversion is a separate contract and should be verified before consumers
-  treat this as `sensor_msgs/PointCloud2`.
+- **ig-heron** keeps the DT100 receiver raw on `/sensors/sonar/raw` as
+  `std_msgs/UInt8MultiArray`. `dt100_profile_to_cloud.py` is the downstream
+  typed adapter and publishes supported profile-point packets on
+  `/sensors/sonar/scan` as `sensor_msgs/PointCloud2`. Raw beam packets remain
+  raw instead of being converted into invented geometry.
 - **ig-husky** thermal live topic is `/sensors/thermal/image_raw`; compressed
   capture should be verified from the active image transport before assuming a
   `/compressed` bag topic exists.

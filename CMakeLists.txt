@@ -3,6 +3,7 @@ project(ig_handle)
 
 find_package(catkin REQUIRED COMPONENTS
   rospy
+  sensor_msgs
   std_msgs
 )
 
@@ -12,6 +13,7 @@ install(
   PROGRAMS 
     scripts/sonar/run_deltat.sh
     scripts/sonar/dt100_rx.py
+    scripts/sonar/dt100_profile_to_cloud.py
     scripts/mocap/natnet_bridge.py
     scripts/pipeline/process_raw_bag.py
     scripts/pipeline/plot_odom.py

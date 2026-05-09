@@ -1,6 +1,3 @@
-/scripts/deltat/
-/scripts/sonar/deltat/
-
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]

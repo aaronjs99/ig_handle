@@ -227,6 +227,10 @@ confuse the two:
 | `/sensors/lidar/hori/points` | `sensor_msgs/PointCloud2` |
 | `/sensors/lidar/hori/packets` | `velodyne_msgs/VelodyneScan` |
 
+The Teensy firmware publishes `/pps/time` and `/cam/time`; the rosserial bridge
+remaps those hardware-native names locally to `/sensors/pps/time` and
+`/sensors/camera/time` so the full stack does not need broad top-level remaps.
+
 `collect_raw_data.launch` invokes `ig_handle/scripts/pipeline/record_bag.sh` and
 records robot-specific bag topics:
 

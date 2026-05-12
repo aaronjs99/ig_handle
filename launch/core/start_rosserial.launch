@@ -1,6 +1,11 @@
 <launch>
+  <arg name="pps_time_topic" default="/sensors/pps/time"/>
+  <arg name="camera_time_topic" default="/sensors/camera/time"/>
+
   <node name="serial_node" pkg="ig_handle" type="teensy_launcher.py" output="screen">
     <param name="port" value="/dev/serial/by-id/usb-Teensyduino_USB_Serial_13709860-if00"/>
     <param name="baud" value="115200" />
+    <remap from="/pps/time" to="$(arg pps_time_topic)"/>
+    <remap from="/cam/time" to="$(arg camera_time_topic)"/>
   </node>
 </launch>

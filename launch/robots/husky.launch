@@ -15,13 +15,19 @@
   <arg name="topic_cam_f2_raw" default="/sensors/camera/f2/image_raw"/>
   <arg name="topic_cam_f3_raw" default="/sensors/camera/f3/image_raw"/>
   <arg name="topic_cam_f4_raw" default="/sensors/camera/f4/image_raw"/>
+  <arg name="topic_cam_f1_info" default="/sensors/camera/f1/camera_info"/>
+  <arg name="topic_cam_f2_info" default="/sensors/camera/f2/camera_info"/>
+  <arg name="topic_cam_f3_info" default="/sensors/camera/f3/camera_info"/>
+  <arg name="topic_cam_f4_info" default="/sensors/camera/f4/camera_info"/>
   <arg name="topic_sonar_raw"  default="/sensors/sonar/raw"/>
   <arg name="topic_sonar"      default="/sensors/sonar/scan"/>
   <arg name="topic_pps_time"   default="/sensors/pps/time"/>
   <arg name="topic_camera_time" default="/sensors/camera/time"/>
   <arg name="topic_imu_time" default="/sensors/imu/time"/>
-  <arg name="camera_f1_info_url" default="package://slam_grande/config/flir_left.yaml"/>
-  <arg name="camera_f2_info_url" default="package://slam_grande/config/flir_right.yaml"/>
+  <arg name="camera_f1_info_url" default="package://slam_grande/config/calibration/f1_forward_left.yaml"/>
+  <arg name="camera_f2_info_url" default="package://slam_grande/config/calibration/f2_forward_right.yaml"/>
+  <arg name="camera_f3_info_url" default=""/>
+  <arg name="camera_f4_info_url" default=""/>
   <arg name="teensy_port" default="/dev/serial/by-id/usb-Teensyduino_USB_Serial_13709860-if00"/>
   <arg name="teensy_baud" default="115200"/>
 
@@ -38,6 +44,10 @@
     <arg name="topic_cam_f2_raw" value="$(arg topic_cam_f2_raw)"/>
     <arg name="topic_cam_f3_raw" value="$(arg topic_cam_f3_raw)"/>
     <arg name="topic_cam_f4_raw" value="$(arg topic_cam_f4_raw)"/>
+    <arg name="topic_cam_f1_info" value="$(arg topic_cam_f1_info)"/>
+    <arg name="topic_cam_f2_info" value="$(arg topic_cam_f2_info)"/>
+    <arg name="topic_cam_f3_info" value="$(arg topic_cam_f3_info)"/>
+    <arg name="topic_cam_f4_info" value="$(arg topic_cam_f4_info)"/>
     <arg name="topic_sonar_raw" value="$(arg topic_sonar_raw)"/>
     <arg name="topic_sonar" value="$(arg topic_sonar)"/>
     <arg name="topic_pps_time" value="$(arg topic_pps_time)"/>
@@ -45,6 +55,8 @@
     <arg name="topic_imu_time" value="$(arg topic_imu_time)"/>
     <arg name="camera_f1_info_url" value="$(arg camera_f1_info_url)"/>
     <arg name="camera_f2_info_url" value="$(arg camera_f2_info_url)"/>
+    <arg name="camera_f3_info_url" value="$(arg camera_f3_info_url)"/>
+    <arg name="camera_f4_info_url" value="$(arg camera_f4_info_url)"/>
     <arg name="teensy_port" value="$(arg teensy_port)"/>
     <arg name="teensy_baud" value="$(arg teensy_baud)"/>
   </include>

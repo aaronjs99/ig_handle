@@ -17,14 +17,18 @@
   <arg name="topic_cam_f4_raw" default="/sensors/camera/f4/image_raw"/>
   <arg name="topic_cam_f1_info" default="/sensors/camera/f1/camera_info"/>
   <arg name="topic_cam_f2_info" default="/sensors/camera/f2/camera_info"/>
+  <arg name="topic_cam_f3_info" default="/sensors/camera/f3/camera_info"/>
+  <arg name="topic_cam_f4_info" default="/sensors/camera/f4/camera_info"/>
   <arg name="topic_sonar_raw"  default="/sensors/sonar/raw"/>
   <arg name="topic_sonar"      default="/sensors/sonar/scan"/>
   <arg name="topic_thermal"    default="/sensors/thermal/image_raw"/>
   <arg name="topic_pps_time"   default="/sensors/pps/time"/>
   <arg name="topic_camera_time" default="/sensors/camera/time"/>
   <arg name="topic_imu_time" default="/sensors/imu/time"/>
-  <arg name="camera_f1_info_url" default="package://slam_grande/config/flir_left.yaml"/>
-  <arg name="camera_f2_info_url" default="package://slam_grande/config/flir_right.yaml"/>
+  <arg name="camera_f1_info_url" default="package://slam_grande/config/calibration/f1_forward_left.yaml"/>
+  <arg name="camera_f2_info_url" default="package://slam_grande/config/calibration/f2_forward_right.yaml"/>
+  <arg name="camera_f3_info_url" default=""/>
+  <arg name="camera_f4_info_url" default=""/>
   <arg name="teensy_port" default="/dev/serial/by-id/usb-Teensyduino_USB_Serial_13709860-if00"/>
   <arg name="teensy_baud" default="115200"/>
 
@@ -62,6 +66,8 @@
   </include>
 
   <group if="$(arg use_cameras)">
+    <!-- F1/F2 are forward-facing inspection cameras; F3/F4 are upward-facing
+         context cameras. Empty info URLs leave uncalibrated cameras online. -->
     <include file="$(find ig_handle)/launch/sensors/start_cam.launch">
       <arg name="camera_name"     value="F1"/>
       <arg name="frame_id"        value="F1_optical"/>
@@ -83,13 +89,19 @@
   <group if="$(arg use_cameras)">
     <include file="$(find ig_handle)/launch/sensors/start_cam.launch">
       <arg name="camera_name"   value="F3"/>
+      <arg name="frame_id"      value="F3_optical"/>
       <arg name="camera_serial" value="25110061"/>
+      <arg name="camera_info_url" value="$(arg camera_f3_info_url)"/>
       <arg name="topic"         value="$(arg topic_cam_f3_raw)"/>
+      <arg name="camera_info_topic" value="$(arg topic_cam_f3_info)"/>
     </include>
     <include file="$(find ig_handle)/launch/sensors/start_cam.launch">
       <arg name="camera_name"   value="F4"/>
+      <arg name="frame_id"      value="F4_optical"/>
       <arg name="camera_serial" value="25110065"/>
+      <arg name="camera_info_url" value="$(arg camera_f4_info_url)"/>
       <arg name="topic"         value="$(arg topic_cam_f4_raw)"/>
+      <arg name="camera_info_topic" value="$(arg topic_cam_f4_info)"/>
     </include>
   </group>
 

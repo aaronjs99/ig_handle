@@ -36,6 +36,34 @@ def test_real_sensor_launch_keeps_dlio_safe_tf_and_camera_info_contracts():
     assert '<remap from="camera_info" to="$(arg camera_info_topic)"/>' in camera
     assert 'value="$(arg topic_cam_f1_info)"' in suite
     assert 'value="$(arg topic_cam_f2_info)"' in suite
+    assert 'value="$(arg topic_cam_f3_info)"' in suite
+    assert 'value="$(arg topic_cam_f4_info)"' in suite
+
+
+def test_standalone_camera_defaults_match_f1_to_f4_layout():
+    suite = (REPO_ROOT / "ig_handle/launch/robots/sensor_suite.launch").read_text(
+        encoding="utf-8"
+    )
+    for relpath in (
+        "ig_handle/launch/robots/heron.launch",
+        "ig_handle/launch/robots/handle.launch",
+        "ig_handle/launch/robots/husky.launch",
+        "ig_handle/launch/robots/sensor_suite.launch",
+    ):
+        text = (REPO_ROOT / relpath).read_text(encoding="utf-8")
+        assert "package://slam_grande/config/calibration/f1_forward_left.yaml" in text
+        assert "package://slam_grande/config/calibration/f2_forward_right.yaml" in text
+        assert '<arg name="camera_f3_info_url" default=""/>' in text
+        assert '<arg name="camera_f4_info_url" default=""/>' in text
+        assert "package://slam_grande/config/flir_left.yaml" not in text
+        assert "package://slam_grande/config/flir_right.yaml" not in text
+
+    assert '<arg name="camera_name"   value="F3"/>' in suite
+    assert '<arg name="frame_id"      value="F3_optical"/>' in suite
+    assert '<arg name="camera_info_topic" value="$(arg topic_cam_f3_info)"/>' in suite
+    assert '<arg name="camera_name"   value="F4"/>' in suite
+    assert '<arg name="frame_id"      value="F4_optical"/>' in suite
+    assert '<arg name="camera_info_topic" value="$(arg topic_cam_f4_info)"/>' in suite
 
 
 def test_vertical_lidar_packets_use_canonical_vert_namespace():

@@ -6,15 +6,14 @@ import matplotlib.animation as animation
 from nav_msgs.msg import Odometry
 from geometry_msgs.msg import PoseStamped
 import threading
-import numpy as np
 
 
 class OdomPlotter:
     def __init__(self):
-        rospy.init_node("odom_plotter", anonymous=True)
+        rospy.init_node("mocap_odom_plotter", anonymous=True)
 
-        self.mocap_topic = rospy.get_param("~mocap_topic", "/motive/rigid_body_1/pose")
-        self.dlio_topic = rospy.get_param("~dlio_topic", "/state/odometry")
+        self.mocap_topic = rospy.get_param("~mocap_topic", "/mocap/rigid_body_1/pose")
+        self.odom_topic = rospy.get_param("~odom_topic", "/state/odometry")
 
         self.mocap_data = {"x": [], "y": []}
         self.dlio_data = {"x": [], "y": []}
@@ -26,7 +25,7 @@ class OdomPlotter:
 
         # Subscribers
         rospy.Subscriber(self.mocap_topic, PoseStamped, self.mocap_callback)
-        rospy.Subscriber(self.dlio_topic, Odometry, self.dlio_callback)
+        rospy.Subscriber(self.odom_topic, Odometry, self.dlio_callback)
 
         # Plotting setup
         self.fig, self.ax = plt.subplots()

@@ -21,9 +21,10 @@ class NatNetBridge:
     def __init__(self):
         self.server_ip = rospy.get_param("~server_ip", "192.168.1.199")
         self.client_ip = rospy.get_param("~client_ip", "192.168.1.8")
-        self.frame_id = rospy.get_param("~frame_id", "motive_world")
-        self.pub_prefix = rospy.get_param("~topic_prefix", "/motive")
+        self.frame_id = rospy.get_param("~frame_id", "mocap_world")
+        self.pub_prefix = rospy.get_param("~topic_prefix", "/mocap")
         self.publish_tf = rospy.get_param("~publish_tf", True)
+        self.child_frame_prefix = rospy.get_param("~child_frame_prefix", "rigid_body_")
 
         self.pub_rb = {}
         self.tf_broadcaster = TransformBroadcaster() if self.publish_tf else None
@@ -88,7 +89,7 @@ class NatNetBridge:
             tfm = TransformStamped()
             tfm.header.stamp = t
             tfm.header.frame_id = self.frame_id
-            tfm.child_frame_id = f"rigid_body_{int(rb_id)}"
+            tfm.child_frame_id = f"{self.child_frame_prefix}{int(rb_id)}"
             tfm.transform.translation.x = float(position[0])
             tfm.transform.translation.y = float(position[1])
             tfm.transform.translation.z = float(position[2])
@@ -100,7 +101,7 @@ class NatNetBridge:
 
 
 def main():
-    rospy.init_node("natnet_bridge", anonymous=False)
+    rospy.init_node("natnet_pose_bridge", anonymous=False)
     bridge = NatNetBridge()
 
     while not rospy.is_shutdown():
@@ -108,7 +109,7 @@ def main():
             bridge.start()
             break
         except RuntimeError as e:
-            rospy.logwarn("[NatNetBridge] %s — retrying in 5s", e)
+            rospy.logwarn("[NatNetBridge] %s; retrying in 5s", e)
             rospy.sleep(5.0)
 
     if not rospy.is_shutdown():

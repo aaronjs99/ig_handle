@@ -15,7 +15,8 @@ def test_ig_handle_repo_keeps_real_platform_launch_and_data_collection_contracts
     assert (REPO_ROOT / "ig_handle/launch/sensors/start_cam.launch").exists()
     assert (REPO_ROOT / "ig_handle/scripts/sonar/dt100_profile_to_cloud.py").exists()
     assert (REPO_ROOT / "ig_handle/scripts/pipeline/process_raw_bag.py").exists()
-    assert (REPO_ROOT / "ig_handle/scripts/teensy_launcher.py").exists()
+    assert (REPO_ROOT / "ig_handle/scripts/teensy_rosserial_launcher.py").exists()
+    assert (REPO_ROOT / "ig_handle/scripts/mocap/natnet_pose_bridge.py").exists()
 
 
 def test_real_sensor_launch_keeps_dlio_safe_tf_and_camera_info_contracts():
@@ -44,6 +45,39 @@ def test_vertical_lidar_packets_use_canonical_vert_namespace():
 
     assert '<arg name="name"      value="vert"/>' in suite
     assert 'value="lidar_v"' not in suite
+
+
+def test_mocap_and_teensy_paths_are_explicit_and_modular():
+    natnet_launch = (
+        REPO_ROOT / "ig_handle/launch/core/natnet_bridge.launch"
+    ).read_text(encoding="utf-8")
+    rosserial_launch = (
+        REPO_ROOT / "ig_handle/launch/core/start_rosserial.launch"
+    ).read_text(encoding="utf-8")
+    suite = (REPO_ROOT / "ig_handle/launch/robots/sensor_suite.launch").read_text(
+        encoding="utf-8"
+    )
+    heron = (REPO_ROOT / "ig_handle/launch/robots/heron.launch").read_text(
+        encoding="utf-8"
+    )
+    cmake = (REPO_ROOT / "ig_handle/CMakeLists.txt").read_text(encoding="utf-8")
+    package_xml = (REPO_ROOT / "ig_handle/package.xml").read_text(encoding="utf-8")
+
+    assert 'type="natnet_pose_bridge.py" name="natnet_pose_bridge"' in natnet_launch
+    assert 'name="server_ip" default="192.168.1.199"' in natnet_launch
+    assert 'name="client_ip" default="192.168.1.8"' in natnet_launch
+    assert 'name="topic_prefix" default="/mocap"' in natnet_launch
+    assert 'type="teensy_rosserial_launcher.py"' in rosserial_launch
+    assert 'name="port"' in rosserial_launch
+    assert 'name="baud"' in rosserial_launch
+    assert '<remap from="/imu/time" to="$(arg imu_time_topic)"/>' in rosserial_launch
+    assert '<arg name="use_teensy" default="false"/>' in suite
+    assert '<arg name="use_teensy" default="false"/>' in heron
+    assert "scripts/mocap/natnet_pose_bridge.py" in cmake
+    assert "scripts/teensy_rosserial_launcher.py" in cmake
+    assert "<exec_depend>geometry_msgs</exec_depend>" in package_xml
+    assert "<exec_depend>tf2_ros</exec_depend>" in package_xml
+    assert "<exec_depend>rosserial_python</exec_depend>" in package_xml
 
 
 def test_dt100_raw_driver_is_kept_separate_from_pointcloud_adapter():

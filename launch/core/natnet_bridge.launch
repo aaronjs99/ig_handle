@@ -1,9 +1,17 @@
 <launch>
-  <node pkg="ig_handle" type="natnet_bridge.py" name="natnet_bridge" output="log">
-    <param name="server_ip" value="192.168.1.199" />
-    <param name="client_ip" value="192.168.1.8" />
-    <param name="frame_id" value="mocap_world" />
-    <param name="topic_prefix" value="/mocap" />
-    <param name="publish_tf" value="true" />
+  <arg name="server_ip" default="192.168.1.199"/>
+  <arg name="client_ip" default="192.168.1.8"/>
+  <arg name="frame_id" default="mocap_world"/>
+  <arg name="topic_prefix" default="/mocap"/>
+  <arg name="publish_tf" default="true"/>
+  <arg name="child_frame_prefix" default="rigid_body_"/>
+
+  <node pkg="ig_handle" type="natnet_pose_bridge.py" name="natnet_pose_bridge" output="log">
+    <param name="server_ip" value="$(arg server_ip)"/>
+    <param name="client_ip" value="$(arg client_ip)"/>
+    <param name="frame_id" value="$(arg frame_id)"/>
+    <param name="topic_prefix" value="$(arg topic_prefix)"/>
+    <param name="publish_tf" value="$(arg publish_tf)"/>
+    <param name="child_frame_prefix" value="$(arg child_frame_prefix)"/>
   </node>
 </launch>

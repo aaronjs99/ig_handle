@@ -22,12 +22,18 @@
   <arg name="topic_thermal"    default="/sensors/thermal/image_raw"/>
   <arg name="topic_pps_time"   default="/sensors/pps/time"/>
   <arg name="topic_camera_time" default="/sensors/camera/time"/>
+  <arg name="topic_imu_time" default="/sensors/imu/time"/>
   <arg name="camera_f1_info_url" default="package://slam_grande/config/flir_left.yaml"/>
   <arg name="camera_f2_info_url" default="package://slam_grande/config/flir_right.yaml"/>
+  <arg name="teensy_port" default="/dev/serial/by-id/usb-Teensyduino_USB_Serial_13709860-if00"/>
+  <arg name="teensy_baud" default="115200"/>
 
   <include if="$(arg use_teensy)" file="$(find ig_handle)/launch/core/start_rosserial.launch">
+    <arg name="port" value="$(arg teensy_port)"/>
+    <arg name="baud" value="$(arg teensy_baud)"/>
     <arg name="pps_time_topic" value="$(arg topic_pps_time)"/>
     <arg name="camera_time_topic" value="$(arg topic_camera_time)"/>
+    <arg name="imu_time_topic" value="$(arg topic_imu_time)"/>
   </include>
 
   <include file="$(find ig_handle)/launch/sensors/start_imu.launch">

@@ -30,6 +30,10 @@ same core idea: synchronized acquisition on a dedicated onboard computer.
   the same maintained sensor suite wiring as Heron and does not start Husky base
   drivers.
 - `use_cameras:=false` disables all configured platform cameras.
+- `use_teensy:=false` is the current default. The Teensy/rosserial timing path is
+  still kept for lab hardware, but normal boat bringup does not start it.
+- Motion capture is salvageable as an explicit localization source through the
+  NatNet bridge plus the top-level `slam_grande` mocap alignment path.
 - The stable udev aliases in `config/99-ig_handle_udev.rules` exist, but some
   launch defaults still use `/dev/serial/by-id/...` paths. If a device serial
   changes, check both the udev rule and the launch argument.
@@ -227,9 +231,22 @@ confuse the two:
 | `/sensors/lidar/hori/points` | `sensor_msgs/PointCloud2` |
 | `/sensors/lidar/hori/packets` | `velodyne_msgs/VelodyneScan` |
 
-The Teensy firmware publishes `/pps/time` and `/cam/time`; the rosserial bridge
-remaps those hardware-native names locally to `/sensors/pps/time` and
-`/sensors/camera/time` so the full stack does not need broad top-level remaps.
+The Teensy firmware publishes hardware-native timing names such as `/pps/time`,
+`/cam/time`, and `/imu/time`; the rosserial bridge remaps those names locally to
+`/sensors/pps/time`, `/sensors/camera/time`, and `/sensors/imu/time` so the full
+stack does not need broad top-level remaps. This bridge is opt-in.
+
+The NatNet bridge publishes raw rigid-body poses under `/mocap`, normally
+`/mocap/rigid_body_1/pose`. Integrated `slam_grande` runs can select mocap as the
+real canonical odometry source with:
+
+```bash
+roslaunch slam_grande bringup.launch mode:=real odom_source:=mocap
+```
+
+That starts the NatNet bridge, aligns the rigid-body pose with the existing odom
+frame, publishes `/state/mocap/odometry`, and lets the normal odometry sanity
+filter own `/state/odometry`. The default remains `odom_source:=dlio`.
 
 `collect_raw_data.launch` invokes `ig_handle/scripts/pipeline/record_bag.sh` and
 records robot-specific bag topics:

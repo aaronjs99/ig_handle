@@ -18,8 +18,11 @@
   <arg name="topic_sonar"      default="/sensors/sonar/scan"/>
   <arg name="topic_pps_time"   default="/sensors/pps/time"/>
   <arg name="topic_camera_time" default="/sensors/camera/time"/>
+  <arg name="topic_imu_time" default="/sensors/imu/time"/>
   <arg name="camera_f1_info_url" default="package://slam_grande/config/flir_left.yaml"/>
   <arg name="camera_f2_info_url" default="package://slam_grande/config/flir_right.yaml"/>
+  <arg name="teensy_port" default="/dev/serial/by-id/usb-Teensyduino_USB_Serial_13709860-if00"/>
+  <arg name="teensy_baud" default="115200"/>
 
   <include file="$(find ig_handle)/launch/robots/sensor_suite.launch">
     <arg name="use_cameras" value="$(arg use_cameras)"/>
@@ -38,7 +41,10 @@
     <arg name="topic_sonar" value="$(arg topic_sonar)"/>
     <arg name="topic_pps_time" value="$(arg topic_pps_time)"/>
     <arg name="topic_camera_time" value="$(arg topic_camera_time)"/>
+    <arg name="topic_imu_time" value="$(arg topic_imu_time)"/>
     <arg name="camera_f1_info_url" value="$(arg camera_f1_info_url)"/>
     <arg name="camera_f2_info_url" value="$(arg camera_f2_info_url)"/>
+    <arg name="teensy_port" value="$(arg teensy_port)"/>
+    <arg name="teensy_baud" value="$(arg teensy_baud)"/>
   </include>
 </launch>

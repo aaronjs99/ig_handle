@@ -51,13 +51,16 @@ def test_standalone_camera_defaults_match_f1_to_f4_layout():
         "ig_handle/launch/robots/sensor_suite.launch",
     ):
         text = (REPO_ROOT / relpath).read_text(encoding="utf-8")
-        assert "package://slam_grande/config/calibration/f1_forward_left.yaml" in text
-        assert "package://slam_grande/config/calibration/f2_forward_right.yaml" in text
-        assert '<arg name="camera_f3_info_url" default=""/>' in text
-        assert '<arg name="camera_f4_info_url" default=""/>' in text
-        assert "package://slam_grande/config/flir_left.yaml" not in text
-        assert "package://slam_grande/config/flir_right.yaml" not in text
-
+        assert "package://slam_grande/config/calibration/f1.yaml" in text
+        assert "package://slam_grande/config/calibration/f2.yaml" in text
+        assert (
+            '<arg name="camera_f3_info_url" default="package://slam_grande/config/calibration/f3.yaml"/>'
+            in text
+        )
+        assert (
+            '<arg name="camera_f4_info_url" default="package://slam_grande/config/calibration/f4.yaml"/>'
+            in text
+        )
     assert '<arg name="camera_name"   value="F3"/>' in suite
     assert '<arg name="frame_id"      value="F3_optical"/>' in suite
     assert '<arg name="camera_info_topic" value="$(arg topic_cam_f3_info)"/>' in suite

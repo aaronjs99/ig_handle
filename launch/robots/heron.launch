@@ -23,10 +23,10 @@
   <arg name="topic_pps_time"   default="/sensors/pps/time"/>
   <arg name="topic_camera_time" default="/sensors/camera/time"/>
   <arg name="topic_imu_time" default="/sensors/imu/time"/>
-  <arg name="camera_f1_info_url" default="package://slam_grande/config/calibration/f1_forward_left.yaml"/>
-  <arg name="camera_f2_info_url" default="package://slam_grande/config/calibration/f2_forward_right.yaml"/>
-  <arg name="camera_f3_info_url" default=""/>
-  <arg name="camera_f4_info_url" default=""/>
+  <arg name="camera_f1_info_url" default="package://slam_grande/config/calibration/f1.yaml"/>
+  <arg name="camera_f2_info_url" default="package://slam_grande/config/calibration/f2.yaml"/>
+  <arg name="camera_f3_info_url" default="package://slam_grande/config/calibration/f3.yaml"/>
+  <arg name="camera_f4_info_url" default="package://slam_grande/config/calibration/f4.yaml"/>
   <arg name="teensy_port" default="/dev/serial/by-id/usb-Teensyduino_USB_Serial_13709860-if00"/>
   <arg name="teensy_baud" default="115200"/>
 

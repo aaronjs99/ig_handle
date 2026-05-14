@@ -30,6 +30,10 @@ same core idea: synchronized acquisition on a dedicated onboard computer.
   the same maintained sensor suite wiring as Heron and does not start Husky base
   drivers.
 - `use_cameras:=false` disables all configured platform cameras.
+- `use_camera_f1`, `use_camera_f2`, `use_camera_f3`, and `use_camera_f4`
+  enable or disable individual Forge cameras under the global camera switch.
+  For a two-camera boat test, keep F1/F2 enabled and pass
+  `use_camera_f3:=false use_camera_f4:=false`.
 - `use_teensy:=false` is the current default. The Teensy/rosserial timing path is
   still kept for lab hardware, but normal boat bringup does not start it.
 - Motion capture is salvageable as an explicit localization source through the
@@ -282,6 +286,9 @@ Additional sensors:
   `/compressed` bag topic exists.
 
 To add or remove topics, edit `ig_handle/scripts/pipeline/record_bag.sh`.
+Keep both `/sensors/sonar/raw` and `/sensors/sonar/scan` in field bags: raw
+packets prove sonar reception, while the scan cloud is the basic geometry/map
+surface when the DT100 packet format can be decoded.
 
 ## Tests
 

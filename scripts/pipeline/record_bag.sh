@@ -21,4 +21,5 @@ rosbag record -O $bagDir/raw.bag \
   /sensors/lidar/hori/points \
   /sensors/lidar/vert/packets \
   /sensors/lidar/vert/points \
+  /sensors/sonar/raw \
   /sensors/sonar/scan

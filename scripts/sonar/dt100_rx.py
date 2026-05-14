@@ -8,8 +8,8 @@ This node binds to the proprietary sonar subnet, intercepts UDP datagrams
 broadcast by the sonar head (83P format), and publishes them as raw byte arrays
 to ROS.
 
-This raw stream is typically recorded for offline processing or parsed real-time
-by a downstream decoder (not included here) to produce PointCloud2.
+This raw stream is typically recorded for offline processing or parsed in
+real-time by dt100_profile_to_cloud.py to produce PointCloud2.
 """
 import socket, struct
 import rospy
@@ -21,7 +21,7 @@ def run():
     rospy.init_node("dt100_rx")
 
     port = rospy.get_param("~port", 4040)
-    topic = rospy.get_param("~topic", "/sonar/scan")
+    topic = rospy.get_param("~topic", "/sensors/sonar/raw")
     bind_ip = rospy.get_param("~bind_ip", "0.0.0.0")
 
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)

@@ -67,6 +67,14 @@ def test_standalone_camera_defaults_match_f1_to_f4_layout():
     assert '<arg name="camera_name"   value="F4"/>' in suite
     assert '<arg name="frame_id"      value="F4_optical"/>' in suite
     assert '<arg name="camera_info_topic" value="$(arg topic_cam_f4_info)"/>' in suite
+    for camera_arg in (
+        "use_camera_f1",
+        "use_camera_f2",
+        "use_camera_f3",
+        "use_camera_f4",
+    ):
+        assert f'<arg name="{camera_arg}" default="true"/>' in suite
+        assert f"arg('{camera_arg}')" in suite
 
 
 def test_vertical_lidar_packets_use_canonical_vert_namespace():
@@ -133,6 +141,9 @@ def test_dt100_raw_driver_is_kept_separate_from_pointcloud_adapter():
     assert '<param name="max_range_m" value="$(arg max_range_m)"/>' in start_sonar
     assert '<arg name="raw_topic" value="$(arg topic_sonar_raw)"/>' in suite
     assert '<arg name="cloud_topic" value="$(arg topic_sonar)"/>' in suite
+    assert '"/sensors/sonar/raw"' in (
+        REPO_ROOT / "ig_handle/scripts/sonar/dt100_rx.py"
+    ).read_text(encoding="utf-8")
     assert "scripts/sonar/dt100_profile_to_cloud.py" in cmake
     assert "<exec_depend>sensor_msgs</exec_depend>" in package_xml
 

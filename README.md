@@ -34,6 +34,9 @@ same core idea: synchronized acquisition on a dedicated onboard computer.
   enable or disable individual Forge cameras under the global camera switch.
   For a two-camera boat test, keep F1/F2 enabled and pass
   `use_camera_f3:=false use_camera_f4:=false`.
+- Physical layout metadata treats F1/F3 as left-side mounts and F2/F4 as
+  center-ish mounts. Serial numbers or IPs identified as center cameras should
+  be assigned to F2/F4 unless the physical install changes.
 - `use_teensy:=false` is the current default. The Teensy/rosserial timing path is
   still kept for lab hardware, but normal boat bringup does not start it.
 - Motion capture is salvageable as an explicit localization source through the

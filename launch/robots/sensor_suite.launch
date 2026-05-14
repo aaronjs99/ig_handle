@@ -70,7 +70,8 @@
   </include>
 
   <!-- F1/F2 are forward-facing inspection cameras; F3/F4 are upward-facing
-       context cameras. Empty info URLs leave uncalibrated cameras online. -->
+       context cameras. F1/F3 are left-side mounts; F2/F4 are center-ish
+       mounts. Empty info URLs leave uncalibrated cameras online. -->
   <group if="$(eval str(arg('use_cameras')).lower() == 'true' and str(arg('use_camera_f1')).lower() == 'true')">
     <include file="$(find ig_handle)/launch/sensors/start_cam.launch">
       <arg name="camera_name"     value="F1"/>

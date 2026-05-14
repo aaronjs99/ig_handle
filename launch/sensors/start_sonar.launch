@@ -9,6 +9,8 @@
   <arg name="frame_id"       default="sonar_link"/>
   <arg name="bind_ip"        default="0.0.0.0"/>
   <arg name="udp_dest_ip"    default="192.168.0.3"/>
+  <arg name="min_range_m"    default="0.5"/>
+  <arg name="max_range_m"    default="100.0"/>
 
   <node pkg="ig_handle" type="run_deltat.sh" name="deltat_tx" output="log"
         args="$(arg udp_dest_ip) $(arg udp_port)" />
@@ -33,5 +35,7 @@
     <param name="raw_topic" value="$(arg raw_topic)"/>
     <param name="cloud_topic" value="$(arg cloud_topic)"/>
     <param name="frame_id" value="$(arg frame_id)"/>
+    <param name="min_range_m" value="$(arg min_range_m)"/>
+    <param name="max_range_m" value="$(arg max_range_m)"/>
   </node>
 </launch>

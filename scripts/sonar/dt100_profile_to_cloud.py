@@ -30,12 +30,14 @@ class DecodeResult:
     reason: str = ""
 
 
-def _plausible_point(point: Sequence[float], max_range_m: float) -> bool:
+def _plausible_point(
+    point: Sequence[float], min_range_m: float, max_range_m: float
+) -> bool:
     if not all(math.isfinite(float(value)) for value in point):
         return False
     x, y, z = (float(point[0]), float(point[1]), float(point[2]))
     radius = math.sqrt(x * x + y * y + z * z)
-    return 1e-6 <= radius <= max_range_m
+    return min_range_m <= radius <= max_range_m
 
 
 def _decode_xyz_records(
@@ -43,6 +45,7 @@ def _decode_xyz_records(
     *,
     offset: int,
     endian: str,
+    min_range_m: float,
     max_range_m: float,
 ) -> List[Point]:
     points: List[Point] = []
@@ -61,7 +64,7 @@ def _decode_xyz_records(
         except struct.error:
             break
         point = (float(x), float(y), float(z))
-        if _plausible_point(point, max_range_m):
+        if _plausible_point(point, min_range_m, max_range_m):
             points.append(point)
     return points
 
@@ -70,7 +73,8 @@ def decode_dt100_profile_packet(
     payload: Iterable[int],
     *,
     header_bytes: int = 256,
-    max_range_m: float = 120.0,
+    min_range_m: float = 0.5,
+    max_range_m: float = 100.0,
     min_points: int = 3,
 ) -> DecodeResult:
     """Decode supported Imagenex profile-point packets.
@@ -78,6 +82,8 @@ def decode_dt100_profile_packet(
     The converter only publishes geometry when the payload looks like a profile
     point stream containing XYZ records. Raw beam/intensity packets are kept as
     raw data and rejected here instead of being converted into invented points.
+    The default range gate matches the DT100 physical window: 0.5 m minimum
+    detectable range and 100 m maximum slant range.
     """
 
     data = bytes(int(value) & 0xFF for value in payload)
@@ -97,6 +103,7 @@ def decode_dt100_profile_packet(
                 data,
                 offset=offset,
                 endian=endian,
+                min_range_m=min_range_m,
                 max_range_m=max_range_m,
             )
             candidates.append((offset, endian, points))
@@ -116,7 +123,8 @@ class DT100ProfileToCloud:
         self.cloud_topic = rospy.get_param("~cloud_topic", "/sensors/sonar/scan")
         self.frame_id = rospy.get_param("~frame_id", "sonar_link")
         self.header_bytes = int(rospy.get_param("~header_bytes", 256))
-        self.max_range_m = float(rospy.get_param("~max_range_m", 120.0))
+        self.min_range_m = float(rospy.get_param("~min_range_m", 0.5))
+        self.max_range_m = float(rospy.get_param("~max_range_m", 100.0))
         self.min_points = int(rospy.get_param("~min_points", 3))
         self.publish_empty_on_decode_failure = bool(
             rospy.get_param("~publish_empty_on_decode_failure", False)
@@ -137,6 +145,7 @@ class DT100ProfileToCloud:
         result = decode_dt100_profile_packet(
             msg.data,
             header_bytes=self.header_bytes,
+            min_range_m=self.min_range_m,
             max_range_m=self.max_range_m,
             min_points=self.min_points,
         )

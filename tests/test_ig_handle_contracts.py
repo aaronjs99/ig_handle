@@ -58,8 +58,14 @@ def test_dt100_raw_driver_is_kept_separate_from_pointcloud_adapter():
 
     assert 'name="raw_topic"      default="/sensors/sonar/raw"' in start_sonar
     assert 'name="cloud_topic"    default="/sensors/sonar/scan"' in start_sonar
+    assert 'name="min_range_m"    default="0.5"' in start_sonar
+    assert 'name="max_range_m"    default="100.0"' in start_sonar
     assert 'type="dt100_rx.py" name="dt100_raw_driver"' in start_sonar
-    assert 'type="dt100_profile_to_cloud.py" name="dt100_profile_to_cloud"' in start_sonar
+    assert (
+        'type="dt100_profile_to_cloud.py" name="dt100_profile_to_cloud"' in start_sonar
+    )
+    assert '<param name="min_range_m" value="$(arg min_range_m)"/>' in start_sonar
+    assert '<param name="max_range_m" value="$(arg max_range_m)"/>' in start_sonar
     assert '<arg name="raw_topic" value="$(arg topic_sonar_raw)"/>' in suite
     assert '<arg name="cloud_topic" value="$(arg topic_sonar)"/>' in suite
     assert "scripts/sonar/dt100_profile_to_cloud.py" in cmake
@@ -91,6 +97,26 @@ def test_dt100_profile_converter_decodes_xyz_profile_records():
         result.points, [(1.0, 0.0, 0.0), (2.0, 0.5, -0.1), (3.0, -0.2, 0.1)]
     ):
         assert actual == pytest.approx(expected)
+
+
+def test_dt100_profile_converter_applies_physical_range_gate():
+    converter = _load_dt100_converter_module()
+    payload = bytearray(b"83P" + bytes(253))
+    for point in (
+        (0.2, 0.0, 0.0),
+        (0.5, 0.0, 0.0),
+        (1.0, 0.0, 0.0),
+        (99.0, 0.0, 0.0),
+        (101.0, 0.0, 0.0),
+    ):
+        payload.extend(struct.pack("<fffH", *point, 42))
+
+    result = converter.decode_dt100_profile_packet(payload)
+
+    assert result.reason == ""
+    assert result.points == pytest.approx(
+        [(0.5, 0.0, 0.0), (1.0, 0.0, 0.0), (99.0, 0.0, 0.0)]
+    )
 
 
 def test_dt100_profile_converter_rejects_raw_beam_packets_without_fake_points():

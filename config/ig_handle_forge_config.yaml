@@ -1,7 +1,9 @@
-# Flir Camera Config
+# Forge IP67 1GigE camera config.
 #
-# See flir_camera_driver/spinnaker_camera_driver/cfg/Spinnaker.cfg v0.2.5
-# for parameter descriptions and default values
+# See spinnaker_camera_driver/cfg/Spinnaker.cfg for parameter descriptions and
+# default values. The four installed boat cameras are Forge FG-PGE-50S5C-C-IP
+# units: F1/F2 face forward, F3/F4 face upward, F1/F3 are left-side mounts, and
+# F2/F4 are center-ish mounts.
 
 # Trigger parameters
 #
@@ -18,11 +20,12 @@ line_selector: 'Line1'
 line_mode: 'Output'
 
 # Image parameters
+#
 # Keep the integrated boat profile below full native throughput. The Forge
-# cameras are 5MP GigE devices, and two full-resolution streams can overload
-# the link or driver during multi-sensor bringup. The centered 1280x1024 ROI
-# matches the current ROS calibration files and leaves full-native capture as
-# an explicit calibration/network exercise.
+# cameras are 5MP GigE devices, and four full-resolution streams can overload
+# the link or driver during multi-sensor bringup. The centered 1280x1024 ROI is
+# an uncalibrated conservative runtime profile until real camera-info files are
+# captured.
 acquisition_frame_rate_enable: true
 acquisition_frame_rate: 10.0
 exposure_auto: Continuous

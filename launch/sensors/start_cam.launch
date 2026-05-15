@@ -3,7 +3,7 @@
   <arg name="frame_id"                  default="$(arg camera_name)" />
   <arg name="camera_serial"             default="25110056" />
   <arg name="device_type"               default="GigE" />
-  <arg name="config_file"               default="$(find ig_handle)/config/ig_handle_flir_config.yaml" />
+  <arg name="config_file"               default="$(find ig_handle)/config/ig_handle_forge_config.yaml" />
   <arg name="camera_info_url"           default="" />
   <arg name="topic"                     default="image_raw"/>
   <arg name="camera_info_topic"         default="camera_info"/>

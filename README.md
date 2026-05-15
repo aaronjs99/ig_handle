@@ -40,8 +40,8 @@ same core idea: synchronized acquisition on a dedicated onboard computer.
   verified; otherwise the driver can connect but publish no image buffers.
 - The integrated bringup camera profile is intentionally conservative: 10 Hz,
   continuous exposure/gain with a 50 ms exposure ceiling, `BayerRG8`, ISP
-  disabled, and a centered 1280x1024 ROI matching the current calibration
-  files. Full native 2448x2048 capture should be treated as a separate
+  disabled, and a centered 1280x1024 ROI. No current Forge camera calibration
+  files are tracked yet; full native 2448x2048 capture should be paired with a
   calibration and GigE throughput check.
 - Physical layout metadata treats F1/F3 as left-side mounts and F2/F4 as
   center-ish mounts. Serial numbers or IPs identified as center cameras should

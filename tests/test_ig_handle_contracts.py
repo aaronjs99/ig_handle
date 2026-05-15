@@ -51,16 +51,13 @@ def test_standalone_camera_defaults_match_f1_to_f4_layout():
         "ig_handle/launch/robots/sensor_suite.launch",
     ):
         text = (REPO_ROOT / relpath).read_text(encoding="utf-8")
-        assert "package://slam_grande/config/calibration/f1.yaml" in text
-        assert "package://slam_grande/config/calibration/f2.yaml" in text
-        assert (
-            '<arg name="camera_f3_info_url" default="package://slam_grande/config/calibration/f3.yaml"/>'
-            in text
-        )
-        assert (
-            '<arg name="camera_f4_info_url" default="package://slam_grande/config/calibration/f4.yaml"/>'
-            in text
-        )
+        for camera_arg in (
+            "camera_f1_info_url",
+            "camera_f2_info_url",
+            "camera_f3_info_url",
+            "camera_f4_info_url",
+        ):
+            assert f'<arg name="{camera_arg}" default=""/>' in text
     assert '<arg name="camera_name"   value="F3"/>' in suite
     assert '<arg name="frame_id"      value="F3_optical"/>' in suite
     assert '<arg name="camera_info_topic" value="$(arg topic_cam_f3_info)"/>' in suite
@@ -114,6 +111,7 @@ def test_mocap_and_teensy_paths_are_explicit_and_modular():
     assert '<arg name="use_teensy" default="false"/>' in heron
     assert "scripts/mocap/natnet_pose_bridge.py" in cmake
     assert "scripts/teensy_rosserial_launcher.py" in cmake
+    assert "DIRECTORY config" in cmake
     assert "<exec_depend>geometry_msgs</exec_depend>" in package_xml
     assert "<exec_depend>tf2_ros</exec_depend>" in package_xml
     assert "<exec_depend>rosserial_python</exec_depend>" in package_xml
@@ -154,12 +152,14 @@ def test_dt100_raw_driver_is_kept_separate_from_pointcloud_adapter():
 
 
 def test_camera_default_config_uses_continuous_acquisition_without_line0_trigger():
-    config = (REPO_ROOT / "ig_handle/config/ig_handle_flir_config.yaml").read_text(
+    config = (REPO_ROOT / "ig_handle/config/ig_handle_forge_config.yaml").read_text(
         encoding="utf-8"
     )
 
     assert "enable_trigger: 'Off'" in config
     assert "starve waiting for NEW_BUFFER_DATA" in config
+    assert "Forge FG-PGE-50S5C-C-IP" in config
+    assert "uncalibrated conservative runtime profile" in config
     assert "acquisition_frame_rate_enable: true" in config
     assert "acquisition_frame_rate: 10.0" in config
     assert "exposure_auto: Continuous" in config

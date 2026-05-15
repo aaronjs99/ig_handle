@@ -139,6 +139,11 @@ def test_dt100_raw_driver_is_kept_separate_from_pointcloud_adapter():
     )
     assert '<param name="min_range_m" value="$(arg min_range_m)"/>' in start_sonar
     assert '<param name="max_range_m" value="$(arg max_range_m)"/>' in start_sonar
+    assert 'name="publish_empty_on_decode_failure" default="true"' in start_sonar
+    assert (
+        '<param name="publish_empty_on_decode_failure" value="$(arg publish_empty_on_decode_failure)"/>'
+        in start_sonar
+    )
     assert '<arg name="raw_topic" value="$(arg topic_sonar_raw)"/>' in suite
     assert '<arg name="cloud_topic" value="$(arg topic_sonar)"/>' in suite
     assert '"/sensors/sonar/raw"' in (
@@ -146,6 +151,26 @@ def test_dt100_raw_driver_is_kept_separate_from_pointcloud_adapter():
     ).read_text(encoding="utf-8")
     assert "scripts/sonar/dt100_profile_to_cloud.py" in cmake
     assert "<exec_depend>sensor_msgs</exec_depend>" in package_xml
+
+
+def test_camera_default_config_uses_continuous_acquisition_without_line0_trigger():
+    config = (REPO_ROOT / "ig_handle/config/ig_handle_flir_config.yaml").read_text(
+        encoding="utf-8"
+    )
+
+    assert "enable_trigger: 'Off'" in config
+    assert "starve waiting for NEW_BUFFER_DATA" in config
+    assert "acquisition_frame_rate_enable: true" in config
+    assert "acquisition_frame_rate: 10.0" in config
+    assert "exposure_auto: Continuous" in config
+    assert "auto_exposure_time_upper_limit: 50000.0" in config
+    assert "auto_gain: Continuous" in config
+    assert "image_format_roi_width: 1280" in config
+    assert "image_format_roi_height: 1024" in config
+    assert "image_format_x_offset: 584" in config
+    assert "image_format_y_offset: 512" in config
+    assert "image_format_color_coding: BayerRG8" in config
+    assert "isp_enable: false" in config
 
 
 def _load_dt100_converter_module():

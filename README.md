@@ -32,8 +32,17 @@ same core idea: synchronized acquisition on a dedicated onboard computer.
 - `use_cameras:=false` disables all configured platform cameras.
 - `use_camera_f1`, `use_camera_f2`, `use_camera_f3`, and `use_camera_f4`
   enable or disable individual Forge cameras under the global camera switch.
-  For a two-camera boat test, keep F1/F2 enabled and pass
-  `use_camera_f3:=false use_camera_f4:=false`.
+  For a partial boat test, enable only the serials that are physically online.
+  For example, the current F1/F4-only check uses
+  `use_camera_f2:=false use_camera_f3:=false`.
+- The default Forge ROS config uses continuous/free-run acquisition. Do not
+  enable Line0 hardware trigger mode unless the trigger source is connected and
+  verified; otherwise the driver can connect but publish no image buffers.
+- The integrated bringup camera profile is intentionally conservative: 10 Hz,
+  continuous exposure/gain with a 50 ms exposure ceiling, `BayerRG8`, ISP
+  disabled, and a centered 1280x1024 ROI matching the current calibration
+  files. Full native 2448x2048 capture should be treated as a separate
+  calibration and GigE throughput check.
 - Physical layout metadata treats F1/F3 as left-side mounts and F2/F4 as
   center-ish mounts. Serial numbers or IPs identified as center cameras should
   be assigned to F2/F4 unless the physical install changes.
@@ -284,6 +293,9 @@ Additional sensors:
   typed adapter and publishes supported profile-point packets on
   `/sensors/sonar/scan` as `sensor_msgs/PointCloud2`. Raw beam packets remain
   raw instead of being converted into invented geometry.
+  When raw packets are present but cannot be decoded as profile-point XYZ
+  records, the launch publishes an empty `/sensors/sonar/scan` cloud so
+  operators can distinguish live undecoded sonar traffic from a missing topic.
 - **ig-husky** thermal live topic is `/sensors/thermal/image_raw`; compressed
   capture should be verified from the active image transport before assuming a
   `/compressed` bag topic exists.

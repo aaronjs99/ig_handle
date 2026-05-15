@@ -229,3 +229,22 @@ def test_dt100_profile_converter_rejects_raw_beam_packets_without_fake_points():
     assert result.points == []
     assert result.packet_kind == "83B"
     assert result.reason == "beam_or_raw_packet_not_xyz_profile"
+
+
+def test_dt100_profile_converter_treats_zero_profile_payload_as_empty_return():
+    converter = _load_dt100_converter_module()
+    payload = b"83P" + bytes(253) + bytes(960)
+
+    result = converter.decode_dt100_profile_packet(payload)
+
+    assert result.points == []
+    assert result.packet_kind == "83P"
+    assert result.reason == "profile_packet_contains_no_returns"
+
+
+def test_dt100_profile_converter_logs_empty_returns_without_warning():
+    converter = _load_dt100_converter_module()
+    source = Path(converter.__file__).read_text(encoding="utf-8")
+
+    assert "dt100_profile_to_cloud_empty" in source
+    assert "profile_packet_contains_no_returns" in source

@@ -96,6 +96,10 @@ def decode_dt100_profile_packet(
             return DecodeResult([], packet_kind, "beam_or_raw_packet_not_xyz_profile")
         return DecodeResult([], packet_kind, "unsupported_packet_kind")
 
+    profile_payload = data[header_bytes:]
+    if profile_payload and not any(profile_payload):
+        return DecodeResult([], packet_kind, "profile_packet_contains_no_returns")
+
     candidates: List[Tuple[int, str, List[Point]]] = []
     for offset in (header_bytes, 0):
         for endian in ("<", ">"):
@@ -159,12 +163,20 @@ class DT100ProfileToCloud:
             )
             return
 
-        rospy.logwarn_throttle(
-            5.0,
-            "dt100_profile_to_cloud_decode_failed packet_kind=%s reason=%s",
-            result.packet_kind or "(unknown)",
-            result.reason,
-        )
+        if result.reason == "profile_packet_contains_no_returns":
+            rospy.loginfo_throttle(
+                5.0,
+                "dt100_profile_to_cloud_empty packet_kind=%s reason=%s",
+                result.packet_kind or "(unknown)",
+                result.reason,
+            )
+        else:
+            rospy.logwarn_throttle(
+                5.0,
+                "dt100_profile_to_cloud_decode_failed packet_kind=%s reason=%s",
+                result.packet_kind or "(unknown)",
+                result.reason,
+            )
         if self.publish_empty_on_decode_failure:
             self._publish([])
 

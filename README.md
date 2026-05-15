@@ -296,6 +296,8 @@ Additional sensors:
   When raw packets are present but cannot be decoded as profile-point XYZ
   records, the launch publishes an empty `/sensors/sonar/scan` cloud so
   operators can distinguish live undecoded sonar traffic from a missing topic.
+  Empty `83P` profile payloads are logged as live packets with no returns, not
+  as decode warnings.
 - **ig-husky** thermal live topic is `/sensors/thermal/image_raw`; compressed
   capture should be verified from the active image transport before assuming a
   `/compressed` bag topic exists.

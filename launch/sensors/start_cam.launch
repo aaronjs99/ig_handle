@@ -7,6 +7,7 @@
   <arg name="camera_info_url"           default="" />
   <arg name="topic"                     default="image_raw"/>
   <arg name="camera_info_topic"         default="camera_info"/>
+  <arg name="publish_debayered_color"   default="false"/>
 
   <group ns="$(arg camera_name)">
     <!-- Nodelet manager -->
@@ -29,8 +30,11 @@
       <remap from="camera_info" to="$(arg camera_info_topic)"/>
     </node>
 
-    <!-- Debayering nodelet -->
-    <node pkg="nodelet" type="nodelet" name="image_proc_debayer"
+    <!-- Optional color alias for viewers that cannot decode Bayer input. Keep it
+         off by default so field launches publish only the canonical raw image
+         and CameraInfo streams. -->
+    <node if="$(arg publish_debayered_color)"
+          pkg="nodelet" type="nodelet" name="image_proc_debayer"
           args="load image_proc/debayer camera_nodelet_manager">
       <remap from="image_raw" to="$(arg topic)"/>
       <remap from="image_color" to="$(arg topic)/color"/>

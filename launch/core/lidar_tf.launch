@@ -1,5 +1,12 @@
 <launch>
-  <!-- Static TF between lidar_h_link and lidar_v_link -->
-  <node pkg="tf2_ros" type="static_transform_publisher" name="lidar_h_to_v_tf" args="-0.165 0 -0.230 3.1416 -1.5708 3.1416 lidar_h_link lidar_v_link"/>
-</launch>
+  <arg name="config_file" default="$(find ig_handle)/config/lidar_pair_extrinsics.yaml"/>
 
+  <!-- Static TF between lidar_h_link and lidar_v_link. The values live in YAML
+       so calibration tools can update data without rewriting launch XML. -->
+  <node pkg="ig_handle"
+        type="lidar_pair_tf_broadcaster.py"
+        name="lidar_pair_tf_broadcaster"
+        output="screen">
+    <param name="config_file" value="$(arg config_file)"/>
+  </node>
+</launch>

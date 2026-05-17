@@ -6,8 +6,13 @@ import sys
 from pathlib import Path
 
 import pytest
+import yaml
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
+
+
+def yaml_safe_load(path: Path):
+    return yaml.safe_load(path.read_text(encoding="utf-8"))
 
 
 def test_ig_handle_repo_keeps_real_platform_launch_and_data_collection_contracts():
@@ -34,14 +39,45 @@ def test_real_sensor_launch_keeps_dlio_safe_tf_and_camera_info_contracts():
     assert 'name="frame_id" value="imu_link"' in imu
     assert 'name="camera_info_topic"' in camera
     assert '<remap from="camera_info" to="$(arg camera_info_topic)"/>' in camera
+    assert 'name="publish_debayered_color"   default="false"' in camera
+    assert 'if="$(arg publish_debayered_color)"' in camera
     assert 'value="$(arg topic_cam_f1_info)"' in suite
     assert 'value="$(arg topic_cam_f2_info)"' in suite
     assert 'value="$(arg topic_cam_f3_info)"' in suite
     assert 'value="$(arg topic_cam_f4_info)"' in suite
 
 
+def test_forge_runtime_profile_matches_current_field_camera_contract():
+    config = yaml_safe_load(REPO_ROOT / "ig_handle/config/ig_handle_forge_config.yaml")
+
+    assert config["enable_trigger"] == "Off"
+    assert config["trigger_selector"] == "FrameStart"
+    assert config["trigger_source"] == "Line0"
+    assert config["acquisition_frame_rate_enable"] is True
+    assert config["acquisition_frame_rate"] == pytest.approx(10.0)
+    assert config["exposure_auto"] == "Continuous"
+    assert config["auto_exposure_lighting_mode"] == "Normal"
+    assert config["auto_gain"] == "Continuous"
+    assert config["auto_white_balance"] == "Continuous"
+    assert config["image_format_color_coding"] == "BayerRG8"
+    assert config["isp_enable"] is False
+    assert config["image_format_x_reverse"] is False
+    assert config["image_format_y_reverse"] is False
+
+    native_width = 2448
+    native_height = 2048
+    roi_width = config["image_format_roi_width"]
+    roi_height = config["image_format_roi_height"]
+    assert [roi_width, roi_height] == [1280, 1024]
+    assert config["image_format_x_offset"] == (native_width - roi_width) // 2
+    assert config["image_format_y_offset"] == (native_height - roi_height) // 2
+
+
 def test_standalone_camera_defaults_match_f1_to_f4_layout():
     suite = (REPO_ROOT / "ig_handle/launch/robots/sensor_suite.launch").read_text(
+        encoding="utf-8"
+    )
+    heron = (REPO_ROOT / "ig_handle/launch/robots/heron.launch").read_text(
         encoding="utf-8"
     )
     for relpath in (
@@ -72,6 +108,10 @@ def test_standalone_camera_defaults_match_f1_to_f4_layout():
     ):
         assert f'<arg name="{camera_arg}" default="true"/>' in suite
         assert f"arg('{camera_arg}')" in suite
+    assert '<arg name="use_camera_f1" default="true"/>' in heron
+    assert '<arg name="use_camera_f2" default="false"/>' in heron
+    assert '<arg name="use_camera_f3" default="false"/>' in heron
+    assert '<arg name="use_camera_f4" default="true"/>' in heron
 
 
 def test_vertical_lidar_packets_use_canonical_vert_namespace():
@@ -115,6 +155,33 @@ def test_mocap_and_teensy_paths_are_explicit_and_modular():
     assert "<exec_depend>geometry_msgs</exec_depend>" in package_xml
     assert "<exec_depend>tf2_ros</exec_depend>" in package_xml
     assert "<exec_depend>rosserial_python</exec_depend>" in package_xml
+
+
+def test_lidar_pair_extrinsics_are_data_driven_and_quality_gated():
+    lidar_tf = (REPO_ROOT / "ig_handle/launch/core/lidar_tf.launch").read_text(
+        encoding="utf-8"
+    )
+    cmake = (REPO_ROOT / "ig_handle/CMakeLists.txt").read_text(encoding="utf-8")
+    config = yaml_safe_load(REPO_ROOT / "ig_handle/config/lidar_pair_extrinsics.yaml")
+    package_xml = (REPO_ROOT / "ig_handle/package.xml").read_text(encoding="utf-8")
+
+    active = config["lidar_pair"]["active_transform"]
+    policy = config["lidar_pair"]["quality_policy"]
+
+    assert 'type="lidar_pair_tf_broadcaster.py"' in lidar_tf
+    assert "-0.165 0 -0.230" not in lidar_tf
+    assert "lidar_pair_extrinsics.yaml" in lidar_tf
+    assert "scripts/calibration/apply_lidar_pair_calibration.py" in cmake
+    assert "scripts/calibration/lidar_pair_tf_broadcaster.py" in cmake
+    assert "<exec_depend>rospkg</exec_depend>" in package_xml
+    assert active["parent"] == "lidar_h_link"
+    assert active["child"] == "lidar_v_link"
+    assert active["expected_mount_relation"] == "approximately_90_deg_pitch"
+    assert active["rotation_rpy_rad"][1] == pytest.approx(1.5708, abs=1e-3)
+    assert policy["seed_relation"] == "approximately_90_deg_pitch"
+    assert policy["max_translation_correction_norm_m"] == pytest.approx(0.25)
+    assert policy["max_rotation_correction_angle_deg"] == pytest.approx(10.0)
+    assert policy["max_icp_rmse_m"] == pytest.approx(0.25)
 
 
 def test_dt100_raw_driver_is_kept_separate_from_pointcloud_adapter():

@@ -1,9 +1,10 @@
 # Forge IP67 1GigE camera config.
 #
 # See spinnaker_camera_driver/cfg/Spinnaker.cfg for parameter descriptions and
-# default values. The four installed boat cameras are Forge FG-PGE-50S5C-C-IP
-# units: F1/F2 face forward, F3/F4 face upward, F1/F3 are left-side mounts, and
-# F2/F4 are center-ish mounts.
+# default values. The named boat cameras are Forge FG-PGE-50S5C-C-IP units:
+# F1/F2 face forward, F3/F4 face upward, F1/F3 are left-side mounts, and
+# F2/F4 are center-ish mounts. The current field rig enables F1/F4 and keeps
+# F2/F3 disabled until those two cameras are physically connected again.
 
 # Trigger parameters
 #
@@ -30,6 +31,7 @@ acquisition_frame_rate_enable: true
 acquisition_frame_rate: 10.0
 exposure_auto: Continuous
 auto_exposure_time_upper_limit: 50000.0
+auto_exposure_lighting_mode: Normal
 auto_gain: Continuous
 image_format_roi_width: 1280
 image_format_roi_height: 1024
@@ -39,6 +41,8 @@ image_format_x_binning: 1
 image_format_y_binning: 1
 image_format_x_decimation: 1
 image_format_y_decimation: 1
+image_format_x_reverse: false
+image_format_y_reverse: false
 image_format_color_coding: BayerRG8
 isp_enable: false
 auto_white_balance: Continuous

@@ -32,9 +32,8 @@ same core idea: synchronized acquisition on a dedicated onboard computer.
 - `use_cameras:=false` disables all configured platform cameras.
 - `use_camera_f1`, `use_camera_f2`, `use_camera_f3`, and `use_camera_f4`
   enable or disable individual Forge cameras under the global camera switch.
-  For a partial boat test, enable only the serials that are physically online.
-  For example, the current F1/F4-only check uses
-  `use_camera_f2:=false use_camera_f3:=false`.
+  The Heron adapter currently defaults to F1/F4 only because F2/F3 are
+  physically disconnected until a later hardware install.
 - The default Forge ROS config uses continuous/free-run acquisition. Do not
   enable Line0 hardware trigger mode unless the trigger source is connected and
   verified; otherwise the driver can connect but publish no image buffers.
@@ -46,6 +45,11 @@ same core idea: synchronized acquisition on a dedicated onboard computer.
 - Physical layout metadata treats F1/F3 as left-side mounts and F2/F4 as
   center-ish mounts. Serial numbers or IPs identified as center cameras should
   be assigned to F2/F4 unless the physical install changes.
+- The horizontal/vertical LiDAR extrinsic is data-driven from
+  `config/lidar_pair_extrinsics.yaml`. The expected seed relation is an
+  approximately 90 degree pitch between the two VLP-16 frames; calibration
+  reports must pass the quality gate before the updater writes that active
+  transform.
 - `use_teensy:=false` is the current default. The Teensy/rosserial timing path is
   still kept for lab hardware, but normal boat bringup does not start it.
 - Motion capture is salvageable as an explicit localization source through the

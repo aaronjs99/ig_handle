@@ -17,6 +17,8 @@ install(
     scripts/sonar/dt100_rx.py
     scripts/sonar/dt100_profile_to_cloud.py
     scripts/mocap/natnet_pose_bridge.py
+    scripts/calibration/apply_lidar_pair_calibration.py
+    scripts/calibration/lidar_pair_tf_broadcaster.py
     scripts/pipeline/process_raw_bag.py
     scripts/pipeline/plot_mocap_odom.py
     scripts/pipeline/record_bag.sh

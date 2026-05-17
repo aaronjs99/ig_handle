@@ -5,6 +5,18 @@ description: >
   child frame lidar_v_link. Calibration tools may update this file only after
   their quality gate passes, unless the operator explicitly forces an update.
 lidar_pair:
+  initial_guess_transform:
+    parent: lidar_h_link
+    child: lidar_v_link
+    expected_mount_relation: approximately_90_deg_pitch
+    translation_xyz_m: [0.18, 0.035, -0.0873]
+    rotation_quat_xyzw: [0.0, 0.7071080798594737, 0.0, 0.7071054825112363]
+    rotation_rpy_rad: [3.141592653589793, 1.5707926536057681, 3.141592653589793]
+    matrix_row_major:
+      - [-3.673205103638111e-06, 0.0, 0.999999999993254, 0.18]
+      - [0.0, 1.0000000000000002, 0.0, 0.035]
+      - [-0.999999999993254, 0.0, -3.673205103638111e-06, -0.0873]
+      - [0.0, 0.0, 0.0, 1.0]
   active_transform:
     parent: lidar_h_link
     child: lidar_v_link

@@ -166,6 +166,7 @@ def test_lidar_pair_extrinsics_are_data_driven_and_quality_gated():
     package_xml = (REPO_ROOT / "ig_handle/package.xml").read_text(encoding="utf-8")
 
     active = config["lidar_pair"]["active_transform"]
+    initial = config["lidar_pair"]["initial_guess_transform"]
     policy = config["lidar_pair"]["quality_policy"]
 
     assert 'type="lidar_pair_tf_broadcaster.py"' in lidar_tf
@@ -178,6 +179,11 @@ def test_lidar_pair_extrinsics_are_data_driven_and_quality_gated():
     assert active["child"] == "lidar_v_link"
     assert active["expected_mount_relation"] == "approximately_90_deg_pitch"
     assert active["rotation_rpy_rad"][1] == pytest.approx(1.5708, abs=1e-3)
+    assert initial["parent"] == "lidar_h_link"
+    assert initial["child"] == "lidar_v_link"
+    assert initial["expected_mount_relation"] == "approximately_90_deg_pitch"
+    assert any(abs(value) > 0.0 for value in initial["translation_xyz_m"])
+    assert initial["rotation_rpy_rad"][1] == pytest.approx(1.5708, abs=1e-3)
     assert policy["seed_relation"] == "approximately_90_deg_pitch"
     assert policy["max_translation_correction_norm_m"] == pytest.approx(0.25)
     assert policy["max_rotation_correction_angle_deg"] == pytest.approx(10.0)

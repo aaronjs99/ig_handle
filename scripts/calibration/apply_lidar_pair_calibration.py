@@ -17,6 +17,12 @@ from scipy.spatial.transform import Rotation
 
 
 TRANSFORM_KEYS = ("initial_target_from_source", "refined_target_from_source")
+TRANSFORM_FIELDS = (
+    "translation_xyz_m",
+    "rotation_quat_xyzw",
+    "rotation_rpy_rad",
+    "matrix_row_major",
+)
 
 
 @dataclass(frozen=True)
@@ -48,12 +54,7 @@ class CalibrationReport:
         transform = self.data.get(key)
         if not isinstance(transform, dict):
             raise ValueError(f"report is missing {key}")
-        for required in (
-            "translation_xyz_m",
-            "rotation_quat_xyzw",
-            "rotation_rpy_rad",
-            "matrix_row_major",
-        ):
+        for required in TRANSFORM_FIELDS:
             if required not in transform:
                 raise ValueError(f"{key} is missing {required}")
         return transform
@@ -120,6 +121,12 @@ class LidarPairExtrinsicsStore:
 
         transform = report.transform(transform_key)
         previous_active = copy.deepcopy(pair.get("active_transform"))
+        if (
+            "initial_guess_transform" not in pair
+            and isinstance(previous_active, dict)
+            and all(field in previous_active for field in TRANSFORM_FIELDS)
+        ):
+            pair["initial_guess_transform"] = copy.deepcopy(previous_active)
         pair["active_transform"] = {
             "parent": str(report.data.get("target_frame", "lidar_h_link")),
             "child": str(report.data.get("source_frame", "lidar_v_link")),

@@ -333,11 +333,12 @@ Keep both `/sensors/sonar/raw` and `/sensors/sonar/scan` in field bags: raw
 packets prove sonar reception, while the scan cloud is the basic geometry/map
 surface when the DT100 packet format can be decoded.
 
-## Tests
+## Validation
 
-Package tests live under `tests/`. Current coverage is intentionally light and
-mostly checks launch/file contracts; it does not prove sensor timing,
-calibration, sonar decoding, or full raw-bag post-processing correctness.
+No pytest files are currently tracked in this package. Use static checks,
+script help/import checks, `catkin build`, and live topic-rate checks for local
+validation. Hardware timing, calibration, sonar decoding, and full raw-bag
+post-processing still require live or bag-backed operator validation.
 
 ---
 

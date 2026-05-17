@@ -221,7 +221,14 @@ roslaunch ig_handle collect_raw_data.launch
 ```
 
 Output:
-`~/bags/YYYY_MM_DD_HH_MM_SS/raw.bag`
+`~/bags/YYYY_MM_DD_HH_MM_SS_raw.bag`
+
+`collect_raw_data.launch` starts the sensor adapter from `ig_handle`, but the
+bag recorder itself is owned by `slam_grande`:
+
+```bash
+rosrun slam_grande record_bag.sh --profile raw ~/bags
+```
 
 ---
 
@@ -246,7 +253,7 @@ confuse the two:
 | Live runtime topic | Type |
 | --- | --- |
 | `/sensors/camera/f1/image_raw` | `sensor_msgs/Image` |
-| `/sensors/camera/f2/image_raw` | `sensor_msgs/Image` |
+| `/sensors/camera/f4/image_raw` | `sensor_msgs/Image` |
 | `/sensors/imu/data` | `sensor_msgs/Imu` |
 | `/sensors/lidar/hori/points` | `sensor_msgs/PointCloud2` |
 | `/sensors/lidar/hori/packets` | `velodyne_msgs/VelodyneScan` |
@@ -286,13 +293,17 @@ Record it like any other diagnostic topic:
 rosbag record /mocap/rigid_body_1/pose /mocap/heron/markers /mocap/potential_objects /mocap/datacollect_status
 ```
 
-`collect_raw_data.launch` invokes `ig_handle/scripts/pipeline/record_bag.sh` and
-records robot-specific bag topics:
+`collect_raw_data.launch` invokes `slam_grande/scripts/field/record_bag.sh` with
+the `raw` profile. The default raw profile matches the current Heron field rig:
+F1/F4 cameras, IMU, both LiDARs, DT100 sonar, base telemetry, TF, and optional
+mocap comparison topics. F2/F3 and thermal camera topics are available from the
+recorder with `--include-all-cameras`, but they are not part of the default
+capture because F2/F3 are intentionally disconnected on the current boat.
 
 | Topic                                     | Message type                   |
 |-------------------------------------------|--------------------------------|
 | `/sensors/camera/f1/image_raw/compressed` | `sensor_msgs/CompressedImage`  |
-| `/sensors/camera/f2/image_raw/compressed` | `sensor_msgs/CompressedImage`  |
+| `/sensors/camera/f4/image_raw/compressed` | `sensor_msgs/CompressedImage`  |
 | `/sensors/camera/time`                    | `sensor_msgs/TimeReference`    |
 | `/sensors/imu/data`                       | `sensor_msgs/Imu`              |
 | `/sensors/imu/time`                       | `sensor_msgs/TimeReference`    |
@@ -304,14 +315,13 @@ records robot-specific bag topics:
 | `/mocap/datacollect_status`               | `std_msgs/String`              |
 | `/sensors/pps/time`                       | `sensor_msgs/TimeReference`    |
 
-### Additional topics for ig-heron and ig-husky
+### Optional camera topics
 
 | Topic                                     | Message type                   |
 |-------------------------------------------|--------------------------------|
+| `/sensors/camera/f2/image_raw/compressed` | `sensor_msgs/CompressedImage`  |
 | `/sensors/camera/f3/image_raw/compressed` | `sensor_msgs/CompressedImage`  |
-| `/sensors/camera/f4/image_raw/compressed` | `sensor_msgs/CompressedImage`  |
-| `/sensors/lidar/vert/packets`             | `velodyne_msgs/VelodyneScan`   |
-| `/sensors/lidar/vert/points`              | `sensor_msgs/PointCloud2`      |
+| `/sensors/camera/thermal/image_raw/compressed` | `sensor_msgs/CompressedImage` |
 
 Additional sensors:
 - **ig-heron** keeps the DT100 receiver raw on `/sensors/sonar/raw` as
@@ -328,7 +338,7 @@ Additional sensors:
   capture should be verified from the active image transport before assuming a
   `/compressed` bag topic exists.
 
-To add or remove topics, edit `ig_handle/scripts/pipeline/record_bag.sh`.
+To add or remove bag topics, edit `slam_grande/scripts/field/record_bag.sh`.
 Keep both `/sensors/sonar/raw` and `/sensors/sonar/scan` in field bags: raw
 packets prove sonar reception, while the scan cloud is the basic geometry/map
 surface when the DT100 packet format can be decoded.

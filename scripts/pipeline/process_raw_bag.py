@@ -3,8 +3,9 @@
 --------------------------------------------------------------
 
 This script is the critical "backend" of the `ig-handle` data pipeline.
-Raw files recorded by `collect_raw_data.launch` contain sensor data with
-"arrival time" timestamps (software time) which are subject to USB/Ethernet
+Raw files recorded by `collect_raw_data.launch` or
+`slam_grande/scripts/field/record_bag.sh --profile raw` contain sensor data
+with "arrival time" timestamps (software time) which are subject to USB/Ethernet
 latency and jitter.
 
 This tool repairs the data integrity by:
@@ -343,7 +344,7 @@ class IgPostProcess:
 
 def main(args):
     parser = argparse.ArgumentParser(
-        description="This script is used to post-process a raw bag from ig_handle. This script restamps topics with their appropriate reference times and interpolates reference times for soft-synchronized sensors."
+        description="Post-process a raw IG Handle/slam_grande sensor bag. This script restamps topics with their corresponding reference times and interpolates reference times for soft-synchronized sensors."
     )
     parser.add_argument("--bag", type=str, required=True, help="input bag file")
     parser.add_argument(
@@ -351,8 +352,6 @@ def main(args):
         default=[
             "/sensors/imu/data",
             "/sensors/camera/f1/image_raw/compressed",
-            "/sensors/camera/f2/image_raw/compressed",
-            "/sensors/camera/f3/image_raw/compressed",
             "/sensors/camera/f4/image_raw/compressed",
         ],
         type=str,
@@ -363,8 +362,6 @@ def main(args):
         "--time_restamp_topics",
         default=[
             "/sensors/imu/time",
-            "/sensors/camera/time",
-            "/sensors/camera/time",
             "/sensors/camera/time",
             "/sensors/camera/time",
         ],
@@ -388,7 +385,7 @@ def main(args):
     )
     parser.add_argument(
         "--clip_restamp_topics",
-        default=[0.0, 0.0, 0.0, 0.0, 0.0],
+        default=[0.0, 0.0, 0.0],
         type=float,
         nargs="+",
         help="list of times (in seconds) for sensor data message topics to be clipped",

@@ -27,7 +27,6 @@ catkin_install_python(
 install(
   PROGRAMS
     scripts/sonar/run_deltat.sh
-    scripts/pipeline/record_bag.sh
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 

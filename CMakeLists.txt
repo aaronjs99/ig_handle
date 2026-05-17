@@ -11,9 +11,8 @@ find_package(catkin REQUIRED COMPONENTS
 
 catkin_package()
 
-install(
-  PROGRAMS 
-    scripts/sonar/run_deltat.sh
+catkin_install_python(
+  PROGRAMS
     scripts/sonar/dt100_rx.py
     scripts/sonar/dt100_profile_to_cloud.py
     scripts/mocap/natnet_pose_bridge.py
@@ -21,8 +20,14 @@ install(
     scripts/calibration/lidar_pair_tf_broadcaster.py
     scripts/pipeline/process_raw_bag.py
     scripts/pipeline/plot_mocap_odom.py
-    scripts/pipeline/record_bag.sh
     scripts/teensy_rosserial_launcher.py
+  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+)
+
+install(
+  PROGRAMS
+    scripts/sonar/run_deltat.sh
+    scripts/pipeline/record_bag.sh
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 

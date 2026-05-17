@@ -337,6 +337,11 @@ Additional sensors:
   typed adapter and publishes supported profile-point packets on
   `/sensors/sonar/scan` as `sensor_msgs/PointCloud2`. Raw beam packets remain
   raw instead of being converted into invented geometry.
+  The default launch path uses the bundled native `Linux_DeltaT` binary under
+  `scripts/sonar/deltat` only to talk to the sonar head and forward vendor UDP
+  packets; it is not a ROS decoder. The legacy Windows VM path can still be
+  selected with `use_vm:=true`, but it should not run at the same time as the
+  native binary.
   When raw packets are present but cannot be decoded as profile-point XYZ
   records, the launch publishes an empty `/sensors/sonar/scan` cloud so
   operators can distinguish live undecoded sonar traffic from a missing topic.

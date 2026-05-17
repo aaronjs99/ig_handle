@@ -5,31 +5,43 @@ PKG_DIR="$(rospack find ig_handle)"
 BIN_DIR="$PKG_DIR/scripts/sonar/deltat"
 BIN="$BIN_DIR/Linux_DeltaT_v1023_x86_64"
 INI="$BIN_DIR/Linux_DeltaT.INI"
+RUNTIME_SUBDIR="ig_handle/deltat"
+RUNTIME_DIR="${ROS_HOME:-$HOME/.ros}/$RUNTIME_SUBDIR"
+RUNTIME_BIN="$RUNTIME_DIR/Linux_DeltaT_v1023_x86_64"
+RUNTIME_INI="$RUNTIME_DIR/Linux_DeltaT.INI"
 
 UDP_DEST_IP="${1:-}"
 UDP_PORT="${2:-}"
 
-echo "Starting DeltaT with INI: $INI"
+if [ ! -x "$BIN" ]; then
+  echo "DeltaT binary not found or not executable: $BIN" >&2
+  exit 1
+fi
+if [ ! -r "$INI" ]; then
+  echo "DeltaT INI not found or not readable: $INI" >&2
+  exit 1
+fi
+
+mkdir -p "$RUNTIME_DIR"
+cp "$INI" "$RUNTIME_INI"
+ln -sf "$BIN" "$RUNTIME_BIN"
+
+echo "Starting DeltaT with runtime INI: $RUNTIME_INI"
 echo "UDP_DEST_IP override:     ${UDP_DEST_IP:-<none>}"
 echo "UDP_PORT override:        ${UDP_PORT:-<none>}"
 
-tmp="$(mktemp)"
-# Simple sed-based replacement that preserves all other lines
-cp "$INI" "$tmp"
 if [ -n "$UDP_DEST_IP" ]; then
   # Replace the line after UDPAddress: with the new IP
-  sed -i '/^UDPAddress:$/{ n; s/.*/'"$UDP_DEST_IP"'/; }' "$tmp"
+  sed -i '/^UDPAddress:$/{ n; s/.*/'"$UDP_DEST_IP"'/; }' "$RUNTIME_INI"
 fi
 if [ -n "$UDP_PORT" ]; then
   # Replace the line after UDPPort: with the new port
-  sed -i '/^UDPPort:$/{ n; s/.*/'"$UDP_PORT"'/; }' "$tmp"
+  sed -i '/^UDPPort:$/{ n; s/.*/'"$UDP_PORT"'/; }' "$RUNTIME_INI"
 fi
-mv "$tmp" "$INI"
 
 echo "----- INI just before exec -----"
-nl -ba "$INI" | sed -n '1,80p'
+nl -ba "$RUNTIME_INI" | sed -n '1,80p'
 echo "--------------------------------"
 
-chmod +x "$BIN"
-cd "$BIN_DIR"
-exec "$BIN"
+cd "$RUNTIME_DIR"
+exec "$RUNTIME_BIN"

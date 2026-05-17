@@ -30,7 +30,7 @@ install(
 
 install(
   DIRECTORY scripts/sonar/deltat/
-  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/scripts/deltat
+  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/scripts/sonar/deltat
   USE_SOURCE_PERMISSIONS
 )
 

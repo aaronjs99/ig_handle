@@ -143,6 +143,25 @@ def test_mocap_and_teensy_paths_are_explicit_and_modular():
     assert 'name="server_ip" default="192.168.1.199"' in natnet_launch
     assert 'name="client_ip" default="192.168.1.8"' in natnet_launch
     assert 'name="topic_prefix" default="/mocap"' in natnet_launch
+    assert 'name="transport" default="natnet"' in natnet_launch
+    assert "transport')).lower() == 'datacollect_udp'" in natnet_launch
+    assert 'name="udp_port" default="5005"' in natnet_launch
+    assert 'name="datacollect_schema" default="datacollect.heron.v1"' in natnet_launch
+    assert 'name="heron_pose_topic" default="/mocap/rigid_body_1/pose"' in natnet_launch
+    assert 'name="markers_topic" default="/mocap/heron/markers"' in natnet_launch
+    assert (
+        'name="potential_objects_topic" default="/mocap/potential_objects"'
+        in natnet_launch
+    )
+    assert 'name="status_topic" default="/mocap/datacollect_status"' in natnet_launch
+    assert '<param name="transport" value="$(arg transport)"/>' in natnet_launch
+    natnet_script = (
+        REPO_ROOT / "ig_handle/scripts/mocap/natnet_pose_bridge.py"
+    ).read_text(encoding="utf-8")
+    assert "datacollect_udp" in natnet_script
+    assert "SO_REUSEADDR" in natnet_script
+    assert "create_cloud_xyz32" in natnet_script
+    assert 'status_state != "ok"' in natnet_script
     assert 'type="teensy_rosserial_launcher.py"' in rosserial_launch
     assert 'name="port"' in rosserial_launch
     assert 'name="baud"' in rosserial_launch
@@ -153,8 +172,17 @@ def test_mocap_and_teensy_paths_are_explicit_and_modular():
     assert "scripts/teensy_rosserial_launcher.py" in cmake
     assert "DIRECTORY config" in cmake
     assert "<exec_depend>geometry_msgs</exec_depend>" in package_xml
+    assert "<exec_depend>sensor_msgs</exec_depend>" in package_xml
+    assert "<exec_depend>std_msgs</exec_depend>" in package_xml
     assert "<exec_depend>tf2_ros</exec_depend>" in package_xml
     assert "<exec_depend>rosserial_python</exec_depend>" in package_xml
+    record_bag = (REPO_ROOT / "ig_handle/scripts/pipeline/record_bag.sh").read_text(
+        encoding="utf-8"
+    )
+    assert "/mocap/rigid_body_1/pose" in record_bag
+    assert "/mocap/heron/markers" in record_bag
+    assert "/mocap/potential_objects" in record_bag
+    assert "/mocap/datacollect_status" in record_bag
 
 
 def test_lidar_pair_extrinsics_are_data_driven_and_quality_gated():

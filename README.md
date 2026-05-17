@@ -53,7 +53,7 @@ same core idea: synchronized acquisition on a dedicated onboard computer.
 - `use_teensy:=false` is the current default. The Teensy/rosserial timing path is
   still kept for lab hardware, but normal boat bringup does not start it.
 - Motion capture is salvageable as an explicit localization source through the
-  NatNet bridge plus the top-level `slam_grande` mocap alignment path.
+  NatNet/datacollect bridge for standalone mocap logging.
 - The stable udev aliases in `config/99-ig_handle_udev.rules` exist, but some
   launch defaults still use `/dev/serial/by-id/...` paths. If a device serial
   changes, check both the udev rule and the launch argument.
@@ -256,17 +256,35 @@ The Teensy firmware publishes hardware-native timing names such as `/pps/time`,
 `/sensors/pps/time`, `/sensors/camera/time`, and `/sensors/imu/time` so the full
 stack does not need broad top-level remaps. This bridge is opt-in.
 
-The NatNet bridge publishes raw rigid-body poses under `/mocap`, normally
-`/mocap/rigid_body_1/pose`. Integrated `slam_grande` runs can select mocap as the
-real canonical odometry source with:
+The mocap bridge is a standalone logging and comparison tool. It publishes raw
+rigid-body poses under `/mocap`, normally
+`/mocap/rigid_body_1/pose`. It has one publication contract and two input
+transports:
+
+- `transport:=natnet`: receive Motive/NatNet directly.
+- `transport:=datacollect_udp`: receive `datacollect.heron.v1` UDP JSON packets
+  from the Motive-side datacollect broadcaster on port `5005`.
+
+The UDP transport republishes the same Heron pose topic, plus optional marker
+and potential-object point clouds on `/mocap/heron/markers` and
+`/mocap/potential_objects`, and status JSON on `/mocap/datacollect_status`.
+Mocap remains a lab testing and ground-truth comparison path. It is not launched
+by `slam_grande` bringup, does not feed `/state/odometry`, and should not be a
+field dependency. The datacollect UDP receiver also leaves TF publishing off by
+default, so it only republishes raw comparison/logging topics unless explicitly
+overridden.
+
+Run the receiver directly when the Motive-side broadcaster is active:
 
 ```bash
-roslaunch slam_grande bringup.launch mode:=real odom_source:=mocap
+roslaunch "$(rospack find ig_handle)/launch/core/natnet_bridge.launch" transport:=datacollect_udp
 ```
 
-That starts the NatNet bridge, aligns the rigid-body pose with the existing odom
-frame, publishes `/state/mocap/odometry`, and lets the normal odometry sanity
-filter own `/state/odometry`. The default remains `odom_source:=dlio`.
+Record it like any other diagnostic topic:
+
+```bash
+rosbag record /mocap/rigid_body_1/pose /mocap/heron/markers /mocap/potential_objects /mocap/datacollect_status
+```
 
 `collect_raw_data.launch` invokes `ig_handle/scripts/pipeline/record_bag.sh` and
 records robot-specific bag topics:
@@ -280,6 +298,10 @@ records robot-specific bag topics:
 | `/sensors/imu/time`                       | `sensor_msgs/TimeReference`    |
 | `/sensors/lidar/hori/packets`             | `velodyne_msgs/VelodyneScan`   |
 | `/sensors/lidar/hori/points`              | `sensor_msgs/PointCloud2`      |
+| `/mocap/rigid_body_1/pose`                | `geometry_msgs/PoseStamped`    |
+| `/mocap/heron/markers`                    | `sensor_msgs/PointCloud2`      |
+| `/mocap/potential_objects`                | `sensor_msgs/PointCloud2`      |
+| `/mocap/datacollect_status`               | `std_msgs/String`              |
 | `/sensors/pps/time`                       | `sensor_msgs/TimeReference`    |
 
 ### Additional topics for ig-heron and ig-husky

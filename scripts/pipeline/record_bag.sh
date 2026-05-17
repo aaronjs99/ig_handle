@@ -22,4 +22,8 @@ rosbag record -O $bagDir/raw.bag \
   /sensors/lidar/vert/packets \
   /sensors/lidar/vert/points \
   /sensors/sonar/raw \
-  /sensors/sonar/scan
+  /sensors/sonar/scan \
+  /mocap/rigid_body_1/pose \
+  /mocap/heron/markers \
+  /mocap/potential_objects \
+  /mocap/datacollect_status

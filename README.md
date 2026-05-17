@@ -287,10 +287,12 @@ Run the receiver directly when the Motive-side broadcaster is active:
 roslaunch "$(rospack find ig_handle)/launch/core/natnet_bridge.launch" transport:=datacollect_udp
 ```
 
-Record it like any other diagnostic topic:
+The canonical `slam_grande` bag recorder includes these mocap topics in the raw
+profile, so use the same recorder instead of maintaining a separate mocap
+recording command:
 
 ```bash
-rosbag record /mocap/rigid_body_1/pose /mocap/heron/markers /mocap/potential_objects /mocap/datacollect_status
+rosrun slam_grande record_bag.sh --profile raw ~/bags
 ```
 
 Visualize mocap against canonical odometry from `slam_grande`:
@@ -358,20 +360,18 @@ post-processing still require live or bag-backed operator validation.
 
 ---
 
-## Raw data processing
+## Raw Data Processing
 
-**Processing script:**
-`scripts/pipeline/process_raw_bag.py`
+The canonical raw-bag processor lives beside the recorder in `slam_grande`:
+
+```bash
+rosrun slam_grande process_raw_bag.py --bag raw.bag
+```
 
 **Processing steps:**
 - Restamp camera and IMU messages using hardware timestamps
 - Align sonar timestamps with PPS
 - Detect timing dropouts
-
-**Example:**
-```bash
-python3 process_raw_bag.py --bag raw.bag
-```
 
 ---
 

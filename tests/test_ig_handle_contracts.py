@@ -20,8 +20,12 @@ def test_ig_handle_repo_keeps_real_platform_launch_and_data_collection_contracts
     assert (REPO_ROOT / "ig_handle/launch/sensors/start_cam.launch").exists()
     assert (REPO_ROOT / "ig_handle/scripts/sonar/dt100_profile_to_cloud.py").exists()
     assert (REPO_ROOT / "ig_handle/scripts/pipeline/process_raw_bag.py").exists()
-    assert (REPO_ROOT / "ig_handle/scripts/teensy_rosserial_launcher.py").exists()
+    assert (
+        REPO_ROOT / "ig_handle/scripts/teensy/teensy_rosserial_launcher.py"
+    ).exists()
     assert (REPO_ROOT / "ig_handle/scripts/mocap/natnet_pose_bridge.py").exists()
+    assert (REPO_ROOT / "ig_handle/scripts/mocap/plot_mocap_odom.py").exists()
+    assert not (REPO_ROOT / "ig_handle/scripts/pipeline/plot_mocap_odom.py").exists()
 
 
 def test_real_sensor_launch_keeps_dlio_safe_tf_and_camera_info_contracts():
@@ -169,7 +173,9 @@ def test_mocap_and_teensy_paths_are_explicit_and_modular():
     assert '<arg name="use_teensy" default="false"/>' in suite
     assert '<arg name="use_teensy" default="false"/>' in heron
     assert "scripts/mocap/natnet_pose_bridge.py" in cmake
-    assert "scripts/teensy_rosserial_launcher.py" in cmake
+    assert "scripts/mocap/plot_mocap_odom.py" in cmake
+    assert "scripts/pipeline/plot_mocap_odom.py" not in cmake
+    assert "scripts/teensy/teensy_rosserial_launcher.py" in cmake
     assert "DIRECTORY config" in cmake
     assert "<exec_depend>geometry_msgs</exec_depend>" in package_xml
     assert "<exec_depend>sensor_msgs</exec_depend>" in package_xml

@@ -19,8 +19,8 @@ catkin_install_python(
     scripts/calibration/apply_lidar_pair_calibration.py
     scripts/calibration/lidar_pair_tf_broadcaster.py
     scripts/pipeline/process_raw_bag.py
-    scripts/pipeline/plot_mocap_odom.py
-    scripts/teensy_rosserial_launcher.py
+    scripts/mocap/plot_mocap_odom.py
+    scripts/teensy/teensy_rosserial_launcher.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 

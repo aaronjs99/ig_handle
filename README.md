@@ -293,6 +293,12 @@ Record it like any other diagnostic topic:
 rosbag record /mocap/rigid_body_1/pose /mocap/heron/markers /mocap/potential_objects /mocap/datacollect_status
 ```
 
+Visualize mocap against canonical odometry from `slam_grande`:
+
+```bash
+rosrun slam_grande plot_mocap_odom.py _mocap_topic:=/mocap/rigid_body_1/pose _odom_topic:=/state/odometry
+```
+
 `collect_raw_data.launch` invokes `slam_grande/scripts/field/record_bag.sh` with
 the `raw` profile. The default raw profile matches the current Heron field rig:
 F1/F4 cameras, IMU, both LiDARs, DT100 sonar, base telemetry, TF, and optional

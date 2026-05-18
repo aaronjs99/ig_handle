@@ -368,7 +368,11 @@ Connectivity checks ping network sensors and verify the IMU serial device path:
 pytest -q ig_handle/tests/test_live_sensor_connectivity.py
 ```
 
-Data checks wait for one ROS message on each canonical sensor topic:
+Data checks wait for one ROS message on each canonical sensor topic and then
+validate the message payload. Camera tests require real image dimensions and
+bytes, LiDAR tests require finite XYZ points in the cloud, sonar requires a
+nonempty nonzero DT100 raw packet, IMU requires finite plausible quaternion and
+acceleration data, and Heron `/sense` requires plausible battery telemetry.
 
 ```bash
 source /opt/ros/noetic/setup.bash

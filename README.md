@@ -356,10 +356,41 @@ Keep both `/sensors/sonar/raw` and `/sensors/sonar/scan` in field bags: raw
 packets prove sonar reception, while the scan cloud is the basic geometry/map
 surface when the DT100 packet format can be decoded.
 
+## Live Hardware Pytests
+
+The `ig_handle/tests` suite includes opt-in live hardware checks. Normal pytest
+runs skip them so a laptop or CI run does not fail just because the boat sensors
+are off.
+
+Connectivity checks ping network sensors and verify the IMU serial device path:
+
+```bash
+IG_HANDLE_RUN_LIVE_CONNECTIVITY_TESTS=1 \
+  pytest -q ig_handle/tests/test_live_sensor_connectivity.py
+```
+
+Data checks wait for one ROS message on each canonical sensor topic:
+
+```bash
+source /opt/ros/noetic/setup.bash
+source ~/catkin_ws/heron_ws/devel/setup.bash
+
+IG_HANDLE_RUN_LIVE_DATA_TESTS=1 \
+  pytest -q ig_handle/tests/test_live_sensor_data.py
+```
+
+F2 and F3 tests exist but are skipped by default because those cameras are
+physically disconnected on the current Heron rig. After reconnecting them, add:
+
+```bash
+IG_HANDLE_INCLUDE_DISABLED_CAMERAS=1
+```
+
 ## Validation
 
-No pytest files are currently tracked in this package. Use static checks,
-script help/import checks, `catkin build`, and live topic-rate checks for local
+The tracked pytest files are live hardware checks and skip by default unless the
+opt-in environment variables above are set. Use static checks, script
+help/import checks, `catkin build`, and live topic-rate checks for local
 validation. Hardware timing, calibration, sonar decoding, and full raw-bag
 post-processing still require live or bag-backed operator validation.
 

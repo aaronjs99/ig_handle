@@ -1,4 +1,4 @@
-"""Shared helpers for opt-in live IG Handle sensor tests."""
+"""Shared helpers for live IG Handle sensor tests."""
 
 from __future__ import annotations
 
@@ -12,8 +12,6 @@ from typing import Optional
 import pytest
 
 
-CONNECTIVITY_ENV = "IG_HANDLE_RUN_LIVE_CONNECTIVITY_TESTS"
-DATA_ENV = "IG_HANDLE_RUN_LIVE_DATA_TESTS"
 DISABLED_CAMERA_ENV = "IG_HANDLE_INCLUDE_DISABLED_CAMERAS"
 
 
@@ -92,18 +90,12 @@ def env_enabled(name: str) -> bool:
     return os.environ.get(name, "").strip().lower() in {"1", "true", "yes", "on"}
 
 
-def require_live_env(name: str) -> None:
-    if not env_enabled(name):
-        pytest.skip(f"set {name}=1 to run live IG Handle hardware tests")
-
-
 def require_sensor_enabled(sensor: SensorSpec) -> None:
     if sensor.disabled_by_default and not env_enabled(DISABLED_CAMERA_ENV):
         pytest.skip(sensor.disabled_reason)
 
 
 def assert_sensor_connectivity(sensor: SensorSpec, *, timeout_sec: float = 2.0) -> None:
-    require_live_env(CONNECTIVITY_ENV)
     require_sensor_enabled(sensor)
 
     if sensor.host:
@@ -124,7 +116,6 @@ def assert_sensor_connectivity(sensor: SensorSpec, *, timeout_sec: float = 2.0) 
 
 
 def assert_sensor_publishes(sensor: SensorSpec, *, timeout_sec: float = 8.0) -> None:
-    require_live_env(DATA_ENV)
     require_sensor_enabled(sensor)
 
     try:

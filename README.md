@@ -358,15 +358,14 @@ surface when the DT100 packet format can be decoded.
 
 ## Live Hardware Pytests
 
-The `ig_handle/tests` suite includes opt-in live hardware checks. Normal pytest
-runs skip them so a laptop or CI run does not fail just because the boat sensors
-are off.
+The `ig_handle/tests` suite includes live hardware checks. Normal pytest runs
+the connected/current sensor checks, so run it when the IG Handle sensor stack
+is expected to be online.
 
 Connectivity checks ping network sensors and verify the IMU serial device path:
 
 ```bash
-IG_HANDLE_RUN_LIVE_CONNECTIVITY_TESTS=1 \
-  pytest -q ig_handle/tests/test_live_sensor_connectivity.py
+pytest -q ig_handle/tests/test_live_sensor_connectivity.py
 ```
 
 Data checks wait for one ROS message on each canonical sensor topic:
@@ -375,8 +374,7 @@ Data checks wait for one ROS message on each canonical sensor topic:
 source /opt/ros/noetic/setup.bash
 source ~/catkin_ws/heron_ws/devel/setup.bash
 
-IG_HANDLE_RUN_LIVE_DATA_TESTS=1 \
-  pytest -q ig_handle/tests/test_live_sensor_data.py
+pytest -q ig_handle/tests/test_live_sensor_data.py
 ```
 
 F2 and F3 tests exist but are skipped by default because those cameras are
@@ -388,8 +386,7 @@ IG_HANDLE_INCLUDE_DISABLED_CAMERAS=1
 
 ## Validation
 
-The tracked pytest files are live hardware checks and skip by default unless the
-opt-in environment variables above are set. Use static checks, script
+The tracked pytest files are live hardware checks. Use static checks, script
 help/import checks, `catkin build`, and live topic-rate checks for local
 validation. Hardware timing, calibration, sonar decoding, and full raw-bag
 post-processing still require live or bag-backed operator validation.

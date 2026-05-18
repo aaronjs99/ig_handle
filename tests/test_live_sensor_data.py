@@ -1,4 +1,4 @@
-"""Opt-in live ROS data checks for IG Handle sensor topics."""
+"""Live ROS data checks for IG Handle sensor topics."""
 
 import pytest
 

@@ -1,4 +1,4 @@
-"""Opt-in live connectivity checks for IG Handle hardware endpoints."""
+"""Live connectivity checks for IG Handle hardware endpoints."""
 
 import pytest
 

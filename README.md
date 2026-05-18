@@ -301,7 +301,7 @@ Visualize mocap against canonical odometry from `slam_grande`:
 rosrun slam_grande plot_mocap_odom.py _mocap_topic:=/mocap/rigid_body_1/pose _odom_topic:=/state/odometry
 ```
 
-`collect_raw_data.launch` invokes `slam_grande/scripts/field/record_bag.sh` with
+`collect_raw_data.launch` invokes `slam_grande/scripts/utils/record_bag.sh` with
 the `raw` profile. The default raw profile matches the current Heron field rig:
 F1/F4 cameras, IMU, both LiDARs, DT100 sonar, base telemetry, TF, and optional
 mocap comparison topics. F2/F3 and thermal camera topics are available from the
@@ -351,7 +351,7 @@ Additional sensors:
   capture should be verified from the active image transport before assuming a
   `/compressed` bag topic exists.
 
-To add or remove bag topics, edit `slam_grande/scripts/field/record_bag.sh`.
+To add or remove bag topics, edit `slam_grande/scripts/utils/record_bag.sh`.
 Keep both `/sensors/sonar/raw` and `/sensors/sonar/scan` in field bags: raw
 packets prove sonar reception, while the scan cloud is the basic geometry/map
 surface when the DT100 packet format can be decoded.

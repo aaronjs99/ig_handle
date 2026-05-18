@@ -7,6 +7,7 @@ from live_sensor_helpers import (
     CAMERA_F2,
     CAMERA_F3,
     CAMERA_F4,
+    HERON,
     IMU,
     LIDAR_H,
     LIDAR_V,
@@ -48,3 +49,7 @@ def test_sonar_publishes_data():
 
 def test_imu_publishes_data():
     assert_sensor_publishes(IMU)
+
+
+def test_heron_publishes_data():
+    assert_sensor_publishes(HERON)

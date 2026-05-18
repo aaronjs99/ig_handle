@@ -84,6 +84,12 @@ IMU = SensorSpec(
     device_path="/dev/serial/by-id/usb-Xsens_MTi-30_AHRS_0368319D-if01-port0",
     topic="/sensors/imu/data",
 )
+HERON = SensorSpec(
+    key="heron",
+    label="Heron base computer",
+    host="192.168.131.1",
+    topic="/sense",
+)
 
 
 def env_enabled(name: str) -> bool:

@@ -7,6 +7,7 @@ from live_sensor_helpers import (
     CAMERA_F2,
     CAMERA_F3,
     CAMERA_F4,
+    HERON,
     IMU,
     LIDAR_H,
     LIDAR_V,
@@ -48,3 +49,7 @@ def test_sonar_connectivity():
 
 def test_imu_connectivity():
     assert_sensor_connectivity(IMU)
+
+
+def test_heron_connectivity():
+    assert_sensor_connectivity(HERON)

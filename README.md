@@ -258,11 +258,10 @@ confuse the two:
 | `/sensors/lidar/hori/points` | `sensor_msgs/PointCloud2` |
 | `/sensors/lidar/hori/packets` | `velodyne_msgs/VelodyneScan` |
 
-ROS `image_transport` may also advertise sibling topics such as
-`/compressed`, `/compressedDepth`, and `/theora` under each camera root. Treat
-those as transport variants of the same camera feed. Runtime logic should use
-the canonical raw roots, while bagging and web streaming choose one transport
-explicitly instead of subscribing to every visual variant.
+ROS `image_transport` may also advertise sibling transport topics under each
+camera root. This stack intentionally uses the raw root for runtime consumers
+and `/compressed` for bagging or web streaming. Do not install or depend on
+unused non-JPEG transport plugins for the Forge cameras.
 
 The Teensy firmware publishes hardware-native timing names such as `/pps/time`,
 `/cam/time`, and `/imu/time`; the rosserial bridge remaps those names locally to

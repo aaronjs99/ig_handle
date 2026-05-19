@@ -280,16 +280,26 @@ transports:
 The UDP transport republishes the same Heron pose topic, plus optional marker
 and potential-object point clouds on `/mocap/heron/markers` and
 `/mocap/potential_objects`, and status JSON on `/mocap/datacollect_status`.
-Mocap remains a lab testing and ground-truth comparison path. It is not launched
-by `slam_grande` bringup, does not feed `/state/odometry`, and should not be a
-field dependency. The datacollect UDP receiver also leaves TF publishing off by
-default, so it only republishes raw comparison/logging topics unless explicitly
-overridden.
+In the current lab setup the Motive-side datacollect packets arrive from
+`192.168.8.6` on local UDP port `5005`.
+
+Mocap remains a lab testing and ground-truth comparison path. It does not feed
+`/state/odometry` and should not be a field dependency. The datacollect UDP
+receiver also leaves TF publishing off by default, so it only republishes raw
+comparison/logging topics unless explicitly overridden.
 
 Run the receiver directly when the Motive-side broadcaster is active:
 
 ```bash
 roslaunch "$(rospack find ig_handle)/launch/core/natnet_bridge.launch" transport:=datacollect_udp
+```
+
+For a full DLiO-vs-mocap run, `slam_grande` can start this receiver and the
+relative comparison topics from one bringup:
+
+```bash
+roslaunch slam_grande bringup.launch mode:=real use_mocap_comparison:=true bag_prefix:=mocap_dlio
+rostopic pub -1 /mocap/initialize_alignment std_msgs/Bool "data: true"
 ```
 
 The canonical `slam_grande` bag recorder includes these mocap topics in the raw

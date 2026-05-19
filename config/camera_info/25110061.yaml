@@ -1,0 +1,23 @@
+# Placeholder CameraInfo for Forge F3 serial 25110061.
+# Capture a real calibration for the active 1280x1024 ROI before using this for
+# metric vision. K[0] = 0 marks the camera as uncalibrated to ROS consumers.
+image_width: 1280
+image_height: 1024
+camera_name: "25110061"
+camera_matrix:
+  rows: 3
+  cols: 3
+  data: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+distortion_model: plumb_bob
+distortion_coefficients:
+  rows: 1
+  cols: 5
+  data: [0.0, 0.0, 0.0, 0.0, 0.0]
+rectification_matrix:
+  rows: 3
+  cols: 3
+  data: [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0]
+projection_matrix:
+  rows: 3
+  cols: 4
+  data: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]

@@ -31,6 +31,10 @@
   <arg name="camera_f2_info_url" default=""/>
   <arg name="camera_f3_info_url" default=""/>
   <arg name="camera_f4_info_url" default=""/>
+  <arg name="camera_f1_ip" default="192.168.50.101"/>
+  <arg name="camera_f2_ip" default="192.168.50.102"/>
+  <arg name="camera_f3_ip" default="192.168.50.103"/>
+  <arg name="camera_f4_ip" default="192.168.50.104"/>
   <arg name="teensy_port" default="/dev/serial/by-id/usb-Teensyduino_USB_Serial_13709860-if00"/>
   <arg name="teensy_baud" default="115200"/>
 
@@ -64,6 +68,10 @@
     <arg name="camera_f2_info_url" value="$(arg camera_f2_info_url)"/>
     <arg name="camera_f3_info_url" value="$(arg camera_f3_info_url)"/>
     <arg name="camera_f4_info_url" value="$(arg camera_f4_info_url)"/>
+    <arg name="camera_f1_ip" value="$(arg camera_f1_ip)"/>
+    <arg name="camera_f2_ip" value="$(arg camera_f2_ip)"/>
+    <arg name="camera_f3_ip" value="$(arg camera_f3_ip)"/>
+    <arg name="camera_f4_ip" value="$(arg camera_f4_ip)"/>
     <arg name="teensy_port" value="$(arg teensy_port)"/>
     <arg name="teensy_baud" value="$(arg teensy_baud)"/>
   </include>

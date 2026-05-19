@@ -34,6 +34,10 @@ same core idea: synchronized acquisition on a dedicated onboard computer.
   enable or disable individual Forge cameras under the global camera switch.
   The Heron adapter currently defaults to F1/F4 only because F2/F3 are
   physically disconnected until a later hardware install.
+- Each Forge camera launch passes both the camera serial and expected GigE IP
+  to `spinnaker_camera_driver`. This keeps ROS selection deterministic even
+  when one host NIC has additional lab subnets and the Spinnaker SDK enumerates
+  duplicate wrong-subnet entries for the same physical cameras.
 - The default Forge ROS config uses continuous/free-run acquisition. Do not
   enable Line0 hardware trigger mode unless the trigger source is connected and
   verified; otherwise the driver can connect but publish no image buffers.

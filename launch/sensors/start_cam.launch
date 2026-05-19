@@ -2,6 +2,7 @@
   <arg name="camera_name"               default="F1" />
   <arg name="frame_id"                  default="$(arg camera_name)" />
   <arg name="camera_serial"             default="25110056" />
+  <arg name="camera_ip"                 default="" />
   <arg name="device_type"               default="GigE" />
   <arg name="config_file"               default="$(find ig_handle)/config/ig_handle_forge_config.yaml" />
   <arg name="camera_info_url"           default="" />
@@ -22,6 +23,9 @@
 
       <param name="frame_id"                        value="$(arg frame_id)" />
       <param name="serial"                          value="$(arg camera_serial)" />
+      <param if="$(eval arg('camera_ip') != '')"
+             name="camera_ip"
+             value="$(arg camera_ip)" />
       <param name="device_type"                     value="$(arg device_type)" />
       <param name="timeout"                         value="$(arg timeout)" />
       <param if="$(eval arg('camera_info_url') != '')"

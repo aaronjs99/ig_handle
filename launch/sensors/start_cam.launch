@@ -8,6 +8,8 @@
   <arg name="topic"                     default="image_raw"/>
   <arg name="camera_info_topic"         default="camera_info"/>
   <arg name="publish_debayered_color"   default="false"/>
+  <arg name="timeout"                   default="5.0"/>
+  <arg name="startup_delay_sec"          default="0.0"/>
 
   <group ns="$(arg camera_name)">
     <!-- Nodelet manager -->
@@ -15,11 +17,13 @@
 
     <!-- Camera nodelet -->
     <node pkg="nodelet" type="nodelet" name="spinnaker_camera_nodelet"
-          args="load spinnaker_camera_driver/SpinnakerCameraNodelet camera_nodelet_manager" >
+          args="load spinnaker_camera_driver/SpinnakerCameraNodelet camera_nodelet_manager"
+          launch-prefix="bash -c 'sleep $(arg startup_delay_sec); exec &quot;$0&quot; &quot;$@&quot;'" >
 
       <param name="frame_id"                        value="$(arg frame_id)" />
       <param name="serial"                          value="$(arg camera_serial)" />
       <param name="device_type"                     value="$(arg device_type)" />
+      <param name="timeout"                         value="$(arg timeout)" />
       <param if="$(eval arg('camera_info_url') != '')"
              name="camera_info_url"
              value="$(arg camera_info_url)" />

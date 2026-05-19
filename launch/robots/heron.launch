@@ -33,6 +33,11 @@
   <arg name="camera_f2_info_url" default=""/>
   <arg name="camera_f3_info_url" default=""/>
   <arg name="camera_f4_info_url" default=""/>
+  <arg name="camera_timeout_sec" default="5.0"/>
+  <arg name="camera_f1_startup_delay_sec" default="0.0"/>
+  <arg name="camera_f2_startup_delay_sec" default="1.0"/>
+  <arg name="camera_f3_startup_delay_sec" default="2.0"/>
+  <arg name="camera_f4_startup_delay_sec" default="2.0"/>
   <arg name="teensy_port" default="/dev/serial/by-id/usb-Teensyduino_USB_Serial_13709860-if00"/>
   <arg name="teensy_baud" default="115200"/>
 
@@ -66,6 +71,11 @@
     <arg name="camera_f2_info_url" value="$(arg camera_f2_info_url)"/>
     <arg name="camera_f3_info_url" value="$(arg camera_f3_info_url)"/>
     <arg name="camera_f4_info_url" value="$(arg camera_f4_info_url)"/>
+    <arg name="camera_timeout_sec" value="$(arg camera_timeout_sec)"/>
+    <arg name="camera_f1_startup_delay_sec" value="$(arg camera_f1_startup_delay_sec)"/>
+    <arg name="camera_f2_startup_delay_sec" value="$(arg camera_f2_startup_delay_sec)"/>
+    <arg name="camera_f3_startup_delay_sec" value="$(arg camera_f3_startup_delay_sec)"/>
+    <arg name="camera_f4_startup_delay_sec" value="$(arg camera_f4_startup_delay_sec)"/>
     <arg name="teensy_port" value="$(arg teensy_port)"/>
     <arg name="teensy_baud" value="$(arg teensy_baud)"/>
   </include>

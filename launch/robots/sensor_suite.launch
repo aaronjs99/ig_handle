@@ -33,6 +33,11 @@
   <arg name="camera_f2_info_url" default=""/>
   <arg name="camera_f3_info_url" default=""/>
   <arg name="camera_f4_info_url" default=""/>
+  <arg name="camera_timeout_sec" default="5.0"/>
+  <arg name="camera_f1_startup_delay_sec" default="0.0"/>
+  <arg name="camera_f2_startup_delay_sec" default="1.0"/>
+  <arg name="camera_f3_startup_delay_sec" default="2.0"/>
+  <arg name="camera_f4_startup_delay_sec" default="2.0"/>
   <arg name="teensy_port" default="/dev/serial/by-id/usb-Teensyduino_USB_Serial_13709860-if00"/>
   <arg name="teensy_baud" default="115200"/>
 
@@ -80,6 +85,8 @@
       <arg name="camera_info_url" value="$(arg camera_f1_info_url)"/>
       <arg name="topic"           value="$(arg topic_cam_f1_raw)"/>
       <arg name="camera_info_topic" value="$(arg topic_cam_f1_info)"/>
+      <arg name="timeout" value="$(arg camera_timeout_sec)"/>
+      <arg name="startup_delay_sec" value="$(arg camera_f1_startup_delay_sec)"/>
     </include>
   </group>
 
@@ -91,6 +98,8 @@
       <arg name="camera_info_url" value="$(arg camera_f2_info_url)"/>
       <arg name="topic"           value="$(arg topic_cam_f2_raw)"/>
       <arg name="camera_info_topic" value="$(arg topic_cam_f2_info)"/>
+      <arg name="timeout" value="$(arg camera_timeout_sec)"/>
+      <arg name="startup_delay_sec" value="$(arg camera_f2_startup_delay_sec)"/>
     </include>
   </group>
 
@@ -102,6 +111,8 @@
       <arg name="camera_info_url" value="$(arg camera_f3_info_url)"/>
       <arg name="topic"         value="$(arg topic_cam_f3_raw)"/>
       <arg name="camera_info_topic" value="$(arg topic_cam_f3_info)"/>
+      <arg name="timeout" value="$(arg camera_timeout_sec)"/>
+      <arg name="startup_delay_sec" value="$(arg camera_f3_startup_delay_sec)"/>
     </include>
   </group>
 
@@ -113,6 +124,8 @@
       <arg name="camera_info_url" value="$(arg camera_f4_info_url)"/>
       <arg name="topic"         value="$(arg topic_cam_f4_raw)"/>
       <arg name="camera_info_topic" value="$(arg topic_cam_f4_info)"/>
+      <arg name="timeout" value="$(arg camera_timeout_sec)"/>
+      <arg name="startup_delay_sec" value="$(arg camera_f4_startup_delay_sec)"/>
     </include>
   </group>
 

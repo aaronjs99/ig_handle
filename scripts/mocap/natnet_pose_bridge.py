@@ -30,6 +30,14 @@ def _finite(values):
         return False
 
 
+def _as_bool(value):
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        return value.strip().lower() in {"1", "true", "yes", "on"}
+    return bool(value)
+
+
 def _xyz_from_packet(value):
     if value is None:
         return None
@@ -85,6 +93,12 @@ class NatNetBridge:
         self.datacollect_schema = rospy.get_param(
             "~datacollect_schema", "datacollect.heron.v1"
         )
+        self.datacollect_source_ip = rospy.get_param(
+            "~datacollect_source_ip", ""
+        ).strip()
+        self.datacollect_reject_unexpected_source = _as_bool(
+            rospy.get_param("~datacollect_reject_unexpected_source", False)
+        )
         self.udp_bind_ip = rospy.get_param("~udp_bind_ip", "0.0.0.0")
         self.udp_port = int(rospy.get_param("~udp_port", 5005))
         self.heron_pose_topic = rospy.get_param(
@@ -136,16 +150,29 @@ class NatNetBridge:
                 % self.transport
             )
 
-        rospy.loginfo(
-            "NatNetBridge configured. transport=%s server_ip=%s client_ip=%s udp=%s:%d"
-            % (
-                self.transport,
-                self.server_ip,
-                self.client_ip,
-                self.udp_bind_ip,
-                self.udp_port,
+        if self.transport == "datacollect_udp":
+            rospy.loginfo(
+                "NatNetBridge configured. transport=datacollect_udp udp=%s:%d "
+                "schema=%s expected_source_ip=%s reject_unexpected_source=%s"
+                % (
+                    self.udp_bind_ip,
+                    self.udp_port,
+                    self.datacollect_schema,
+                    self.datacollect_source_ip or "*",
+                    self.datacollect_reject_unexpected_source,
+                )
             )
-        )
+        else:
+            rospy.loginfo(
+                "NatNetBridge configured. transport=%s server_ip=%s client_ip=%s udp=%s:%d"
+                % (
+                    self.transport,
+                    self.server_ip,
+                    self.client_ip,
+                    self.udp_bind_ip,
+                    self.udp_port,
+                )
+            )
 
     def start(self):
         if self.transport == "datacollect_udp":
@@ -214,7 +241,9 @@ class NatNetBridge:
         header = Header(stamp=stamp, frame_id=self.frame_id)
         return pc2.create_cloud_xyz32(header, points)
 
-    def _publish_status(self, packet, status_state, stamp):
+    def _publish_status(
+        self, packet, status_state, stamp, source_address=None, tracking_valid=None
+    ):
         status = {
             "schema": packet.get("schema"),
             "status": status_state,
@@ -222,6 +251,13 @@ class NatNetBridge:
             "frame": packet.get("frame"),
             "stamp": stamp.to_sec(),
         }
+        if self.datacollect_source_ip:
+            status["expected_source_ip"] = self.datacollect_source_ip
+        if source_address is not None:
+            status["source_ip"] = source_address[0]
+            status["source_port"] = source_address[1]
+        if tracking_valid is not None:
+            status["tracking_valid"] = bool(tracking_valid)
         self.status_pub.publish(String(data=json.dumps(status, sort_keys=True)))
 
     def _publish_datacollect_packet(self, packet, source_address):
@@ -241,6 +277,10 @@ class NatNetBridge:
             return
 
         stamp = rospy.Time.now()
+        source_ip = source_address[0] if source_address is not None else ""
+        unexpected_source = (
+            bool(self.datacollect_source_ip) and source_ip != self.datacollect_source_ip
+        )
         status = packet.get("status", {})
         status_state = status.get("state", "ok") if isinstance(status, dict) else "ok"
         heron = packet.get("heron", {})
@@ -249,9 +289,31 @@ class NatNetBridge:
         rigid_body = heron.get("rigid_body", {})
         if not isinstance(rigid_body, dict):
             rigid_body = {}
-        tracking_valid = bool(heron.get("tracking_valid", False))
+        tracking_valid = _as_bool(heron.get("tracking_valid", False))
 
-        self._publish_status(packet, status_state, stamp)
+        if unexpected_source:
+            rospy.logwarn_throttle(
+                5.0,
+                "Datacollect mocap packet from unexpected source %s; expected %s"
+                % (source_ip, self.datacollect_source_ip),
+            )
+            if self.datacollect_reject_unexpected_source:
+                self._publish_status(
+                    packet,
+                    "unexpected_source",
+                    stamp,
+                    source_address=source_address,
+                    tracking_valid=tracking_valid,
+                )
+                return
+
+        self._publish_status(
+            packet,
+            status_state,
+            stamp,
+            source_address=source_address,
+            tracking_valid=tracking_valid,
+        )
         if status_state != "ok" or not tracking_valid:
             return
 

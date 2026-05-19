@@ -10,6 +10,8 @@
   <arg name="udp_bind_ip" default="0.0.0.0"/>
   <arg name="udp_port" default="5005"/>
   <arg name="datacollect_schema" default="datacollect.heron.v1"/>
+  <arg name="datacollect_source_ip" default=""/>
+  <arg name="datacollect_reject_unexpected_source" default="false"/>
   <arg name="heron_pose_topic" default="/mocap/rigid_body_1/pose"/>
   <arg name="markers_topic" default="/mocap/heron/markers"/>
   <arg name="potential_objects_topic" default="/mocap/potential_objects"/>
@@ -27,6 +29,8 @@
     <param name="udp_bind_ip" value="$(arg udp_bind_ip)"/>
     <param name="udp_port" value="$(arg udp_port)"/>
     <param name="datacollect_schema" value="$(arg datacollect_schema)"/>
+    <param name="datacollect_source_ip" value="$(arg datacollect_source_ip)"/>
+    <param name="datacollect_reject_unexpected_source" value="$(arg datacollect_reject_unexpected_source)"/>
     <param name="heron_pose_topic" value="$(arg heron_pose_topic)"/>
     <param name="markers_topic" value="$(arg markers_topic)"/>
     <param name="potential_objects_topic" value="$(arg potential_objects_topic)"/>

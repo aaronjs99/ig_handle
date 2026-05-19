@@ -17,8 +17,6 @@ from live_sensor_helpers import env_enabled, float_env
 pytestmark = pytest.mark.live_hardware
 
 PROFILE_NAME = "restrained_pytest_30s"
-RUN_ENV = "IG_HANDLE_RUN_THRUSTER_PROFILE_30S"
-RESTRAINT_ENV = "IG_HANDLE_CONFIRM_RESTRAINED"
 EXPECTED_PHASES = [
     ("forward_70", 10.0, 0.70, 0.70, True),
     ("rotate_left70_right90_reverse", 5.0, 0.70, -0.90, True),
@@ -66,12 +64,6 @@ def test_restrained_thruster_profile_definition_matches_requested_sequence():
 
 @pytest.mark.restrained_thruster
 def test_live_restrained_thruster_profile_exercises_both_motors(tmp_path):
-    if not env_enabled(RUN_ENV) or not env_enabled(RESTRAINT_ENV):
-        pytest.skip(
-            f"set {RUN_ENV}=1 and {RESTRAINT_ENV}=1 only when the Heron is "
-            "physically restrained and the prop area is clear"
-        )
-
     bag_mode = os.environ.get("IG_HANDLE_THRUSTER_PROFILE_BAG_MODE", "control")
     command = [
         sys.executable,

@@ -1,4 +1,10 @@
-"""Live ROS data checks for IG Handle sensor topic payloads."""
+"""Live hardware data checks for IG Handle sensors.
+
+The non-Heron sensors are probed at their hardware data boundary instead of
+through ROS topics: Forge cameras through Spinnaker, LiDAR/sonar through UDP
+datagrams, and the IMU through direct serial bytes. Heron base telemetry remains
+checked at /sense because that is the Heron ROS boundary.
+"""
 
 import pytest
 

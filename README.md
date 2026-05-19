@@ -368,18 +368,22 @@ Connectivity checks ping network sensors and verify the IMU serial device path:
 pytest -q ig_handle/tests/test_live_sensor_connectivity.py
 ```
 
-Data checks wait for one ROS message on each canonical sensor topic and then
-validate the message payload. Camera tests require real image dimensions and
-bytes, LiDAR tests require finite XYZ points in the cloud, sonar requires a
-nonempty nonzero DT100 raw packet, IMU requires finite plausible quaternion and
-acceleration data, and Heron `/sense` requires plausible battery telemetry.
+Data checks look for real sensor data at the hardware boundary wherever that is
+practical. Forge cameras acquire one direct Spinnaker frame by serial number,
+LiDAR tests listen for Velodyne UDP packets on the launch-defined ports, sonar
+listens for DT100 UDP packets on port 4040, and the IMU reads bytes directly
+from the Xsens serial device. Heron base telemetry is the exception: it is
+validated through `/sense`, because that signal is produced by the Heron ROS
+base stack. The camera tests build a tiny local C probe against the installed
+Spinnaker SDK under `/opt/spinnaker`; they do not require ROS camera topics.
 
 ```bash
-source /opt/ros/noetic/setup.bash
-source ~/catkin_ws/heron_ws/devel/setup.bash
-
 pytest -q ig_handle/tests/test_live_sensor_data.py
 ```
+
+ROS does not need to be running for the camera, LiDAR, sonar, or IMU data
+checks. The Heron `/sense` test still needs the Heron ROS master and workspace
+sourced.
 
 F2 and F3 tests exist but are skipped by default because those cameras are
 physically disconnected on the current Heron rig. After reconnecting them, add:

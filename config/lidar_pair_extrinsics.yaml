@@ -8,26 +8,26 @@ lidar_pair:
   initial_guess_transform:
     parent: lidar_h_link
     child: lidar_v_link
-    expected_mount_relation: approximately_90_deg_pitch
+    expected_mount_relation: x_aligned_y_up_z_aft
     translation_xyz_m: [0.18, 0.035, -0.0873]
-    rotation_quat_xyzw: [0.0, 0.7071080798594737, 0.0, 0.7071054825112363]
-    rotation_rpy_rad: [3.141592653589793, 1.5707926536057681, 3.141592653589793]
+    rotation_quat_xyzw: [0.7071067811865475, 0.0, 0.0, 0.7071067811865476]
+    rotation_rpy_rad: [1.5707963267948966, 0.0, 0.0]
     matrix_row_major:
-      - [-3.673205103638111e-06, 0.0, 0.999999999993254, 0.18]
-      - [0.0, 1.0000000000000002, 0.0, 0.035]
-      - [-0.999999999993254, 0.0, -3.673205103638111e-06, -0.0873]
+      - [1.0, 0.0, 0.0, 0.18]
+      - [0.0, 0.0, -1.0, 0.035]
+      - [0.0, 1.0, 0.0, -0.0873]
       - [0.0, 0.0, 0.0, 1.0]
   active_transform:
     parent: lidar_h_link
     child: lidar_v_link
-    expected_mount_relation: approximately_90_deg_pitch
+    expected_mount_relation: x_aligned_y_up_z_aft
     translation_xyz_m: [0.18, 0.035, -0.0873]
-    rotation_quat_xyzw: [0.0, 0.7071080798594737, 0.0, 0.7071054825112363]
-    rotation_rpy_rad: [3.141592653589793, 1.5707926536057681, 3.141592653589793]
+    rotation_quat_xyzw: [0.7071067811865475, 0.0, 0.0, 0.7071067811865476]
+    rotation_rpy_rad: [1.5707963267948966, 0.0, 0.0]
     matrix_row_major:
-      - [-3.673205103638111e-06, 0.0, 0.999999999993254, 0.18]
-      - [0.0, 1.0000000000000002, 0.0, 0.035]
-      - [-0.999999999993254, 0.0, -3.673205103638111e-06, -0.0873]
+      - [1.0, 0.0, 0.0, 0.18]
+      - [0.0, 0.0, -1.0, 0.035]
+      - [0.0, 1.0, 0.0, -0.0873]
       - [0.0, 0.0, 0.0, 1.0]
   last_calibration:
     report_path: null
@@ -43,7 +43,7 @@ lidar_pair:
       iterations: null
     pairs_used: null
   quality_policy:
-    seed_relation: approximately_90_deg_pitch
+    seed_relation: x_aligned_y_up_z_aft
     max_translation_correction_norm_m: 0.25
     max_rotation_correction_angle_deg: 10.0
     max_icp_rmse_m: 0.25

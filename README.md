@@ -48,15 +48,11 @@ same core idea: synchronized acquisition on a dedicated onboard computer.
   file warnings and keep the camera-info topics present, but `K[0] = 0` marks
   them as uncalibrated. Full native 2448x2048 capture or metric vision should
   be paired with a real calibration and GigE throughput check.
-- Physical layout metadata treats F1/F3 as left-side mounts and F2/F4 as
-  center-ish mounts. Serial numbers or IPs identified as center cameras should
-  be assigned to F2/F4 unless the physical install changes.
-- The horizontal/vertical LiDAR extrinsic is data-driven from
-  `config/lidar_pair_extrinsics.yaml`. The expected seed relation is an
-  approximately 90 degree pitch between the two VLP-16 frames with current
-  seed translation `[0.00766, -0.19003, -0.11586]` in `lidar_h_link`;
-  calibration reports must pass the quality gate before the updater writes that
-  active transform.
+- Physical layout metadata treats F1/F4 as the current center-ish cameras and
+  F2/F3 as the port/left cameras. The authoritative sensor geometry lives in
+  `slam_grande/config/sensors/heron_sensor_suite.yaml`; the old horizontal/
+  vertical VLP-16 updater has been removed for this rig, so that transform
+  should not be updated from a separate report.
 - `use_teensy:=false` is the current default. The Teensy/rosserial timing path is
   still kept for lab hardware, but normal boat bringup does not start it.
 - Motion capture is salvageable as an explicit localization source through the

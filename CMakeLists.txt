@@ -16,8 +16,6 @@ catkin_install_python(
     scripts/sonar/dt100_rx.py
     scripts/sonar/dt100_profile_to_cloud.py
     scripts/mocap/natnet_pose_bridge.py
-    scripts/calibration/apply_lidar_pair_calibration.py
-    scripts/calibration/lidar_pair_tf_broadcaster.py
     scripts/teensy/teensy_rosserial_launcher.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )

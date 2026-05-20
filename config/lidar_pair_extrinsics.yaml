@@ -9,25 +9,25 @@ lidar_pair:
     parent: lidar_h_link
     child: lidar_v_link
     expected_mount_relation: x_aligned_y_up_z_aft
-    translation_xyz_m: [-0.02785, -0.10298, -0.09383]
+    translation_xyz_m: [0.00766, -0.19003, -0.11586]
     rotation_quat_xyzw: [0.7071067811865475, 0.0, 0.0, 0.7071067811865476]
     rotation_rpy_rad: [1.5707963267948966, 0.0, 0.0]
     matrix_row_major:
-      - [1.0, 0.0, 0.0, -0.02785]
-      - [0.0, 0.0, -1.0, -0.10298]
-      - [0.0, 1.0, 0.0, -0.09383]
+      - [1.0, 0.0, 0.0, 0.00766]
+      - [0.0, 0.0, -1.0, -0.19003]
+      - [0.0, 1.0, 0.0, -0.11586]
       - [0.0, 0.0, 0.0, 1.0]
   active_transform:
     parent: lidar_h_link
     child: lidar_v_link
     expected_mount_relation: x_aligned_y_up_z_aft
-    translation_xyz_m: [-0.02785, -0.10298, -0.09383]
+    translation_xyz_m: [0.00766, -0.19003, -0.11586]
     rotation_quat_xyzw: [0.7071067811865475, 0.0, 0.0, 0.7071067811865476]
     rotation_rpy_rad: [1.5707963267948966, 0.0, 0.0]
     matrix_row_major:
-      - [1.0, 0.0, 0.0, -0.02785]
-      - [0.0, 0.0, -1.0, -0.10298]
-      - [0.0, 1.0, 0.0, -0.09383]
+      - [1.0, 0.0, 0.0, 0.00766]
+      - [0.0, 0.0, -1.0, -0.19003]
+      - [0.0, 1.0, 0.0, -0.11586]
       - [0.0, 0.0, 0.0, 1.0]
   last_calibration:
     report_path: null

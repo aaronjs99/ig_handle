@@ -360,6 +360,9 @@ Additional sensors:
   packets; it is not a ROS decoder. The legacy Windows VM path can still be
   selected with `use_vm:=true`, but it should not run at the same time as the
   native binary.
+  `scripts/sonar/deltat/Linux_DeltaT.INI` is the active profile pointer used by
+  the native binary. It currently points at `Linux_DeltaT.pool.INI`; switch it
+  to `Linux_DeltaT.harbor.INI` only when the broader harbor profile is intended.
   When raw packets are present but cannot be decoded as profile-point XYZ
   records, the launch publishes an empty `/sensors/sonar/scan` cloud so
   operators can distinguish live undecoded sonar traffic from a missing topic.

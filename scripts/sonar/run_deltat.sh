@@ -4,7 +4,6 @@ set -euo pipefail
 PKG_DIR="$(rospack find ig_handle)"
 BIN_DIR="$PKG_DIR/scripts/sonar/deltat"
 BIN="$BIN_DIR/Linux_DeltaT_v1023_x86_64"
-INI="$BIN_DIR/Linux_DeltaT.INI"
 RUNTIME_SUBDIR="ig_handle/deltat"
 RUNTIME_DIR="${ROS_HOME:-$HOME/.ros}/$RUNTIME_SUBDIR"
 RUNTIME_BIN="$RUNTIME_DIR/Linux_DeltaT_v1023_x86_64"
@@ -12,6 +11,18 @@ RUNTIME_INI="$RUNTIME_DIR/Linux_DeltaT.INI"
 
 UDP_DEST_IP="${1:-}"
 UDP_PORT="${2:-}"
+SONAR_PROFILE="${3:-pool}"
+
+case "$SONAR_PROFILE" in
+  pool|harbor)
+    INI="$BIN_DIR/Linux_DeltaT.$SONAR_PROFILE.INI"
+    ;;
+  *)
+    echo "Unknown DeltaT sonar profile: $SONAR_PROFILE" >&2
+    echo "Expected one of: pool, harbor" >&2
+    exit 2
+    ;;
+esac
 
 if [ ! -x "$BIN" ]; then
   echo "DeltaT binary not found or not executable: $BIN" >&2
@@ -27,6 +38,8 @@ cp "$INI" "$RUNTIME_INI"
 ln -sf "$BIN" "$RUNTIME_BIN"
 
 echo "Starting DeltaT with runtime INI: $RUNTIME_INI"
+echo "Sonar profile:            $SONAR_PROFILE"
+echo "Profile INI:              $INI"
 echo "UDP_DEST_IP override:     ${UDP_DEST_IP:-<none>}"
 echo "UDP_PORT override:        ${UDP_PORT:-<none>}"
 

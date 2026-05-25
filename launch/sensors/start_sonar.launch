@@ -9,8 +9,9 @@
   <arg name="frame_id"       default="sonar_link"/>
   <arg name="bind_ip"        default="0.0.0.0"/>
   <arg name="udp_dest_ip"    default="192.168.0.3"/>
+  <arg name="sonar_profile"  default="pool"/>
   <arg name="min_range_m"    default="0.5"/>
-  <arg name="max_range_m"    default="100.0"/>
+  <arg name="max_range_m"    default="10.0"/>
   <arg name="publish_empty_on_decode_failure" default="true"/>
 
   <!-- Default native path: Linux_DeltaT talks to the sonar head and forwards
@@ -18,7 +19,7 @@
        VM/DT100.exe path provides that UDP stream instead. -->
   <node unless="$(arg use_vm)"
         pkg="ig_handle" type="run_deltat.sh" name="deltat_tx" output="log"
-        args="$(arg udp_dest_ip) $(arg udp_port)" />
+        args="$(arg udp_dest_ip) $(arg udp_port) $(arg sonar_profile)" />
 
   <!-- Legacy VM path: keep this available for systems that still need DT100.exe. -->
   <group if="$(arg use_vm)">

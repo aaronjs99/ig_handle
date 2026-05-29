@@ -3,7 +3,7 @@
        file instead of copying sensor wiring. -->
   <arg name="use_cameras" default="true"/>
   <arg name="use_camera_f1" default="true"/>
-  <arg name="use_camera_f2" default="false"/>
+  <arg name="use_camera_f2" default="true"/>
   <arg name="use_camera_f3" default="false"/>
   <arg name="use_camera_f4" default="true"/>
   <arg name="use_lidar_h" default="true"/>
@@ -79,8 +79,9 @@
   </include>
 
   <!-- F1/F2 are forward-facing camera slots; F3/F4 are upward-facing
-       camera slots. F1/F3 are left-side mounts; F2/F4 are center-ish
-       mounts. Empty info URLs leave uncalibrated cameras online. -->
+       camera slots. F1/F4 are right/starboard mounts when looking from behind;
+       F2/F3 are left/port mounts. Empty info URLs leave uncalibrated cameras
+       online. -->
   <group if="$(eval str(arg('use_cameras')).lower() == 'true' and str(arg('use_camera_f1')).lower() == 'true')">
     <include file="$(find ig_handle)/launch/sensors/start_cam.launch">
       <arg name="camera_name"     value="F1"/>

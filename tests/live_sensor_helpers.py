@@ -30,9 +30,9 @@ class SensorSpec:
     disabled_reason: str = ""
 
 
-F2_F3_DISABLED_REASON = (
-    "Forge F2/F3 are physically disconnected on the current Heron rig; set "
-    f"{DISABLED_CAMERA_ENV}=1 only after reconnecting them."
+F3_DISABLED_REASON = (
+    "Forge F3 is off for the current three-camera Heron test; set "
+    f"{DISABLED_CAMERA_ENV}=1 only after enabling it."
 )
 
 
@@ -49,8 +49,6 @@ CAMERA_F2 = SensorSpec(
     host="192.168.50.102",
     topic="/sensors/camera/f2/image_raw",
     expected_type="sensor_msgs/Image",
-    disabled_by_default=True,
-    disabled_reason=F2_F3_DISABLED_REASON,
 )
 CAMERA_F3 = SensorSpec(
     key="camera_f3",
@@ -59,7 +57,7 @@ CAMERA_F3 = SensorSpec(
     topic="/sensors/camera/f3/image_raw",
     expected_type="sensor_msgs/Image",
     disabled_by_default=True,
-    disabled_reason=F2_F3_DISABLED_REASON,
+    disabled_reason=F3_DISABLED_REASON,
 )
 CAMERA_F4 = SensorSpec(
     key="camera_f4",

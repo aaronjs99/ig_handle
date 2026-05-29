@@ -32,8 +32,8 @@ same core idea: synchronized acquisition on a dedicated onboard computer.
 - `use_cameras:=false` disables all configured platform cameras.
 - `use_camera_f1`, `use_camera_f2`, `use_camera_f3`, and `use_camera_f4`
   enable or disable individual Forge cameras under the global camera switch.
-  The Heron adapter currently defaults to F1/F4 only because F2/F3 are
-  physically disconnected until a later hardware install.
+  The Heron adapter currently defaults to F1/F2/F4 and keeps F3 off for the
+  three-camera field test.
 - Each Forge camera launch passes both the camera serial and expected GigE IP
   to `spinnaker_camera_driver`. This keeps ROS selection deterministic even
   when one host NIC has additional lab subnets and the Spinnaker SDK enumerates
@@ -48,11 +48,11 @@ same core idea: synchronized acquisition on a dedicated onboard computer.
   file warnings and keep the camera-info topics present, but `K[0] = 0` marks
   them as uncalibrated. Full native 2448x2048 capture or metric vision should
   be paired with a real calibration and GigE throughput check.
-- Physical layout metadata treats F1/F4 as the current center-ish cameras and
-  F2/F3 as the port/left cameras. The authoritative sensor geometry lives in
-  `slam_grande/config/sensors/heron_sensor_suite.yaml`; the old horizontal/
-  vertical VLP-16 updater has been removed for this rig, so that transform
-  should not be updated from a separate report.
+- Physical layout metadata treats F1/F4 as right/starboard mounts when looking
+  from behind and F2/F3 as left/port mounts. The authoritative sensor geometry
+  lives in `slam_grande/config/sensors/heron_sensor_suite.yaml`; the old
+  horizontal/vertical VLP-16 updater has been removed for this rig, so that
+  transform should not be updated from a separate report.
 - `use_teensy:=false` is the current default. The Teensy/rosserial timing path is
   still kept for lab hardware, but normal boat bringup does not start it.
 - Motion capture is salvageable as an explicit localization source through the
@@ -320,11 +320,12 @@ rosrun slam_grande plot_mocap_odom.py _mocap_topic:=/mocap/rigid_body_1/pose _od
 ```
 
 `collect_raw_data.launch` invokes `slam_grande/scripts/utils/record_bag.sh` with
-the `raw` profile. The default raw profile matches the current Heron field rig:
-F1/F4 cameras, IMU, both LiDARs, DT100 sonar, base telemetry, TF, and optional
-mocap comparison topics. F2/F3 and thermal camera topics are available from the
-recorder with `--include-all-cameras`, but they are not part of the default
-capture because F2/F3 are intentionally disconnected on the current boat.
+the `raw` profile. The default raw profile matches the current three-camera
+Heron field rig:
+F1/F2/F4 cameras, IMU, both LiDARs, DT100 sonar, base telemetry, TF, and optional
+mocap comparison topics. F3 and thermal camera topics are available from the
+recorder with `--include-all-cameras`, but F3 is not part of the default capture
+because it is intentionally off for the current three-camera test.
 
 | Topic                                     | Message type                   |
 |-------------------------------------------|--------------------------------|
@@ -409,8 +410,8 @@ pytest -q ig_handle/tests/test_live_heron_status.py
 The default battery floor is `14.0 V`; override it with
 `IG_HANDLE_HERON_MIN_BATTERY_V` if the lab threshold changes.
 
-F2 and F3 tests exist but are skipped by default because those cameras are
-physically disconnected on the current Heron rig. After reconnecting them, add:
+F3 tests exist but are skipped by default because that camera is off for the
+current three-camera Heron test. After enabling it, add:
 
 ```bash
 IG_HANDLE_INCLUDE_DISABLED_CAMERAS=1

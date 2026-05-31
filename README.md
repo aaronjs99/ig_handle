@@ -41,7 +41,7 @@ same core idea: synchronized acquisition on a dedicated onboard computer.
   enable Line0 hardware trigger mode unless the trigger source is connected and
   verified; otherwise the driver can connect but publish no image buffers.
 - The integrated bringup camera profile is intentionally conservative: 10 Hz,
-  continuous exposure/gain with a 50 ms exposure ceiling, `BayerRG8`, ISP
+  continuous exposure/gain with a 10 ms exposure ceiling, `BayerRG8`, ISP
   disabled, and a centered 1280x1024 ROI. Placeholder CameraInfo YAMLs for the
   four Forge serials live under `config/camera_info/`; they suppress missing
   file warnings and keep the camera-info topics present, but `K[0] = 0` marks

@@ -1,16 +1,16 @@
 # Forge IP67 1GigE camera config.
 #
-# See spinnaker_camera_driver/cfg/Spinnaker.cfg for parameter descriptions and
-# default values. The named boat cameras are Forge FG-PGE-50S5C-C-IP units:
-# F1/F2 face forward, F3/F4 face upward. F1/F4 are right/starboard mounts when
-# looking from behind; F2/F3 are left/port mounts. The current field profile
-# enables all four Forge cameras.
+# See spinnaker_camera_driver/cfg/Spinnaker.cfg for parameter descriptions and default values.
+# The named boat cameras are Forge FG-PGE-50S5C-C-IP units:
+# F1/F2 face forward, F3/F4 face upward.
+# F1/F4 are starboard mounts; F2/F3 are port mounts.
+# The current field profile enables all four Forge cameras.
 
 # Trigger parameters
 #
-# The integrated boat bringup defaults to free-run acquisition. Hardware trigger
-# mode requires an active Line0 trigger source; without it, the ROS driver can
-# connect but then starve waiting for NEW_BUFFER_DATA events.
+# The integrated boat bringup defaults to free-run acquisition.
+# Hardware trigger mode requires an active Line0 trigger source
+# Without it, the ROS driver can connect but then starve waiting for NEW_BUFFER_DATA events.
 enable_trigger: 'Off'
 trigger_selector: 'FrameStart'
 trigger_activation_mode: 'RisingEdge'
@@ -22,15 +22,14 @@ line_mode: 'Output'
 
 # Image parameters
 #
-# Keep the integrated boat profile below full native throughput. The Forge
-# cameras are 5MP GigE devices, and four full-resolution streams can overload
-# the link or driver during multi-sensor bringup. The centered 1280x1024 ROI is
-# an uncalibrated conservative runtime profile until real camera-info files are
-# captured.
+# Keep the integrated boat profile below full native throughput.
+# The Forge cameras are 5MP GigE devices.
+# Four full-resolution streams can overload the link or driver during multi-sensor bringup.
+# The centered 1280x1024 ROI is an uncalibrated conservative runtime profile until real camera-info files are captured.
 acquisition_frame_rate_enable: true
 acquisition_frame_rate: 10.0
 exposure_auto: Continuous
-auto_exposure_time_upper_limit: 50000.0
+auto_exposure_time_upper_limit: 10000.0
 auto_exposure_lighting_mode: Normal
 auto_gain: Continuous
 image_format_roi_width: 1280

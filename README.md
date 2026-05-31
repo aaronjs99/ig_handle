@@ -365,7 +365,7 @@ the recorder with `--include-all-cameras`.
 
 Additional sensors:
 - **ig-heron** keeps the DT100 receiver raw on `/sensors/sonar/raw` as
-  `std_msgs/UInt8MultiArray`. `dt100_profile_to_cloud.py` is the downstream
+  `std_msgs/UInt8MultiArray`. `cloud_generator.py` is the downstream
   typed adapter and publishes supported profile-point packets on
   `/sensors/sonar/scan` as `sensor_msgs/PointCloud2`. Raw beam packets remain
   raw instead of being converted into invented geometry.
@@ -376,8 +376,9 @@ Additional sensors:
   native binary.
   The native launch path selects a DT100 settings profile with
   `sonar_profile:=pool` or `sonar_profile:=harbor`; the default is `pool`.
-  The selected profile is copied into the runtime `Linux_DeltaT.INI`, so test
-  runs do not need to change the tracked profile pointer in the repository.
+  Profile range/gain values live in `config/sonar_profiles.yaml`, and
+  `run_deltat.sh` generates the runtime `Linux_DeltaT.INI` from that config.
+  Use `verbose_deltat_ini:=true` to print the generated INI before exec.
   When raw packets are present but cannot be decoded as profile-point XYZ
   records, the launch publishes an empty `/sensors/sonar/scan` cloud so
   operators can distinguish live undecoded sonar traffic from a missing topic.

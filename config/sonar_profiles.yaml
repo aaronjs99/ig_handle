@@ -1,0 +1,20 @@
+# DeltaT sonar runtime profiles.
+#
+# Operators select one profile with `sonar_profile:=pool` or
+# `sonar_profile:=harbor`. `run_deltat.sh` generates Linux_DeltaT.INI from this
+# file at launch time so range/gain changes stay in config, not code.
+
+defaults:
+  profile: pool
+  sonar_ip: 192.168.0.2
+  udp_dest_ip: 192.168.0.3
+  udp_port: 4040
+  sound_velocity_m_per_s: 1500.0
+
+profiles:
+  pool:
+    range_m: 10
+    gain: 16
+  harbor:
+    range_m: 30
+    gain: 6

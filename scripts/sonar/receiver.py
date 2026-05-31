@@ -1,24 +1,38 @@
 #!/usr/bin/env python3
-# ig_handle/scripts/sonar/dt100_rx.py
-"""Imagenex DT100 Driver: Raw UDP Packet Interceptor.
---------------------------------------------------
+"""Raw UDP receiver for Imagenex sonar datagrams.
 
-Lightweight Network Receiver for the Imagenex DT100 Multibeam Profiling Sonar.
-This node binds to the proprietary sonar subnet, intercepts UDP datagrams
-broadcast by the sonar head (83P format), and publishes them as raw byte arrays
-to ROS.
-
-This raw stream is typically recorded for offline processing or parsed in
-real-time by dt100_profile_to_cloud.py to produce PointCloud2.
+This node publishes vendor datagrams unchanged. It intentionally does not filter
+on packet kind, so raw bags preserve profile packets, beam packets, and any
+other diagnostic traffic sent by the sonar-side transmitter.
 """
+import os
 import socket
+import sys
+from typing import Optional
 
 import rospy
 from std_msgs.msg import UInt8MultiArray
 
+THIS_DIR = os.path.dirname(os.path.abspath(__file__))
+MODULE_DIRS = (
+    THIS_DIR,
+    os.path.join(
+        os.path.dirname(os.path.dirname(THIS_DIR)),
+        "share",
+        "ig_handle",
+        "scripts",
+        "sonar",
+    ),
+)
+for module_dir in reversed(MODULE_DIRS):
+    if module_dir not in sys.path:
+        sys.path.insert(0, module_dir)
 
-class DT100RawReceiver:
-    """Receive Imagenex DT100 UDP datagrams and publish raw ROS byte arrays."""
+from decoder import RawSonarPacket
+
+
+class SonarRawReceiver:
+    """Receive Imagenex UDP datagrams and publish raw ROS byte arrays."""
 
     def __init__(self):
         self.port = int(rospy.get_param("~port", 4040))
@@ -26,6 +40,8 @@ class DT100RawReceiver:
         self.bind_ip = str(rospy.get_param("~bind_ip", "0.0.0.0"))
         self.publisher = rospy.Publisher(self.topic, UInt8MultiArray, queue_size=50)
         self.socket = self._open_socket()
+        self.last_packet: Optional[RawSonarPacket] = None
+        rospy.on_shutdown(self.close)
 
     def _open_socket(self):
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -49,18 +65,29 @@ class DT100RawReceiver:
             data, src = self.socket.recvfrom(65535)
         except socket.timeout:
             return
+        except OSError:
+            if not rospy.is_shutdown():
+                raise
+            return
         if len(data) < 8:
             return
         if data[:3] != b"83P":
             rospy.logdebug("Non-83P frame from %s len=%d", src, len(data))
+        self.last_packet = RawSonarPacket(data=data, source=src)
         msg = UInt8MultiArray()
-        msg.data = list(data)
+        msg.data = list(self.last_packet.data)
         self.publisher.publish(msg)
+
+    def close(self):
+        try:
+            self.socket.close()
+        except OSError:
+            pass
 
 
 def run():
-    rospy.init_node("dt100_rx")
-    DT100RawReceiver().spin()
+    rospy.init_node("sonar_receiver")
+    SonarRawReceiver().spin()
 
 
 if __name__ == "__main__":

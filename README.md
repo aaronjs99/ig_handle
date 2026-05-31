@@ -379,7 +379,7 @@ Additional sensors:
   operators can distinguish live undecoded sonar traffic from a missing topic.
   Empty `83P` profile payloads are logged as live packets with no returns, not
   as decode warnings.
-- **ig-husky** thermal live topic is `/sensors/thermal/image_raw`; compressed
+- Optional thermal live topic is `/sensors/thermal/image_raw`; compressed
   capture should be verified from the active image transport before assuming a
   `/compressed` bag topic exists.
 
@@ -390,14 +390,14 @@ surface when the DT100 packet format can be decoded.
 
 ## Live Hardware Pytests
 
-The `ig_handle/tests` suite includes live hardware checks. Normal pytest runs
-the connected/current sensor checks, so run it when the IG Handle sensor stack
-is expected to be online.
+The `ig_handle/tests` suite includes unit and live hardware checks. Hardware
+endpoint facts live in `config/hardware/sensors.yaml`; update that file when
+sensor IPs, topics, or udev aliases change.
 
 Connectivity checks ping network sensors and verify the IMU serial device path:
 
 ```bash
-pytest -q ig_handle/tests/test_live_sensor_connectivity.py
+pytest -q ig_handle/tests/live/test_hardware_connectivity.py
 ```
 
 Heron status checks validate the boat base path instead of forcing every sensor
@@ -413,7 +413,7 @@ export ROS_MASTER_URI=http://192.168.131.1:11311
 export ROS_IP=192.168.131.10
 unset ROS_HOSTNAME
 
-pytest -q ig_handle/tests/test_live_heron_status.py
+pytest -q ig_handle/tests/live/test_heron_base.py
 ```
 
 The default battery floor is `14.0 V`; override it with

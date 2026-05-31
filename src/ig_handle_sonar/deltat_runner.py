@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional, Sequence
 
-from .profiles import SonarProfile, load_sonar_profile
+from .sonar_profiles import SonarProfile, load_sonar_profile
 
 
 BINARY_NAME = "Linux_DeltaT_v1023_x86_64"
@@ -29,7 +29,7 @@ class DeltaTLaunchRequest:
     verbose: bool = False
 
 
-class DeltaTLauncher:
+class DeltaTRunner:
     """Prepare the generated INI and exec the vendor DeltaT binary."""
 
     def __init__(
@@ -147,7 +147,7 @@ def run_cli(argv: Sequence[str], *, package_dir: Path) -> None:
         sound_velocity_m_per_s=args.sound_velocity or None,
         verbose=args.verbose or _env_true("VERBOSE"),
     )
-    DeltaTLauncher(package_dir=package_dir).exec(request)
+    DeltaTRunner(package_dir=package_dir).exec(request)
 
 
 def _parser() -> argparse.ArgumentParser:

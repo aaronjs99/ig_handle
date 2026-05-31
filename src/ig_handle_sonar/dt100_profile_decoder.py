@@ -88,7 +88,7 @@ def normalize_endian(endian: str) -> str:
         ) from exc
 
 
-class SonarPacketDecoder:
+class DT100ProfileDecoder:
     """Configured decoder for Imagenex profile-point packets."""
 
     def __init__(
@@ -190,7 +190,7 @@ def decode_profile_packet(
     min_points: int = DEFAULT_MIN_POINTS,
     endian: str = DEFAULT_ENDIAN,
 ) -> DecodedSonarProfile:
-    return SonarPacketDecoder(
+    return DT100ProfileDecoder(
         header_bytes=header_bytes,
         min_range_m=min_range_m,
         max_range_m=max_range_m,

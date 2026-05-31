@@ -11,7 +11,7 @@ from pathlib import Path
 
 import pytest
 
-from live_sensor_helpers import env_enabled, float_env
+from ig_handle_testing.env import env_enabled, float_env
 
 
 pytestmark = pytest.mark.live_hardware

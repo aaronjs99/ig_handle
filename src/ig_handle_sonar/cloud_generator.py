@@ -16,8 +16,8 @@ import sensor_msgs.point_cloud2 as pc2
 from sensor_msgs.msg import PointCloud2
 from std_msgs.msg import Header, UInt8MultiArray
 
-from .decoder import DEFAULT_MAX_RANGE_M, Point, SonarPacketDecoder
-from .profiles import load_sonar_profile
+from .dt100_profile_decoder import DEFAULT_MAX_RANGE_M, DT100ProfileDecoder, Point
+from .sonar_profiles import load_sonar_profile
 
 
 class SonarPointCloudGenerator:
@@ -52,7 +52,7 @@ class SonarCloudNode:
         self.publish_empty_on_decode_failure = bool(
             rospy.get_param("~publish_empty_on_decode_failure", False)
         )
-        self.decoder = SonarPacketDecoder(
+        self.decoder = DT100ProfileDecoder(
             header_bytes=self.header_bytes,
             min_range_m=self.min_range_m,
             max_range_m=self.max_range_m,

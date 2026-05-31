@@ -9,6 +9,8 @@ find_package(catkin REQUIRED COMPONENTS
   tf2_ros
 )
 
+catkin_python_setup()
+
 catkin_package()
 
 catkin_install_python(
@@ -23,12 +25,6 @@ install(
   PROGRAMS
     scripts/sonar/Linux_DeltaT_v1023_x86_64
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/scripts/sonar
-)
-
-install(
-  DIRECTORY scripts/sonar/include
-  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/scripts/sonar
-  USE_SOURCE_PERMISSIONS
 )
 
 install(

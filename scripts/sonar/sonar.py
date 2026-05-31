@@ -26,21 +26,20 @@ def main(argv: Optional[Sequence[str]] = None) -> None:
         return
 
     package_dir = _package_dir()
-    _configure_imports(package_dir)
 
     command = COMMAND_ALIASES.get(app_args[0])
     if command == "receiver":
-        from include.receiver import run
+        from ig_handle_sonar.receiver import run
 
         run()
         return
     if command == "cloud":
-        from include.cloud_generator import main as run_cloud
+        from ig_handle_sonar.cloud_generator import main as run_cloud
 
         run_cloud()
         return
     if command == "deltat":
-        from include.deltat import run_cli
+        from ig_handle_sonar.deltat_runner import run_cli
 
         run_cli(app_args[1:], package_dir=package_dir)
         return
@@ -66,16 +65,6 @@ def _package_dir() -> Path:
         return Path(rospkg.RosPack().get_path("ig_handle"))
     except Exception:
         return Path(__file__).resolve().parents[2]
-
-
-def _configure_imports(package_dir: Path) -> None:
-    sonar_dirs = [
-        Path(__file__).resolve().parent,
-        package_dir / "scripts" / "sonar",
-    ]
-    for sonar_dir in reversed(sonar_dirs):
-        if str(sonar_dir) not in sys.path:
-            sys.path.insert(0, str(sonar_dir))
 
 
 def _print_usage() -> None:

@@ -11,7 +11,7 @@ from typing import Optional
 import rospy
 from std_msgs.msg import UInt8MultiArray
 
-from .decoder import RawSonarPacket
+from .dt100_profile_decoder import RawSonarPacket
 
 
 class SonarRawReceiver:

@@ -3,17 +3,14 @@
 from __future__ import annotations
 
 import struct
-import sys
 from pathlib import Path
 
-
-SONAR_DIR = Path(__file__).resolve().parents[1] / "scripts" / "sonar"
-if str(SONAR_DIR) not in sys.path:
-    sys.path.insert(0, str(SONAR_DIR))
-
-from include.decoder import SonarPacketDecoder, decode_profile_packet
-from include.deltat import DeltaTLauncher
-from include.profiles import load_sonar_profile
+from ig_handle_sonar.deltat_runner import DeltaTRunner
+from ig_handle_sonar.dt100_profile_decoder import (
+    DT100ProfileDecoder,
+    decode_profile_packet,
+)
+from ig_handle_sonar.sonar_profiles import load_sonar_profile
 
 
 def _profile_packet(*records, header_bytes=8, kind=b"83P"):
@@ -26,7 +23,7 @@ def _profile_packet(*records, header_bytes=8, kind=b"83P"):
 
 
 def test_profile_decoder_decodes_little_endian_xyz_records():
-    decoder = SonarPacketDecoder(
+    decoder = DT100ProfileDecoder(
         header_bytes=8,
         min_range_m=0.5,
         max_range_m=10.0,
@@ -65,12 +62,8 @@ def test_profile_decoder_does_not_try_offset_zero_fallback():
     assert "offset=8" in result.reason
 
 
-def test_sonar_profile_config_selects_harbor_values():
-    config_path = (
-        Path(__file__).resolve().parents[1] / "config" / "sonar" / "profiles.yaml"
-    )
-
-    profile = load_sonar_profile(str(config_path), "harbor", udp_port="5050")
+def test_sonar_profile_config_selects_harbor_values(sonar_profile_config: Path):
+    profile = load_sonar_profile(str(sonar_profile_config), "harbor", udp_port="5050")
 
     assert profile.name == "harbor"
     assert profile.range_m == 30.0
@@ -79,12 +72,10 @@ def test_sonar_profile_config_selects_harbor_values():
     assert profile.sound_velocity_m_per_s == 1500.0
 
 
-def test_sonar_profile_config_selects_pool_freshwater_sound_velocity():
-    config_path = (
-        Path(__file__).resolve().parents[1] / "config" / "sonar" / "profiles.yaml"
-    )
-
-    profile = load_sonar_profile(str(config_path), "pool")
+def test_sonar_profile_config_selects_pool_freshwater_sound_velocity(
+    sonar_profile_config: Path,
+):
+    profile = load_sonar_profile(str(sonar_profile_config), "pool")
 
     assert profile.name == "pool"
     assert profile.range_m == 10.0
@@ -92,16 +83,15 @@ def test_sonar_profile_config_selects_pool_freshwater_sound_velocity():
     assert profile.sound_velocity_m_per_s == 1482.0
 
 
-def test_deltat_launcher_generates_ini_from_profile(tmp_path):
-    package_dir = Path(__file__).resolve().parents[1]
-    launcher = DeltaTLauncher(
+def test_deltat_launcher_generates_ini_from_profile(
+    package_dir: Path, sonar_profile_config: Path, tmp_path
+):
+    launcher = DeltaTRunner(
         package_dir=package_dir,
         runtime_dir=tmp_path,
         binary_path=package_dir / "scripts" / "sonar" / "Linux_DeltaT_v1023_x86_64",
     )
-    profile = load_sonar_profile(
-        str(package_dir / "config" / "sonar" / "profiles.yaml"), "pool"
-    )
+    profile = load_sonar_profile(str(sonar_profile_config), "pool")
 
     ini_text = launcher.ini_text(profile)
 

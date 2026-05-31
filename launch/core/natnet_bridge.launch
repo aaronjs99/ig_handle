@@ -1,40 +1,55 @@
 <launch>
+  <!-- Network configuration. NatNet defaults preserve the existing direct
+       server/client behavior; set natnet_use_multicast:=true when Motive is
+       configured for multicast streaming. -->
   <arg name="transport" default="natnet"/>
   <arg name="server_ip" default="192.168.1.199"/>
   <arg name="client_ip" default="192.168.1.8"/>
+  <arg name="natnet_use_multicast" default="false"/>
+  <arg name="natnet_multicast_address" default="239.255.42.99"/>
+  <arg name="udp_bind_ip" default="0.0.0.0"/>
+  <arg name="udp_port" default="5005"/>
+
+  <!-- ROS topic and frame mapping. -->
   <arg name="frame_id" default="mocap_world"/>
   <arg name="topic_prefix" default="/mocap"/>
   <arg name="publish_tf"
        default="$(eval 'false' if str(arg('transport')).lower() == 'datacollect_udp' else 'true')"/>
   <arg name="child_frame_prefix" default="rigid_body_"/>
-  <arg name="udp_bind_ip" default="0.0.0.0"/>
-  <arg name="udp_port" default="5005"/>
-  <arg name="datacollect_schema" default="datacollect.heron.v1"/>
-  <arg name="datacollect_source_ip" default=""/>
-  <arg name="datacollect_reject_unexpected_source" default="false"/>
+  <arg name="stale_timeout_sec" default="1.0"/>
+
   <arg name="heron_pose_topic" default="/mocap/rigid_body_1/pose"/>
   <arg name="markers_topic" default="/mocap/heron/markers"/>
   <arg name="potential_objects_topic" default="/mocap/potential_objects"/>
   <arg name="status_topic" default="/mocap/datacollect_status"/>
-  <arg name="stale_timeout_sec" default="1.0"/>
 
-  <node pkg="ig_handle" type="natnet_pose_bridge.py" name="natnet_pose_bridge" output="log">
+  <!-- Datacollect UDP options. Used only with transport:=datacollect_udp. -->
+  <arg name="datacollect_schema" default="datacollect.heron.v1"/>
+  <arg name="datacollect_source_ip" default=""/>
+  <arg name="datacollect_reject_unexpected_source" default="false"/>
+
+  <node pkg="ig_handle" type="natnet_pose_bridge.py" name="natnet_pose_bridge" output="screen">
     <param name="transport" value="$(arg transport)"/>
     <param name="server_ip" value="$(arg server_ip)"/>
     <param name="client_ip" value="$(arg client_ip)"/>
+    <param name="natnet_use_multicast" value="$(arg natnet_use_multicast)"/>
+    <param name="natnet_multicast_address" value="$(arg natnet_multicast_address)"/>
+    <param name="udp_bind_ip" value="$(arg udp_bind_ip)"/>
+    <param name="udp_port" value="$(arg udp_port)"/>
+
     <param name="frame_id" value="$(arg frame_id)"/>
     <param name="topic_prefix" value="$(arg topic_prefix)"/>
     <param name="publish_tf" value="$(arg publish_tf)"/>
     <param name="child_frame_prefix" value="$(arg child_frame_prefix)"/>
-    <param name="udp_bind_ip" value="$(arg udp_bind_ip)"/>
-    <param name="udp_port" value="$(arg udp_port)"/>
-    <param name="datacollect_schema" value="$(arg datacollect_schema)"/>
-    <param name="datacollect_source_ip" value="$(arg datacollect_source_ip)"/>
-    <param name="datacollect_reject_unexpected_source" value="$(arg datacollect_reject_unexpected_source)"/>
+    <param name="stale_timeout_sec" value="$(arg stale_timeout_sec)"/>
+
     <param name="heron_pose_topic" value="$(arg heron_pose_topic)"/>
     <param name="markers_topic" value="$(arg markers_topic)"/>
     <param name="potential_objects_topic" value="$(arg potential_objects_topic)"/>
     <param name="status_topic" value="$(arg status_topic)"/>
-    <param name="stale_timeout_sec" value="$(arg stale_timeout_sec)"/>
+
+    <param name="datacollect_schema" value="$(arg datacollect_schema)"/>
+    <param name="datacollect_source_ip" value="$(arg datacollect_source_ip)"/>
+    <param name="datacollect_reject_unexpected_source" value="$(arg datacollect_reject_unexpected_source)"/>
   </node>
 </launch>

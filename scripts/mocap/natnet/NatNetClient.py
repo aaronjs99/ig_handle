@@ -158,6 +158,10 @@ class NatNetClient:
         if not self.__is_locked:
             self.use_multicast = use_multicast
 
+    def set_multicast_address(self, multicast_address):
+        if not self.__is_locked:
+            self.multicast_address = multicast_address
+
     def can_change_bitstream_version(self):
         return self.__can_change_bitstream_version
 

@@ -281,6 +281,9 @@ transports:
 - `transport:=natnet`: receive Motive/NatNet directly.
 - `transport:=datacollect_udp`: receive `datacollect.heron.v1` UDP JSON packets
   from the Motive-side datacollect broadcaster on port `5005`.
+- `transport:=natnet natnet_use_multicast:=true`: join Motive's multicast data
+  stream directly. The default remains the existing direct server/client NatNet
+  mode for backwards compatibility.
 
 The UDP transport republishes the same Heron pose topic, plus optional marker
 and potential-object point clouds on `/mocap/heron/markers` and
@@ -297,6 +300,12 @@ Run the receiver directly when the Motive-side broadcaster is active:
 
 ```bash
 roslaunch "$(rospack find ig_handle)/launch/core/natnet_bridge.launch" transport:=datacollect_udp
+```
+
+For a direct Motive/NatNet lab run where Motive is configured for multicast:
+
+```bash
+roslaunch "$(rospack find ig_handle)/launch/core/natnet_bridge.launch" transport:=natnet natnet_use_multicast:=true
 ```
 
 For a full DLiO-vs-mocap run, `slam_grande` can start this receiver and the

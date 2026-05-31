@@ -86,6 +86,12 @@ class NatNetBridge:
         self.transport = rospy.get_param("~transport", "natnet").strip().lower()
         self.server_ip = rospy.get_param("~server_ip", "192.168.1.199")
         self.client_ip = rospy.get_param("~client_ip", "192.168.1.8")
+        self.natnet_use_multicast = _as_bool(
+            rospy.get_param("~natnet_use_multicast", False)
+        )
+        self.natnet_multicast_address = rospy.get_param(
+            "~natnet_multicast_address", "239.255.42.99"
+        ).strip()
         self.frame_id = rospy.get_param("~frame_id", "mocap_world")
         self.pub_prefix = rospy.get_param("~topic_prefix", "/mocap")
         self.publish_tf = rospy.get_param("~publish_tf", True)
@@ -136,7 +142,9 @@ class NatNetBridge:
             # Configure exactly like PythonSample
             self.client.set_client_address(self.client_ip)
             self.client.set_server_address(self.server_ip)
-            self.client.set_use_multicast(False)
+            self.client.set_use_multicast(self.natnet_use_multicast)
+            if self.natnet_multicast_address:
+                self.client.set_multicast_address(self.natnet_multicast_address)
 
             # IMPORTANT: suppress internal printing
             if hasattr(self.client, "set_print_level"):
@@ -164,11 +172,14 @@ class NatNetBridge:
             )
         else:
             rospy.loginfo(
-                "NatNetBridge configured. transport=%s server_ip=%s client_ip=%s udp=%s:%d"
+                "NatNetBridge configured. transport=%s server_ip=%s client_ip=%s "
+                "use_multicast=%s multicast_address=%s udp=%s:%d"
                 % (
                     self.transport,
                     self.server_ip,
                     self.client_ip,
+                    self.natnet_use_multicast,
+                    self.natnet_multicast_address or "*",
                     self.udp_bind_ip,
                     self.udp_port,
                 )

@@ -32,8 +32,7 @@ same core idea: synchronized acquisition on a dedicated onboard computer.
 - `use_cameras:=false` disables all configured platform cameras.
 - `use_camera_f1`, `use_camera_f2`, `use_camera_f3`, and `use_camera_f4`
   enable or disable individual Forge cameras under the global camera switch.
-  The Heron adapter currently defaults to F1/F2/F4 and keeps F3 off for the
-  three-camera field test.
+  The Heron adapter defaults to all four Forge cameras.
 - Each Forge camera launch passes both the camera serial and expected GigE IP
   to `spinnaker_camera_driver`. This keeps ROS selection deterministic even
   when one host NIC has additional lab subnets and the Spinnaker SDK enumerates
@@ -323,12 +322,10 @@ rosrun slam_grande plot_mocap_odom.py _mocap_topic:=/mocap/rigid_body_1/pose _od
 ```
 
 `collect_raw_data.launch` invokes `slam_grande/scripts/utils/record_bag.sh` with
-the `raw` profile. The default raw profile matches the current three-camera
-Heron field rig:
-F1/F2/F4 cameras, IMU, both LiDARs, DT100 sonar, base telemetry, TF, and optional
-mocap comparison topics. F3 and thermal camera topics are available from the
-recorder with `--include-all-cameras`, but F3 is not part of the default capture
-because it is intentionally off for the current three-camera test.
+the `raw` profile. The default raw profile matches the current Heron field rig:
+F1/F2/F3/F4 cameras, IMU, both LiDARs, DT100 sonar, base telemetry, TF, and
+optional mocap comparison topics. Thermal camera topics remain available from
+the recorder with `--include-all-cameras`.
 
 | Topic                                     | Message type                   |
 |-------------------------------------------|--------------------------------|
@@ -413,12 +410,7 @@ pytest -q ig_handle/tests/test_live_heron_status.py
 The default battery floor is `14.0 V`; override it with
 `IG_HANDLE_HERON_MIN_BATTERY_V` if the lab threshold changes.
 
-F3 tests exist but are skipped by default because that camera is off for the
-current three-camera Heron test. After enabling it, add:
-
-```bash
-IG_HANDLE_INCLUDE_DISABLED_CAMERAS=1
-```
+The F1/F2/F3/F4 camera connectivity tests are all enabled by default.
 
 ## Validation
 

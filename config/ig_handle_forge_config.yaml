@@ -3,8 +3,8 @@
 # See spinnaker_camera_driver/cfg/Spinnaker.cfg for parameter descriptions and
 # default values. The named boat cameras are Forge FG-PGE-50S5C-C-IP units:
 # F1/F2 face forward, F3/F4 face upward. F1/F4 are right/starboard mounts when
-# looking from behind; F2/F3 are left/port mounts. The current three-camera
-# field test enables F1/F2/F4 and keeps F3 off.
+# looking from behind; F2/F3 are left/port mounts. The current field profile
+# enables all four Forge cameras.
 
 # Trigger parameters
 #

@@ -15,9 +15,6 @@ from urllib.parse import urlparse
 import pytest
 
 
-DISABLED_CAMERA_ENV = "IG_HANDLE_INCLUDE_DISABLED_CAMERAS"
-
-
 @dataclass(frozen=True)
 class SensorSpec:
     key: str
@@ -28,12 +25,6 @@ class SensorSpec:
     device_path: Optional[str] = None
     disabled_by_default: bool = False
     disabled_reason: str = ""
-
-
-F3_DISABLED_REASON = (
-    "Forge F3 is off for the current three-camera Heron test; set "
-    f"{DISABLED_CAMERA_ENV}=1 only after enabling it."
-)
 
 
 CAMERA_F1 = SensorSpec(
@@ -56,8 +47,6 @@ CAMERA_F3 = SensorSpec(
     host="192.168.50.103",
     topic="/sensors/camera/f3/image_raw",
     expected_type="sensor_msgs/Image",
-    disabled_by_default=True,
-    disabled_reason=F3_DISABLED_REASON,
 )
 CAMERA_F4 = SensorSpec(
     key="camera_f4",

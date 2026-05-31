@@ -3,10 +3,8 @@
        computer; this launcher owns the shared IG sensor suite. -->
   <arg name="use_cameras" default="true"/>
   <arg name="use_camera_f1" default="true"/>
-  <!-- Current three-camera Heron test uses the reachable F1/F2/F4 cameras and
-       leaves F3 off. -->
   <arg name="use_camera_f2" default="true"/>
-  <arg name="use_camera_f3" default="false"/>
+  <arg name="use_camera_f3" default="true"/>
   <arg name="use_camera_f4" default="true"/>
   <arg name="use_lidar_h" default="true"/>
   <arg name="use_lidar_v" default="true"/>

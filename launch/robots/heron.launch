@@ -43,7 +43,7 @@
   <arg name="teensy_port" default="/dev/serial/by-id/usb-Teensyduino_USB_Serial_13709860-if00"/>
   <arg name="teensy_baud" default="115200"/>
 
-  <include file="$(find ig_handle)/launch/robots/sensor_suite.launch">
+  <include file="$(find ig_handle)/launch/robots/sensors.launch">
     <arg name="use_cameras" value="$(arg use_cameras)"/>
     <arg name="use_camera_f1" value="$(arg use_camera_f1)"/>
     <arg name="use_camera_f2" value="$(arg use_camera_f2)"/>

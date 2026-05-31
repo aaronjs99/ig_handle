@@ -24,11 +24,6 @@ same core idea: synchronized acquisition on a dedicated onboard computer.
   `/sensors/lidar/hori/points` plus Xsens IMU `/sensors/imu/data`.
 - `robot:=heron` is the primary boat adapter and starts the shared IG sensor
   suite: four Forge IP67 cameras, horizontal and vertical LiDAR, IMU, and sonar.
-- `robot:=handle` is a sensor-only adapter. It uses the same maintained sensor
-  suite wiring but does not start an autonomous robot base.
-- `robot:=husky` is an optional portability adapter. In this workspace it uses
-  the same maintained sensor suite wiring as Heron and does not start Husky base
-  drivers.
 - `use_cameras:=false` disables all configured platform cameras.
 - `use_camera_f1`, `use_camera_f2`, `use_camera_f3`, and `use_camera_f4`
   enable or disable individual Forge cameras under the global camera switch.

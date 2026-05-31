@@ -6,9 +6,7 @@
   <arg name="gazebo_master_port" default="11345"/>
   <env name="GAZEBO_MASTER_URI" value="http://127.0.0.1:$(arg gazebo_master_port)"/>
 
-  <include if="$(eval arg('robot')=='handle')" file="$(find ig_handle)/launch/robots/handle.launch" pass_all_args="true"/>
   <include if="$(eval arg('robot')=='heron')" file="$(find ig_handle)/launch/robots/heron.launch" pass_all_args="true"/>
-  <include if="$(eval arg('robot')=='husky')" file="$(find ig_handle)/launch/robots/husky.launch" pass_all_args="true"/>
 
   <node name="record_raw_bag"
         pkg="slam_grande"

@@ -74,6 +74,18 @@ def test_sonar_profile_config_selects_harbor_values():
     assert profile.range_m == 30.0
     assert profile.gain == 6
     assert profile.udp_port == 5050
+    assert profile.sound_velocity_m_per_s == 1500.0
+
+
+def test_sonar_profile_config_selects_pool_freshwater_sound_velocity():
+    config_path = Path(__file__).resolve().parents[1] / "config" / "sonar_profiles.yaml"
+
+    profile = load_sonar_profile(str(config_path), "pool")
+
+    assert profile.name == "pool"
+    assert profile.range_m == 10.0
+    assert profile.gain == 16
+    assert profile.sound_velocity_m_per_s == 1482.0
 
 
 def test_deltat_launcher_generates_ini_from_profile(tmp_path):
@@ -91,4 +103,5 @@ def test_deltat_launcher_generates_ini_from_profile(tmp_path):
 
     assert "Range:\n10\n" in ini_text
     assert "Gain:\n16\n" in ini_text
+    assert "SoundVelocity:\n1482\n" in ini_text
     assert "UDPAddress:\n192.168.0.3\n" in ini_text

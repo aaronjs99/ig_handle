@@ -2,7 +2,9 @@
 #
 # Operators select one profile with `sonar_profile:=pool` or
 # `sonar_profile:=harbor`. `sonar.py deltat` generates Linux_DeltaT.INI from this
-# file at launch time so range/gain changes stay in config, not code.
+# file at launch time so range/gain/sound-velocity changes stay in config, not
+# code. Sound velocity is environment-specific: the pool profile uses a
+# freshwater value; harbor keeps the generic safe seawater default.
 
 defaults:
   profile: pool
@@ -15,6 +17,8 @@ profiles:
   pool:
     range_m: 10
     gain: 16
+    sound_velocity_m_per_s: 1482.0
   harbor:
     range_m: 30
     gain: 6
+    sound_velocity_m_per_s: 1500.0

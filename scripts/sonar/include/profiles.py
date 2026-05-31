@@ -52,12 +52,23 @@ def load_sonar_profile(
         name=selected_name,
         range_m=float(range_m),
         gain=int(gain),
-        sonar_ip=str(_override_or_default(sonar_ip, defaults, "sonar_ip")),
-        udp_dest_ip=str(_override_or_default(udp_dest_ip, defaults, "udp_dest_ip")),
-        udp_port=int(_override_or_default(udp_port, defaults, "udp_port")),
+        sonar_ip=str(
+            _override_or_profile_or_default(sonar_ip, profile, defaults, "sonar_ip")
+        ),
+        udp_dest_ip=str(
+            _override_or_profile_or_default(
+                udp_dest_ip, profile, defaults, "udp_dest_ip"
+            )
+        ),
+        udp_port=int(
+            _override_or_profile_or_default(udp_port, profile, defaults, "udp_port")
+        ),
         sound_velocity_m_per_s=float(
-            _override_or_default(
-                sound_velocity_m_per_s, defaults, "sound_velocity_m_per_s"
+            _override_or_profile_or_default(
+                sound_velocity_m_per_s,
+                profile,
+                defaults,
+                "sound_velocity_m_per_s",
             )
         ),
     )
@@ -75,9 +86,13 @@ def _required(profile: Mapping, key: str, profile_name: str):
     return profile[key]
 
 
-def _override_or_default(override: Optional[str], defaults: Mapping, key: str):
+def _override_or_profile_or_default(
+    override: Optional[str], profile: Mapping, defaults: Mapping, key: str
+):
     if override not in (None, ""):
         return override
+    if key in profile:
+        return profile[key]
     if key not in defaults:
         raise ValueError("sonar profile defaults are missing %s" % key)
     return defaults[key]

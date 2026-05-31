@@ -376,7 +376,7 @@ Additional sensors:
   same time as the native binary.
   The native launch path selects a DT100 settings profile with
   `sonar_profile:=pool` or `sonar_profile:=harbor`; the default is `pool`.
-  Profile range/gain values live in `config/sonar_profiles.yaml`, and
+  Profile range/gain/sound-velocity values live in `config/sonar_profiles.yaml`, and
   `sonar.py deltat` generates the runtime `Linux_DeltaT.INI` from that config.
   Use `verbose_deltat_ini:=true` to print the generated INI before exec.
   When raw packets are present but cannot be decoded as profile-point XYZ

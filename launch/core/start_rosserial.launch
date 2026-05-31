@@ -1,5 +1,5 @@
 <launch>
-  <arg name="port" default="/dev/serial/by-id/usb-Teensyduino_USB_Serial_13709860-if00"/>
+  <arg name="port" default="/dev/teensy"/>
   <arg name="baud" default="115200"/>
   <arg name="pps_time_topic" default="/sensors/pps/time"/>
   <arg name="camera_time_topic" default="/sensors/camera/time"/>

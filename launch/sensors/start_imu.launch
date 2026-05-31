@@ -1,6 +1,6 @@
 <launch>
   <arg name="topic" default="/imu/data"/>
-  <arg name="port" default="/dev/serial/by-id/usb-Xsens_MTi-30_AHRS_0368319D-if01-port0"/>
+  <arg name="port" default="/dev/imu"/>
   <arg name="baudrate" default="115200"/>
   <arg name="scan_for_devices" default="false"/>
 

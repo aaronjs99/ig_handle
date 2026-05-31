@@ -40,7 +40,7 @@
   <arg name="camera_f2_startup_delay_sec" default="8.0"/>
   <arg name="camera_f3_startup_delay_sec" default="10.0"/>
   <arg name="camera_f4_startup_delay_sec" default="12.0"/>
-  <arg name="teensy_port" default="/dev/serial/by-id/usb-Teensyduino_USB_Serial_13709860-if00"/>
+  <arg name="teensy_port" default="/dev/teensy"/>
   <arg name="teensy_baud" default="115200"/>
 
   <include file="$(find ig_handle)/launch/robots/sensors.launch">

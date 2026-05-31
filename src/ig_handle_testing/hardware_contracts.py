@@ -13,8 +13,6 @@ import yaml
 class SensorEndpoint:
     key: str
     label: str
-    topic: str
-    expected_type: str
     host: Optional[str] = None
     device_path: Optional[str] = None
     enabled_by_default: bool = True

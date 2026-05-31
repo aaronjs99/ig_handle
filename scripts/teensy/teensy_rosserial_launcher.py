@@ -10,11 +10,7 @@ class TeensyRosserialLauncher:
     """Start rosserial only when the configured optional Teensy device exists."""
 
     def __init__(self):
-        self.port = str(
-            rospy.get_param(
-                "~port", "/dev/serial/by-id/usb-Teensyduino_USB_Serial_13709860-if00"
-            )
-        )
+        self.port = str(rospy.get_param("~port", "/dev/teensy"))
         self.baud = int(rospy.get_param("~baud", 115200))
 
     def command(self):

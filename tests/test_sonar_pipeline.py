@@ -11,8 +11,9 @@ SONAR_DIR = Path(__file__).resolve().parents[1] / "scripts" / "sonar"
 if str(SONAR_DIR) not in sys.path:
     sys.path.insert(0, str(SONAR_DIR))
 
-from decoder import SonarPacketDecoder, decode_profile_packet
-from profiles import load_sonar_profile
+from include.decoder import SonarPacketDecoder, decode_profile_packet
+from include.deltat import DeltaTLauncher
+from include.profiles import load_sonar_profile
 
 
 def _profile_packet(*records, header_bytes=8, kind=b"83P"):
@@ -73,3 +74,21 @@ def test_sonar_profile_config_selects_harbor_values():
     assert profile.range_m == 30.0
     assert profile.gain == 6
     assert profile.udp_port == 5050
+
+
+def test_deltat_launcher_generates_ini_from_profile(tmp_path):
+    package_dir = Path(__file__).resolve().parents[1]
+    launcher = DeltaTLauncher(
+        package_dir=package_dir,
+        runtime_dir=tmp_path,
+        binary_path=package_dir / "scripts" / "sonar" / "Linux_DeltaT_v1023_x86_64",
+    )
+    profile = load_sonar_profile(
+        str(package_dir / "config" / "sonar_profiles.yaml"), "pool"
+    )
+
+    ini_text = launcher.ini_text(profile)
+
+    assert "Range:\n10\n" in ini_text
+    assert "Gain:\n16\n" in ini_text
+    assert "UDPAddress:\n192.168.0.3\n" in ini_text

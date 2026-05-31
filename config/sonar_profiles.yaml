@@ -1,7 +1,7 @@
 # DeltaT sonar runtime profiles.
 #
 # Operators select one profile with `sonar_profile:=pool` or
-# `sonar_profile:=harbor`. `run_deltat.sh` generates Linux_DeltaT.INI from this
+# `sonar_profile:=harbor`. `sonar.py deltat` generates Linux_DeltaT.INI from this
 # file at launch time so range/gain changes stay in config, not code.
 
 defaults:

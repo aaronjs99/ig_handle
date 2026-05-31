@@ -3,8 +3,6 @@
 
 from __future__ import annotations
 
-import argparse
-import shlex
 from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
@@ -83,50 +81,3 @@ def _override_or_default(override: Optional[str], defaults: Mapping, key: str):
     if key not in defaults:
         raise ValueError("sonar profile defaults are missing %s" % key)
     return defaults[key]
-
-
-def _print_shell(profile: SonarProfile) -> None:
-    assignments = {
-        "SONAR_PROFILE": profile.name,
-        "SONAR_IP": profile.sonar_ip,
-        "RANGE_M": _format_number(profile.range_m),
-        "GAIN": str(profile.gain),
-        "UDP_DEST_IP": profile.udp_dest_ip,
-        "UDP_PORT": str(profile.udp_port),
-        "SOUND_VELOCITY": _format_number(profile.sound_velocity_m_per_s),
-    }
-    for key, value in assignments.items():
-        print("%s=%s" % (key, shlex.quote(value)))
-
-
-def _format_number(value: float) -> str:
-    if float(value).is_integer():
-        return str(int(value))
-    return str(value)
-
-
-def main() -> None:
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--config", required=True)
-    parser.add_argument("--profile", default="")
-    parser.add_argument("--sonar-ip", default="")
-    parser.add_argument("--udp-ip", default="")
-    parser.add_argument("--udp-port", default="")
-    parser.add_argument("--sound-velocity", default="")
-    parser.add_argument("--format", choices=("shell",), default="shell")
-    args = parser.parse_args()
-
-    profile = load_sonar_profile(
-        args.config,
-        args.profile or None,
-        sonar_ip=args.sonar_ip,
-        udp_dest_ip=args.udp_ip,
-        udp_port=args.udp_port,
-        sound_velocity_m_per_s=args.sound_velocity,
-    )
-    if args.format == "shell":
-        _print_shell(profile)
-
-
-if __name__ == "__main__":
-    main()

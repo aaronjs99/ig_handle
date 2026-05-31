@@ -13,10 +13,7 @@ catkin_package()
 
 catkin_install_python(
   PROGRAMS
-    scripts/sonar/cloud_generator.py
-    scripts/sonar/decoder.py
-    scripts/sonar/profiles.py
-    scripts/sonar/receiver.py
+    scripts/sonar/sonar.py
     scripts/mocap/mocap.py
     scripts/teensy/teensy_rosserial_launcher.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
@@ -24,21 +21,14 @@ catkin_install_python(
 
 install(
   PROGRAMS
-    scripts/sonar/run_deltat.sh
-  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
-)
-
-install(
-  DIRECTORY scripts/sonar/deltat/
-  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/scripts/sonar/deltat
-  USE_SOURCE_PERMISSIONS
-)
-
-install(
-  PROGRAMS
-    scripts/sonar/decoder.py
-    scripts/sonar/profiles.py
+    scripts/sonar/Linux_DeltaT_v1023_x86_64
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/scripts/sonar
+)
+
+install(
+  DIRECTORY scripts/sonar/include
+  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/scripts/sonar
+  USE_SOURCE_PERMISSIONS
 )
 
 install(

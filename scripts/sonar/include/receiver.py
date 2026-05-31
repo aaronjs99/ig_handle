@@ -5,30 +5,13 @@ This node publishes vendor datagrams unchanged. It intentionally does not filter
 on packet kind, so raw bags preserve profile packets, beam packets, and any
 other diagnostic traffic sent by the sonar-side transmitter.
 """
-import os
 import socket
-import sys
 from typing import Optional
 
 import rospy
 from std_msgs.msg import UInt8MultiArray
 
-THIS_DIR = os.path.dirname(os.path.abspath(__file__))
-MODULE_DIRS = (
-    THIS_DIR,
-    os.path.join(
-        os.path.dirname(os.path.dirname(THIS_DIR)),
-        "share",
-        "ig_handle",
-        "scripts",
-        "sonar",
-    ),
-)
-for module_dir in reversed(MODULE_DIRS):
-    if module_dir not in sys.path:
-        sys.path.insert(0, module_dir)
-
-from decoder import RawSonarPacket
+from .decoder import RawSonarPacket
 
 
 class SonarRawReceiver:

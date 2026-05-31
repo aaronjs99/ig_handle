@@ -365,19 +365,19 @@ the recorder with `--include-all-cameras`.
 
 Additional sensors:
 - **ig-heron** keeps the DT100 receiver raw on `/sensors/sonar/raw` as
-  `std_msgs/UInt8MultiArray`. `cloud_generator.py` is the downstream
+  `std_msgs/UInt8MultiArray`. `sonar.py cloud` is the downstream
   typed adapter and publishes supported profile-point packets on
   `/sensors/sonar/scan` as `sensor_msgs/PointCloud2`. Raw beam packets remain
   raw instead of being converted into invented geometry.
-  The default launch path uses the bundled native `Linux_DeltaT` binary under
-  `scripts/sonar/deltat` only to talk to the sonar head and forward vendor UDP
-  packets; it is not a ROS decoder. The legacy Windows VM path can still be
-  selected with `use_vm:=true`, but it should not run at the same time as the
-  native binary.
+  The default launch path uses the bundled native `Linux_DeltaT` binary at
+  `scripts/sonar/Linux_DeltaT_v1023_x86_64` to talk to the sonar head and
+  forward vendor UDP packets; it is not a ROS decoder. The legacy Windows VM
+  path can still be selected with `use_vm:=true`, but it should not run at the
+  same time as the native binary.
   The native launch path selects a DT100 settings profile with
   `sonar_profile:=pool` or `sonar_profile:=harbor`; the default is `pool`.
   Profile range/gain values live in `config/sonar_profiles.yaml`, and
-  `run_deltat.sh` generates the runtime `Linux_DeltaT.INI` from that config.
+  `sonar.py deltat` generates the runtime `Linux_DeltaT.INI` from that config.
   Use `verbose_deltat_ini:=true` to print the generated INI before exec.
   When raw packets are present but cannot be decoded as profile-point XYZ
   records, the launch publishes an empty `/sensors/sonar/scan` cloud so

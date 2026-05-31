@@ -21,8 +21,8 @@
        DT100 UDP packets to this ROS host. If use_vm=true, the legacy Windows
        VM/DT100.exe path provides that UDP stream instead. -->
   <node unless="$(arg use_vm)"
-        pkg="ig_handle" type="run_deltat.sh" name="deltat_tx" output="log"
-        args="--profile-config $(arg sonar_profile_config) --profile $(arg sonar_profile) --udp-ip $(arg udp_dest_ip) --udp-port $(arg udp_port)">
+        pkg="ig_handle" type="sonar.py" name="deltat_tx" output="log"
+        args="deltat --profile-config $(arg sonar_profile_config) --profile $(arg sonar_profile) --udp-ip $(arg udp_dest_ip) --udp-port $(arg udp_port)">
     <env name="VERBOSE" value="$(arg verbose_deltat_ini)"/>
   </node>
 
@@ -35,13 +35,13 @@
   </group>
 
   <!-- Common: keep DT100 bytes raw, then publish a typed PointCloud2 adapter. -->
-  <node pkg="ig_handle" type="receiver.py" name="sonar_raw_receiver" output="log">
+  <node pkg="ig_handle" type="sonar.py" name="sonar_raw_receiver" output="log" args="receiver">
     <param name="port" value="$(arg udp_port)"/>
     <param name="topic" value="$(arg raw_topic)"/>
     <param name="bind_ip" value="$(arg bind_ip)"/>
   </node>
 
-  <node pkg="ig_handle" type="cloud_generator.py" name="sonar_cloud_generator" output="screen">
+  <node pkg="ig_handle" type="sonar.py" name="sonar_cloud_generator" output="screen" args="cloud">
     <param name="raw_topic" value="$(arg raw_topic)"/>
     <param name="cloud_topic" value="$(arg cloud_topic)"/>
     <param name="frame_id" value="$(arg frame_id)"/>

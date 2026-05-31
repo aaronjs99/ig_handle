@@ -9,8 +9,6 @@ bags, dashboards, and topic-contract checks.
 
 from __future__ import annotations
 
-import os
-import sys
 from typing import Optional, Sequence
 
 import rospy
@@ -18,23 +16,8 @@ import sensor_msgs.point_cloud2 as pc2
 from sensor_msgs.msg import PointCloud2
 from std_msgs.msg import Header, UInt8MultiArray
 
-THIS_DIR = os.path.dirname(os.path.abspath(__file__))
-MODULE_DIRS = (
-    THIS_DIR,
-    os.path.join(
-        os.path.dirname(os.path.dirname(THIS_DIR)),
-        "share",
-        "ig_handle",
-        "scripts",
-        "sonar",
-    ),
-)
-for module_dir in reversed(MODULE_DIRS):
-    if module_dir not in sys.path:
-        sys.path.insert(0, module_dir)
-
-from decoder import DEFAULT_MAX_RANGE_M, Point, SonarPacketDecoder
-from profiles import load_sonar_profile
+from .decoder import DEFAULT_MAX_RANGE_M, Point, SonarPacketDecoder
+from .profiles import load_sonar_profile
 
 
 class SonarPointCloudGenerator:

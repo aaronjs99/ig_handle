@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 import json
-import math
 import os
-import socket
 import sys
+
 import rospy
 from geometry_msgs.msg import PoseStamped, TransformStamped
 from sensor_msgs.msg import PointCloud2
@@ -12,81 +11,34 @@ from std_msgs.msg import Header, String
 from tf2_ros import TransformBroadcaster
 
 THIS_DIR = os.path.dirname(os.path.abspath(__file__))
-if THIS_DIR not in sys.path:
-    sys.path.insert(0, THIS_DIR)
+MODULE_DIRS = (
+    THIS_DIR,
+    os.path.join(
+        os.path.dirname(os.path.dirname(THIS_DIR)),
+        "share",
+        "ig_handle",
+        "scripts",
+        "mocap",
+    ),
+)
+for module_dir in reversed(MODULE_DIRS):
+    if module_dir not in sys.path:
+        sys.path.insert(0, module_dir)
 
-from natnet.NatNetClient import NatNetClient
+from udp.datacollect import DatacollectUdpReceiver, as_bool
 
 
-def quat_xyzw_from_natnet(q):
+def quat_xyzw(q):
     x, y, z, w = q
     return float(x), float(y), float(z), float(w)
 
 
-def _finite(values):
-    try:
-        return all(math.isfinite(float(value)) for value in values)
-    except (TypeError, ValueError):
-        return False
-
-
-def _as_bool(value):
-    if isinstance(value, bool):
-        return value
-    if isinstance(value, str):
-        return value.strip().lower() in {"1", "true", "yes", "on"}
-    return bool(value)
-
-
-def _xyz_from_packet(value):
-    if value is None:
-        return None
-    if isinstance(value, dict):
-        xyz = [value.get("x"), value.get("y"), value.get("z")]
-    else:
-        try:
-            xyz = list(value[:3])
-        except (TypeError, IndexError):
-            return None
-        if len(xyz) != 3:
-            return None
-    if not _finite(xyz):
-        return None
-    return [float(v) for v in xyz]
-
-
-def _quat_from_packet(value):
-    if value is None:
-        return None
-    if isinstance(value, dict):
-        quat = [value.get("x"), value.get("y"), value.get("z"), value.get("w")]
-    else:
-        try:
-            quat = list(value[:4])
-        except (TypeError, IndexError):
-            return None
-        if len(quat) != 4:
-            return None
-    if not _finite(quat):
-        return None
-    return [float(v) for v in quat]
-
-
-def _point_from_packet(item):
-    if not isinstance(item, dict):
-        return None
-    point = item.get("position_m", item.get("position", item.get("point")))
-    if point is None:
-        return None
-    return _xyz_from_packet(point)
-
-
-class NatNetBridge:
+class MocapBridge:
     def __init__(self):
         self.transport = rospy.get_param("~transport", "natnet").strip().lower()
         self.server_ip = rospy.get_param("~server_ip", "192.168.1.199")
         self.client_ip = rospy.get_param("~client_ip", "192.168.1.8")
-        self.natnet_use_multicast = _as_bool(
+        self.natnet_use_multicast = as_bool(
             rospy.get_param("~natnet_use_multicast", False)
         )
         self.natnet_multicast_address = rospy.get_param(
@@ -102,7 +54,7 @@ class NatNetBridge:
         self.datacollect_source_ip = rospy.get_param(
             "~datacollect_source_ip", ""
         ).strip()
-        self.datacollect_reject_unexpected_source = _as_bool(
+        self.datacollect_reject_unexpected_source = as_bool(
             rospy.get_param("~datacollect_reject_unexpected_source", False)
         )
         self.udp_bind_ip = rospy.get_param("~udp_bind_ip", "0.0.0.0")
@@ -133,10 +85,11 @@ class NatNetBridge:
         )
         self.status_pub = rospy.Publisher(self.status_topic, String, queue_size=10)
         self.tf_broadcaster = TransformBroadcaster() if self.publish_tf else None
-        self.last_packet_time = None
 
         self.client = None
         if self.transport == "natnet":
+            from natnet.NatNetClient import NatNetClient
+
             self.client = NatNetClient()
 
             # Configure exactly like PythonSample
@@ -160,7 +113,7 @@ class NatNetBridge:
 
         if self.transport == "datacollect_udp":
             rospy.loginfo(
-                "NatNetBridge configured. transport=datacollect_udp udp=%s:%d "
+                "MocapBridge configured. transport=datacollect_udp udp=%s:%d "
                 "schema=%s expected_source_ip=%s reject_unexpected_source=%s"
                 % (
                     self.udp_bind_ip,
@@ -172,7 +125,7 @@ class NatNetBridge:
             )
         else:
             rospy.loginfo(
-                "NatNetBridge configured. transport=%s server_ip=%s client_ip=%s "
+                "MocapBridge configured. transport=%s server_ip=%s client_ip=%s "
                 "use_multicast=%s multicast_address=%s udp=%s:%d"
                 % (
                     self.transport,
@@ -187,7 +140,17 @@ class NatNetBridge:
 
     def start(self):
         if self.transport == "datacollect_udp":
-            self._run_datacollect_udp()
+            DatacollectUdpReceiver(
+                bind_ip=self.udp_bind_ip,
+                port=self.udp_port,
+                schema=self.datacollect_schema,
+                expected_source_ip=self.datacollect_source_ip,
+                reject_unexpected_source=self.datacollect_reject_unexpected_source,
+                stale_timeout_sec=self.stale_timeout_sec,
+                publish_status=self._publish_status,
+                publish_pose=self._publish_datacollect_pose,
+                publish_points=self._publish_datacollect_points,
+            ).run()
             return
 
         rospy.loginfo("Starting NatNet client...")
@@ -215,7 +178,7 @@ class NatNetBridge:
         msg.pose.position.y = float(position[1])
         msg.pose.position.z = float(position[2])
 
-        qx, qy, qz, qw = quat_xyzw_from_natnet(rotation)
+        qx, qy, qz, qw = quat_xyzw(rotation)
         msg.pose.orientation.x = qx
         msg.pose.orientation.y = qy
         msg.pose.orientation.z = qz
@@ -225,7 +188,7 @@ class NatNetBridge:
     def _publish_pose_tf(self, stamp, rb_id, position, rotation):
         if self.tf_broadcaster is None:
             return
-        qx, qy, qz, qw = quat_xyzw_from_natnet(rotation)
+        qx, qy, qz, qw = quat_xyzw(rotation)
         tfm = TransformStamped()
         tfm.header.stamp = stamp
         tfm.header.frame_id = self.frame_id
@@ -271,143 +234,25 @@ class NatNetBridge:
             status["tracking_valid"] = bool(tracking_valid)
         self.status_pub.publish(String(data=json.dumps(status, sort_keys=True)))
 
-    def _publish_datacollect_packet(self, packet, source_address):
-        if not isinstance(packet, dict):
-            rospy.logwarn_throttle(
-                5.0,
-                "Ignoring non-object datacollect mocap packet from %s"
-                % (source_address,),
-            )
-            return
-        if packet.get("schema") != self.datacollect_schema:
-            rospy.logwarn_throttle(
-                5.0,
-                "Ignoring datacollect mocap packet with schema=%r from %s"
-                % (packet.get("schema"), source_address),
-            )
-            return
-
-        stamp = rospy.Time.now()
-        source_ip = source_address[0] if source_address is not None else ""
-        unexpected_source = (
-            bool(self.datacollect_source_ip) and source_ip != self.datacollect_source_ip
-        )
-        status = packet.get("status", {})
-        status_state = status.get("state", "ok") if isinstance(status, dict) else "ok"
-        heron = packet.get("heron", {})
-        if not isinstance(heron, dict):
-            heron = {}
-        rigid_body = heron.get("rigid_body", {})
-        if not isinstance(rigid_body, dict):
-            rigid_body = {}
-        tracking_valid = _as_bool(heron.get("tracking_valid", False))
-
-        if unexpected_source:
-            rospy.logwarn_throttle(
-                5.0,
-                "Datacollect mocap packet from unexpected source %s; expected %s"
-                % (source_ip, self.datacollect_source_ip),
-            )
-            if self.datacollect_reject_unexpected_source:
-                self._publish_status(
-                    packet,
-                    "unexpected_source",
-                    stamp,
-                    source_address=source_address,
-                    tracking_valid=tracking_valid,
-                )
-                return
-
-        self._publish_status(
-            packet,
-            status_state,
-            stamp,
-            source_address=source_address,
-            tracking_valid=tracking_valid,
-        )
-        if status_state != "ok" or not tracking_valid:
-            return
-
-        position = _xyz_from_packet(rigid_body.get("position_m"))
-        rotation = _quat_from_packet(rigid_body.get("orientation_xyzw"))
-        if position is None or rotation is None:
-            rospy.logwarn_throttle(
-                5.0,
-                "Ignoring datacollect mocap packet with invalid Heron pose from %s"
-                % (source_address,),
-            )
-            return
-
-        try:
-            rb_id = int(rigid_body.get("id", 1))
-        except (TypeError, ValueError):
-            rb_id = 1
+    def _publish_datacollect_pose(self, stamp, rb_id, position, rotation):
         self.heron_pose_pub.publish(self._pose_msg(stamp, position, rotation))
         self._publish_pose_tf(stamp, rb_id, position, rotation)
 
-        markers = heron.get("markers", []) or []
-        potential_objects = heron.get("potential_objects", []) or []
-        marker_points = [
-            point
-            for point in (_point_from_packet(item) for item in markers)
-            if point is not None
-        ]
-        potential_points = [
-            point
-            for point in (_point_from_packet(item) for item in potential_objects)
-            if point is not None
-        ]
+    def _publish_datacollect_points(self, stamp, marker_points, potential_points):
         self.markers_pub.publish(self._cloud_msg(stamp, marker_points))
         self.potential_objects_pub.publish(self._cloud_msg(stamp, potential_points))
-        self.last_packet_time = rospy.Time.now()
-
-    def _run_datacollect_udp(self):
-        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        sock.bind((self.udp_bind_ip, self.udp_port))
-        sock.settimeout(0.2)
-        rospy.loginfo(
-            "Listening for datacollect Heron mocap UDP packets on %s:%d"
-            % (self.udp_bind_ip, self.udp_port)
-        )
-        while not rospy.is_shutdown():
-            try:
-                data, address = sock.recvfrom(65535)
-            except socket.timeout:
-                if (
-                    self.last_packet_time is not None
-                    and (rospy.Time.now() - self.last_packet_time).to_sec()
-                    > self.stale_timeout_sec
-                ):
-                    stale_packet = {
-                        "schema": self.datacollect_schema,
-                        "status": {"state": "stale"},
-                        "device": "",
-                        "frame": None,
-                    }
-                    self._publish_status(stale_packet, "stale", rospy.Time.now())
-                    self.last_packet_time = None
-                continue
-            try:
-                packet = json.loads(data.decode("utf-8"))
-            except Exception as exc:
-                rospy.logwarn_throttle(
-                    5.0, "Invalid datacollect mocap JSON from %s: %s" % (address, exc)
-                )
-                continue
-            self._publish_datacollect_packet(packet, address)
 
 
 def main():
-    rospy.init_node("natnet_pose_bridge", anonymous=False)
-    bridge = NatNetBridge()
+    rospy.init_node("mocap_bridge", anonymous=False)
+    bridge = MocapBridge()
 
     while not rospy.is_shutdown():
         try:
             bridge.start()
             break
         except RuntimeError as e:
-            rospy.logwarn("[NatNetBridge] %s; retrying in 5s", e)
+            rospy.logwarn("[MocapBridge] %s; retrying in 5s", e)
             rospy.sleep(5.0)
 
     if not rospy.is_shutdown():

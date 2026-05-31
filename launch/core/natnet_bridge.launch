@@ -28,7 +28,7 @@
   <arg name="datacollect_source_ip" default=""/>
   <arg name="datacollect_reject_unexpected_source" default="false"/>
 
-  <node pkg="ig_handle" type="natnet_pose_bridge.py" name="natnet_pose_bridge" output="screen">
+  <node pkg="ig_handle" type="mocap.py" name="mocap_bridge" output="screen">
     <param name="transport" value="$(arg transport)"/>
     <param name="server_ip" value="$(arg server_ip)"/>
     <param name="client_ip" value="$(arg client_ip)"/>

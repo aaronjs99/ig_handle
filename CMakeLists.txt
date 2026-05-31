@@ -15,7 +15,7 @@ catkin_install_python(
   PROGRAMS
     scripts/sonar/dt100_rx.py
     scripts/sonar/dt100_profile_to_cloud.py
-    scripts/mocap/natnet_pose_bridge.py
+    scripts/mocap/mocap.py
     scripts/teensy/teensy_rosserial_launcher.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
@@ -29,6 +29,14 @@ install(
 install(
   DIRECTORY scripts/sonar/deltat/
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/scripts/sonar/deltat
+  USE_SOURCE_PERMISSIONS
+)
+
+install(
+  DIRECTORY
+    scripts/mocap/natnet
+    scripts/mocap/udp
+  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/scripts/mocap
   USE_SOURCE_PERMISSIONS
 )
 

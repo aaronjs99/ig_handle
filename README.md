@@ -285,6 +285,10 @@ transports:
   stream directly. The default remains the existing direct server/client NatNet
   mode for backwards compatibility.
 
+The source layout follows the same split: `scripts/mocap/mocap.py` is the ROS
+entrypoint, `scripts/mocap/natnet/` contains the bundled NatNet client, and
+`scripts/mocap/udp/` contains the datacollect UDP receiver.
+
 The UDP transport republishes the same Heron pose topic, plus optional marker
 and potential-object point clouds on `/mocap/heron/markers` and
 `/mocap/potential_objects`, and status JSON on `/mocap/datacollect_status`.

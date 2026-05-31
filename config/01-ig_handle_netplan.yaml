@@ -7,10 +7,6 @@ network:
     enp2s0:
       dhcp4: no
       addresses:
-        - 192.168.131.2/24   # Heron network
-
-    enx000fc910b495:
-      dhcp4: no
-      addresses:
-        - 192.168.50.10/24   # Cameras & LiDARs network
-        - 192.168.0.3/24     # Sonar network
+        - 192.168.131.2/24   # Heron network on PoE switch
+        - 192.168.50.10/24   # Cameras & LiDARs network on PoE switch
+        - 192.168.0.3/24     # Sonar network on PoE switch

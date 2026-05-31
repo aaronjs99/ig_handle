@@ -65,8 +65,8 @@ same core idea: synchronized acquisition on a dedicated onboard computer.
 
 ## System Architecture
 
-IG Handle coordinates the sensors through a hardware timing system and a
-dedicated sensor network.
+IG Handle coordinates the sensors through a hardware timing system and a single
+PoE-switch-connected wired network.
 
 ### Network Topology
 
@@ -84,12 +84,15 @@ graph TD
     end
 
     subgraph "Boat Computers"
-        Heron["<b>Heron Boat PC</b><br/>192.168.131.1"]
         PC["<b>IG-Handle PC</b>"]
     end
 
-    subgraph "Sensor Network"
+    subgraph "PoE Switch Wired Network"
         Switch["PoE Switch"]
+
+        subgraph "192.168.131.0/24"
+            Heron["<b>Heron Boat PC</b><br/>192.168.131.1"]
+        end
 
         subgraph "192.168.50.0/24"
             Cam1["Camera 1<br/>192.168.50.101"]
@@ -108,9 +111,9 @@ graph TD
 
     VPN -. "tailscale0" .-> PC
     Mocap -. "Wi-Fi (wlo1): SriLab<br/>192.168.1.8" .-> PC
-    Heron ---|"Ethernet (enp2s0)<br/>192.168.131.2"| PC
-    PC ---|"Ethernet (enx000fc910b495)<br/>192.168.50.10 + 192.168.0.3"| Switch
+    PC ---|"Ethernet (enp2s0)<br/>192.168.131.2 + 192.168.50.10 + 192.168.0.3"| Switch
 
+    Switch --- Heron
     Switch --- Cam1
     Switch --- Cam2
     Switch --- Cam3
@@ -167,8 +170,8 @@ This provides deterministic timing for:
 ## Network Architecture
 
 The sensing stack uses dedicated IPv4 subnets for the different device groups.
-Multiple subnets can be assigned to the same physical Ethernet interface when
-needed.
+The PoE switch is connected to `enp2s0`; Heron, LiDARs, cameras, and sonar all
+share that physical switch path while keeping separate IPv4 subnets.
 
 | Network | Subnet | Devices |
 | :--- | :--- | :--- |
@@ -183,9 +186,9 @@ The handle computer uses static addresses configured with Netplan + systemd-netw
 
 | Interface | Address | Purpose |
 | :--- | :--- | :--- |
-| **enp2s0** | 192.168.131.2 | Heron internal network |
-| **enx000fc910b495** | 192.168.50.10 | LiDAR + cameras |
-| **enx000fc910b495** | 192.168.0.3 | sonar |
+| **enp2s0** | 192.168.131.2 | Heron internal network on PoE switch |
+| **enp2s0** | 192.168.50.10 | LiDAR + cameras on PoE switch |
+| **enp2s0** | 192.168.0.3 | sonar on PoE switch |
 | **wlo1** | DHCP (192.168.1.8 on SriLab Wi-Fi) | mocap Wi-Fi connection |
 | **tailscale0** | VPN | remote access |
 
@@ -237,7 +240,7 @@ rosrun slam_grande record_bag.sh --profile raw ~/bags
 
 ## Remote Operation
 
-Connect to the handle computer through the sensor network:
+Connect to the handle computer through the sensor subnet on the PoE switch:
 
 ```bash
 ssh ig-handle@192.168.50.10
@@ -449,10 +452,8 @@ ip -br addr
 
 **Expected result:**
 ```text
-enp2s0           192.168.131.2
-enx000fc910b495  192.168.50.10
-enx000fc910b495  192.168.0.3
-wlo1             DHCP (192.168.1.8 on SriLab Wi-Fi)
+enp2s0           192.168.131.2/24 192.168.50.10/24 192.168.0.3/24
+wlo1             DHCP, commonly 192.168.1.8/24 on SriLab Wi-Fi
 ```
 
 ---

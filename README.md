@@ -43,7 +43,7 @@ same core idea: synchronized acquisition on a dedicated onboard computer.
 - The integrated bringup camera profile is intentionally conservative: 10 Hz,
   continuous exposure/gain with a 10 ms exposure ceiling, `BayerRG8`, ISP
   disabled, and a centered 1280x1024 ROI. Placeholder CameraInfo YAMLs for the
-  four Forge serials live under `config/camera_info/`; they suppress missing
+  four Forge serials live under `config/cameras/`; they suppress missing
   file warnings and keep the camera-info topics present, but `K[0] = 0` marks
   them as uncalibrated. Full native 2448x2048 capture or metric vision should
   be paired with a real calibration and GigE throughput check.
@@ -56,7 +56,7 @@ same core idea: synchronized acquisition on a dedicated onboard computer.
   still kept for lab hardware, but normal boat bringup does not start it.
 - Motion capture is salvageable as an explicit localization source through the
   NatNet/datacollect bridge for standalone mocap logging.
-- The stable udev aliases in `config/99-ig_handle_udev.rules` exist, but some
+- The stable udev aliases in `config/udev/99-udev.rules` exist, but some
   launch defaults still use `/dev/serial/by-id/...` paths. If a device serial
   changes, check both the udev rule and the launch argument.
 
@@ -376,7 +376,7 @@ Additional sensors:
   same time as the native binary.
   The native launch path selects a DT100 settings profile with
   `sonar_profile:=pool` or `sonar_profile:=harbor`; the default is `pool`.
-  Profile range/gain/sound-velocity values live in `config/sonar_profiles.yaml`, and
+  Profile range/gain/sound-velocity values live in `config/sonar/profiles.yaml`, and
   `sonar.py deltat` generates the runtime `Linux_DeltaT.INI` from that config.
   Use `verbose_deltat_ini:=true` to print the generated INI before exec.
   When raw packets are present but cannot be decoded as profile-point XYZ
@@ -469,7 +469,7 @@ wlo1             DHCP, commonly 192.168.1.8/24 on SriLab Wi-Fi
 Install device rules for stable device names:
 
 ```bash
-sudo cp config/99-ig_handle_udev.rules /etc/udev/rules.d/
+sudo cp config/udev/99-udev.rules /etc/udev/rules.d/
 sudo udevadm control --reload-rules
 sudo udevadm trigger
 ```

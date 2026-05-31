@@ -52,7 +52,7 @@ class DeltaTLauncher:
     def profile_config_path(self, request: DeltaTLaunchRequest) -> Path:
         if request.profile_config:
             return Path(request.profile_config)
-        return self.package_dir / "config" / "sonar_profiles.yaml"
+        return self.package_dir / "config" / "sonar" / "profiles.yaml"
 
     def load_profile(self, request: DeltaTLaunchRequest) -> SonarProfile:
         profile = load_sonar_profile(

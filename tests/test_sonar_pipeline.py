@@ -66,7 +66,9 @@ def test_profile_decoder_does_not_try_offset_zero_fallback():
 
 
 def test_sonar_profile_config_selects_harbor_values():
-    config_path = Path(__file__).resolve().parents[1] / "config" / "sonar_profiles.yaml"
+    config_path = (
+        Path(__file__).resolve().parents[1] / "config" / "sonar" / "profiles.yaml"
+    )
 
     profile = load_sonar_profile(str(config_path), "harbor", udp_port="5050")
 
@@ -78,7 +80,9 @@ def test_sonar_profile_config_selects_harbor_values():
 
 
 def test_sonar_profile_config_selects_pool_freshwater_sound_velocity():
-    config_path = Path(__file__).resolve().parents[1] / "config" / "sonar_profiles.yaml"
+    config_path = (
+        Path(__file__).resolve().parents[1] / "config" / "sonar" / "profiles.yaml"
+    )
 
     profile = load_sonar_profile(str(config_path), "pool")
 
@@ -96,7 +100,7 @@ def test_deltat_launcher_generates_ini_from_profile(tmp_path):
         binary_path=package_dir / "scripts" / "sonar" / "Linux_DeltaT_v1023_x86_64",
     )
     profile = load_sonar_profile(
-        str(package_dir / "config" / "sonar_profiles.yaml"), "pool"
+        str(package_dir / "config" / "sonar" / "profiles.yaml"), "pool"
     )
 
     ini_text = launcher.ini_text(profile)

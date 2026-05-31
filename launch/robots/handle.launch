@@ -27,10 +27,10 @@
   <arg name="topic_pps_time"   default="/sensors/pps/time"/>
   <arg name="topic_camera_time" default="/sensors/camera/time"/>
   <arg name="topic_imu_time" default="/sensors/imu/time"/>
-  <arg name="camera_f1_info_url" default="package://ig_handle/config/camera_info/25110056.yaml"/>
-  <arg name="camera_f2_info_url" default="package://ig_handle/config/camera_info/25152257.yaml"/>
-  <arg name="camera_f3_info_url" default="package://ig_handle/config/camera_info/25110061.yaml"/>
-  <arg name="camera_f4_info_url" default="package://ig_handle/config/camera_info/25110065.yaml"/>
+  <arg name="camera_f1_info_url" default="package://ig_handle/config/cameras/25110056.yaml"/>
+  <arg name="camera_f2_info_url" default="package://ig_handle/config/cameras/25152257.yaml"/>
+  <arg name="camera_f3_info_url" default="package://ig_handle/config/cameras/25110061.yaml"/>
+  <arg name="camera_f4_info_url" default="package://ig_handle/config/cameras/25110065.yaml"/>
   <arg name="camera_f1_ip" default="192.168.50.101"/>
   <arg name="camera_f2_ip" default="192.168.50.102"/>
   <arg name="camera_f3_ip" default="192.168.50.103"/>

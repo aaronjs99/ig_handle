@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional, Sequence
 
-from .sonar_profiles import SonarProfile, load_sonar_profile
+from .profiles import SonarProfile, load_sonar_profile
 
 
 BINARY_NAME = "Linux_DeltaT_v1023_x86_64"
@@ -52,7 +52,7 @@ class DeltaTRunner:
     def profile_config_path(self, request: DeltaTLaunchRequest) -> Path:
         if request.profile_config:
             return Path(request.profile_config)
-        return self.package_dir / "config" / "sonar" / "profiles.yaml"
+        return self.package_dir / "config" / "sensors" / "sonar" / "profiles.yaml"
 
     def load_profile(self, request: DeltaTLaunchRequest) -> SonarProfile:
         profile = load_sonar_profile(

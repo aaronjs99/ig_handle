@@ -1,0 +1,33 @@
+# IG Handle live sensor and host endpoint contract.
+# Frame geometry and model specifications live under config/sensors/.
+
+sensor_network:
+  endpoints:
+    camera_f1:
+      label: Forge F1 camera
+      host: 192.168.50.101
+    camera_f2:
+      label: Forge F2 camera
+      host: 192.168.50.102
+    camera_f3:
+      label: Forge F3 camera
+      host: 192.168.50.103
+    camera_f4:
+      label: Forge F4 camera
+      host: 192.168.50.104
+    lidar_h:
+      label: Horizontal VLP-16 LiDAR
+      host: 192.168.50.201
+    lidar_v:
+      label: Vertical VLP-16 LiDAR
+      host: 192.168.50.202
+    sonar:
+      label: Imagenex DT100 sonar
+      host: 192.168.0.2
+    imu:
+      label: Xsens IMU
+      device_path: /dev/imu
+      device_id: 0368319D
+    heron:
+      label: Heron Base Computer
+      host: 192.168.131.1

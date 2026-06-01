@@ -38,15 +38,18 @@ same core idea: synchronized acquisition on a dedicated onboard computer.
 - The integrated bringup camera profile is intentionally conservative: 10 Hz,
   continuous exposure/gain with a 10 ms exposure ceiling, `BayerRG8`, ISP
   disabled, and a centered 1280x1024 ROI. Placeholder CameraInfo YAMLs for the
-  four Forge serials live under `config/cameras/`; they suppress missing
+  four Forge serials live under `config/sensors/cameras/`; they suppress missing
   file warnings and keep the camera-info topics present, but `K[0] = 0` marks
   them as uncalibrated. Full native 2448x2048 capture or metric vision should
   be paired with a real calibration and GigE throughput check.
 - Physical layout metadata treats F1/F4 as right/starboard mounts when looking
   from behind and F2/F3 as left/port mounts. The authoritative sensor geometry
-  lives in `slam_grande/config/sensors/heron_sensor_suite.yaml`; the old
+  lives in `config/sensors/sensor_frames.yaml`; the old
   horizontal/vertical VLP-16 updater has been removed for this rig, so that
   transform should not be updated from a separate report.
+- Sensor model specifications live separately in
+  `config/sensors/sensor_models.yaml`; live IP/device endpoint facts live in
+  `config/network/sensor_network.yaml`.
 - `use_teensy:=false` is the current default. The Teensy/rosserial timing path is
   still kept for lab hardware, but normal boat bringup does not start it.
 - Motion capture is salvageable as an explicit localization source through the
@@ -360,10 +363,10 @@ the recorder with `--include-all-cameras`.
 
 Additional sensors:
 - **ig-heron** keeps the DT100 receiver raw on `/sensors/sonar/raw` as
-  `std_msgs/UInt8MultiArray`. `sonar.py cloud` is the downstream
-  typed adapter and publishes supported profile-point packets on
-  `/sensors/sonar/scan` as `sensor_msgs/PointCloud2`. Raw beam packets remain
-  raw instead of being converted into invented geometry.
+  `std_msgs/UInt8MultiArray`. MARINER owns the downstream typed adapter that
+  decodes supported profile-point packets into `/sensors/sonar/scan` as
+  `sensor_msgs/PointCloud2`. Raw beam packets remain raw instead of being
+  converted into invented geometry.
   The default launch path uses the bundled native `Linux_DeltaT` binary at
   `scripts/sonar/Linux_DeltaT_v1023_x86_64` to talk to the sonar head and
   forward vendor UDP packets; it is not a ROS decoder. The legacy Windows VM
@@ -371,33 +374,28 @@ Additional sensors:
   same time as the native binary.
   The native launch path selects a DT100 settings profile with
   `sonar_profile:=pool` or `sonar_profile:=harbor`; the default is `pool`.
-  Profile range/gain/sound-velocity values live in `config/sonar/profiles.yaml`, and
+  Profile range/gain/sound-velocity values live in `config/sensors/sonar/profiles.yaml`, and
   `sonar.py deltat` generates the runtime `Linux_DeltaT.INI` from that config.
   Use `verbose_deltat_ini:=true` to print the generated INI before exec.
-  When raw packets are present but cannot be decoded as profile-point XYZ
-  records, the launch publishes an empty `/sensors/sonar/scan` cloud so
-  operators can distinguish live undecoded sonar traffic from a missing topic.
-  Empty `83P` profile payloads are logged as live packets with no returns, not
-  as decode warnings.
 - Optional thermal live topic is `/sensors/thermal/image_raw`; compressed
   capture should be verified from the active image transport before assuming a
   `/compressed` bag topic exists.
 
 To add or remove bag topics, edit `slam_grande/scripts/utils/record_bag.sh`.
 Keep both `/sensors/sonar/raw` and `/sensors/sonar/scan` in field bags: raw
-packets prove sonar reception, while the scan cloud is the basic geometry/map
-surface when the DT100 packet format can be decoded.
+packets prove sonar reception, while the MARINER-produced scan cloud is the
+basic geometry/map surface when the DT100 packet format can be decoded.
 
 ## Live Hardware Pytests
 
 The `ig_handle/tests` suite includes unit and live hardware checks. Hardware
-endpoint facts live in `config/hardware/sensors.yaml`; update that file when
+endpoint facts live in `config/network/sensor_network.yaml`; update that file when
 sensor IPs, topics, or udev aliases change.
 
 Connectivity checks ping network sensors and verify the IMU serial device path:
 
 ```bash
-pytest -q ig_handle/tests/live/test_hardware_connectivity.py
+pytest -q ig_handle/tests/test_hardware_connectivity.py
 ```
 
 Heron status checks validate the boat base path instead of forcing every sensor
@@ -413,7 +411,7 @@ export ROS_MASTER_URI=http://192.168.131.1:11311
 export ROS_IP=192.168.131.10
 unset ROS_HOSTNAME
 
-pytest -q ig_handle/tests/live/test_heron_base.py
+pytest -q ig_handle/tests/test_heron_base.py
 ```
 
 The default battery floor is `14.0 V`; override it with

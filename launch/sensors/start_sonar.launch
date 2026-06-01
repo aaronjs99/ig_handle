@@ -5,16 +5,10 @@
   <arg name="headless"       default="false"/>
   <arg name="udp_port"       default="4040"/>
   <arg name="raw_topic"      default="/sensors/sonar/raw"/>
-  <arg name="cloud_topic"    default="/sensors/sonar/scan"/>
-  <arg name="frame_id"       default="sonar_link"/>
   <arg name="bind_ip"        default="0.0.0.0"/>
   <arg name="udp_dest_ip"    default="192.168.0.3"/>
   <arg name="sonar_profile"  default="pool"/>
-  <arg name="sonar_profile_config" default="$(find ig_handle)/config/sonar/profiles.yaml"/>
-  <arg name="sonar_endian"   default="little"/>
-  <arg name="min_range_m"    default="0.5"/>
-  <arg name="max_range_m"    default=""/>
-  <arg name="publish_empty_on_decode_failure" default="true"/>
+  <arg name="sonar_profile_config" default="$(find ig_handle)/config/sensors/sonar/profiles.yaml"/>
   <arg name="verbose_deltat_ini" default="false"/>
 
   <!-- Default native path: Linux_DeltaT talks to the sonar head and forwards
@@ -34,22 +28,10 @@
     </node>
   </group>
 
-  <!-- Common: keep DT100 bytes raw, then publish a typed PointCloud2 adapter. -->
+  <!-- Common: keep DT100 bytes raw. MARINER owns raw -> PointCloud2. -->
   <node pkg="ig_handle" type="sonar.py" name="sonar_raw_receiver" output="log" args="receiver">
     <param name="port" value="$(arg udp_port)"/>
     <param name="topic" value="$(arg raw_topic)"/>
     <param name="bind_ip" value="$(arg bind_ip)"/>
-  </node>
-
-  <node pkg="ig_handle" type="sonar.py" name="sonar_cloud_generator" output="screen" args="cloud">
-    <param name="raw_topic" value="$(arg raw_topic)"/>
-    <param name="cloud_topic" value="$(arg cloud_topic)"/>
-    <param name="frame_id" value="$(arg frame_id)"/>
-    <param name="profile_config" value="$(arg sonar_profile_config)"/>
-    <param name="sonar_profile" value="$(arg sonar_profile)"/>
-    <param name="endian" value="$(arg sonar_endian)"/>
-    <param name="min_range_m" value="$(arg min_range_m)"/>
-    <param name="max_range_m" value="$(arg max_range_m)"/>
-    <param name="publish_empty_on_decode_failure" value="$(arg publish_empty_on_decode_failure)"/>
   </node>
 </launch>

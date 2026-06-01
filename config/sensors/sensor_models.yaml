@@ -1,0 +1,42 @@
+# Canonical IG Handle sensor model specifications.
+# Frame transforms, rig measurements, and model dimensions live in sensor_frames.yaml.
+
+sensor_models:
+  version: 2026-05-27_centerline_three_camera_test_seed
+  models:
+    xsens_mti30_ahrs:
+      model: Xsens MTi-30 AHRS, encased MTi
+      device_id_family: 0368xxxx
+      output_frame_convention: ENU
+    velodyne_vlp16:
+      model: Velodyne VLP-16
+      channels: 16
+      default_rpm: 600
+    forge_ip67:
+      model: Forge FG-PGE-50S5C-C-IP
+      body_shape: cylindrical IP67 housing
+      sensor:
+        sensor_model: Sony IMX264
+      family: Forge 1GigE IP67
+      spectrum: Color
+      sensor_type: CMOS
+      shutter: global
+      lens_mount: C-mount
+      optical_filter: IR cut-off 670 nm
+      interface: Gigabit Ethernet 1 Gbps
+      machine_vision_standard: GigE Vision v1.2
+      synchronization:
+      - software_trigger
+      - hardware_trigger
+      - action_command
+      - PTP
+      protection: IP67
+      adc_bit_depth: 12
+      power: PoE or 12-24 V GPIO
+    imagenex_dt100:
+      model: Imagenex DT100
+      beams_default: 480
+      beams_selectable:
+      - 480
+      - 240
+      - 120

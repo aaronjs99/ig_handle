@@ -11,12 +11,9 @@ from pathlib import Path
 
 import pytest
 
-from ig_handle_testing.env import env_enabled, float_env
-
-
-pytestmark = pytest.mark.live_hardware
 
 PROFILE_NAME = "restrained_pytest_30s"
+LIVE_HARDWARE_ENV = "IG_HANDLE_RUN_LIVE_HARDWARE_TESTS"
 EXPECTED_PHASES = [
     ("forward_70", 10.0, 0.70, 0.70, True),
     ("rotate_left70_right90_reverse", 5.0, 0.70, -0.90, True),
@@ -27,6 +24,15 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 PROFILE_SCRIPT = (
     REPO_ROOT / "slam_grande" / "scripts" / "utils" / "heron_thruster_profile.py"
 )
+
+
+def _env_enabled(name: str) -> bool:
+    return os.environ.get(name, "").strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _float_env(name: str, default: float) -> float:
+    value = os.environ.get(name)
+    return default if value is None or value.strip() == "" else float(value)
 
 
 def _load_profile_module():
@@ -62,7 +68,12 @@ def test_restrained_thruster_profile_definition_matches_requested_sequence():
     )
 
 
+@pytest.mark.live_hardware
 @pytest.mark.restrained_thruster
+@pytest.mark.skipif(
+    not _env_enabled(LIVE_HARDWARE_ENV),
+    reason=f"set {LIVE_HARDWARE_ENV}=1 to run restrained thruster hardware tests",
+)
 def test_live_restrained_thruster_profile_exercises_both_motors(tmp_path):
     bag_mode = os.environ.get("IG_HANDLE_THRUSTER_PROFILE_BAG_MODE", "control")
     command = [
@@ -77,10 +88,10 @@ def test_live_restrained_thruster_profile_exercises_both_motors(tmp_path):
         "--bag-mode",
         bag_mode,
     ]
-    if env_enabled("IG_HANDLE_THRUSTER_PROFILE_NO_CONTROLLER_INPUTS"):
+    if _env_enabled("IG_HANDLE_THRUSTER_PROFILE_NO_CONTROLLER_INPUTS"):
         command.append("--no-require-controller-inputs")
 
-    timeout_sec = float_env("IG_HANDLE_THRUSTER_PROFILE_TIMEOUT_SEC", 100.0)
+    timeout_sec = _float_env("IG_HANDLE_THRUSTER_PROFILE_TIMEOUT_SEC", 100.0)
     result = subprocess.run(
         command,
         text=True,
@@ -111,7 +122,7 @@ def test_live_restrained_thruster_profile_exercises_both_motors(tmp_path):
         for phase in summary["phases"]
     ] == EXPECTED_PHASES
 
-    min_current_a = float_env("IG_HANDLE_THRUSTER_PROFILE_MIN_CURRENT_A", 0.25)
+    min_current_a = _float_env("IG_HANDLE_THRUSTER_PROFILE_MIN_CURRENT_A", 0.25)
     telemetry = summary["telemetry_snapshot"]
     assert telemetry["max_abs_current_left_a"] >= min_current_a
     assert telemetry["max_abs_current_right_a"] >= min_current_a

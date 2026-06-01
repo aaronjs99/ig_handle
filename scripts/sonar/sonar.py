@@ -11,8 +11,6 @@ from typing import Optional, Sequence
 COMMAND_ALIASES = {
     "receiver": "receiver",
     "raw": "receiver",
-    "cloud": "cloud",
-    "cloud_generator": "cloud",
     "deltat": "deltat",
     "tx": "deltat",
 }
@@ -28,18 +26,17 @@ def main(argv: Optional[Sequence[str]] = None) -> None:
     package_dir = _package_dir()
 
     command = COMMAND_ALIASES.get(app_args[0])
+    sonar_script_dir = package_dir / "scripts" / "sonar"
+    if str(sonar_script_dir) not in sys.path:
+        sys.path.insert(0, str(sonar_script_dir))
+
     if command == "receiver":
-        from ig_handle_sonar.receiver import run
+        from include.receiver import run
 
         run()
         return
-    if command == "cloud":
-        from ig_handle_sonar.cloud_generator import main as run_cloud
-
-        run_cloud()
-        return
     if command == "deltat":
-        from ig_handle_sonar.deltat_runner import run_cli
+        from include.deltat_runner import run_cli
 
         run_cli(app_args[1:], package_dir=package_dir)
         return
@@ -69,11 +66,10 @@ def _package_dir() -> Path:
 
 def _print_usage() -> None:
     print(
-        "Usage: sonar.py {receiver|cloud|deltat} [args]\n"
+        "Usage: sonar.py {receiver|deltat} [args]\n"
         "\n"
         "Commands:\n"
         "  receiver  Publish raw vendor UDP datagrams on /sensors/sonar/raw.\n"
-        "  cloud     Decode supported raw packets and publish /sensors/sonar/scan.\n"
         "  deltat    Generate Linux_DeltaT.INI from config and exec the DeltaT binary.",
         file=sys.stderr,
     )

@@ -4,7 +4,7 @@
   <arg name="camera_serial"             default="25110056" />
   <arg name="camera_ip"                 default="" />
   <arg name="device_type"               default="GigE" />
-  <arg name="config_file"               default="$(find ig_handle)/config/cameras/forge_config.yaml" />
+  <arg name="config_file"               default="$(find ig_handle)/config/sensors/cameras/forge_config.yaml" />
   <arg name="camera_info_url"           default="" />
   <arg name="topic"                     default="image_raw"/>
   <arg name="camera_info_topic"         default="camera_info"/>

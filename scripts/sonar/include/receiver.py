@@ -6,12 +6,19 @@ on packet kind, so raw bags preserve profile packets, beam packets, and any
 other diagnostic traffic sent by the sonar-side transmitter.
 """
 import socket
-from typing import Optional
+from dataclasses import dataclass
+from typing import Optional, Tuple
 
 import rospy
 from std_msgs.msg import UInt8MultiArray
 
-from .dt100_profile_decoder import RawSonarPacket
+
+@dataclass(frozen=True)
+class RawSonarPacket:
+    """Raw vendor datagram plus optional UDP source metadata."""
+
+    data: bytes
+    source: Tuple[str, int]
 
 
 class SonarRawReceiver:

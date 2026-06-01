@@ -24,15 +24,14 @@
   <arg name="topic_cam_f3_info" default="/sensors/camera/f3/camera_info"/>
   <arg name="topic_cam_f4_info" default="/sensors/camera/f4/camera_info"/>
   <arg name="topic_sonar_raw"  default="/sensors/sonar/raw"/>
-  <arg name="topic_sonar"      default="/sensors/sonar/scan"/>
   <arg name="topic_thermal"    default="/sensors/thermal/image_raw"/>
   <arg name="topic_pps_time"   default="/sensors/pps/time"/>
   <arg name="topic_camera_time" default="/sensors/camera/time"/>
   <arg name="topic_imu_time" default="/sensors/imu/time"/>
-  <arg name="camera_f1_info_url" default="package://ig_handle/config/cameras/25110056.yaml"/>
-  <arg name="camera_f2_info_url" default="package://ig_handle/config/cameras/25152257.yaml"/>
-  <arg name="camera_f3_info_url" default="package://ig_handle/config/cameras/25110061.yaml"/>
-  <arg name="camera_f4_info_url" default="package://ig_handle/config/cameras/25110065.yaml"/>
+  <arg name="camera_f1_info_url" default="package://ig_handle/config/sensors/cameras/25110056.yaml"/>
+  <arg name="camera_f2_info_url" default="package://ig_handle/config/sensors/cameras/25152257.yaml"/>
+  <arg name="camera_f3_info_url" default="package://ig_handle/config/sensors/cameras/25110061.yaml"/>
+  <arg name="camera_f4_info_url" default="package://ig_handle/config/sensors/cameras/25110065.yaml"/>
   <arg name="camera_f1_ip" default="192.168.50.101"/>
   <arg name="camera_f2_ip" default="192.168.50.102"/>
   <arg name="camera_f3_ip" default="192.168.50.103"/>
@@ -75,7 +74,6 @@
 
   <include if="$(arg use_sonar)" file="$(find ig_handle)/launch/sensors/start_sonar.launch">
     <arg name="raw_topic" value="$(arg topic_sonar_raw)"/>
-    <arg name="cloud_topic" value="$(arg topic_sonar)"/>
   </include>
 
   <!-- F1/F2 are forward-facing camera slots; F3/F4 are upward-facing

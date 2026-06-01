@@ -9,14 +9,15 @@ find_package(catkin REQUIRED COMPONENTS
   tf2_ros
 )
 
-catkin_python_setup()
-
 catkin_package()
 
 catkin_install_python(
   PROGRAMS
     scripts/sonar/sonar.py
     scripts/mocap/mocap.py
+    scripts/frames/export.py
+    scripts/frames/broadcast.py
+    scripts/imu/force_wakeup.py
     scripts/teensy/teensy_rosserial_launcher.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
@@ -25,6 +26,11 @@ install(
   PROGRAMS
     scripts/sonar/Linux_DeltaT_v1023_x86_64
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/scripts/sonar
+)
+
+install(
+  DIRECTORY scripts/sonar/include/
+  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/scripts/sonar/include
 )
 
 install(

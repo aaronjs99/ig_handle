@@ -1,0 +1,443 @@
+# Canonical Heron / IG Handle sensor frames and measured geometry.
+# Model specifications and network endpoints live in sibling config files.
+
+sensor_frames:
+  version: 2026-05-27_centerline_three_camera_test_seed
+  frame_convention:
+    base_link:
+      x: forward / bow
+      y: left / port
+      z: up
+  notes:
+  - All translations are in meters unless explicitly marked otherwise.
+  - All rotations are expressed as parent-to-child transforms.
+  - Prefer runtime TF edges base_link->lidar_h_link, lidar_h_link->lidar_v_link, base_link->imu_link,
+    and base_link->F*_optical.
+  - Do not publish both base_link->lidar_v_link and lidar_h_link->lidar_v_link at
+    runtime.
+  - Camera transforms use ROS optical frames: +Z optical axis, +X image-right, +Y
+      image-down.
+  frames:
+    map: map
+    odom: odom
+    base: base_link
+    imu: imu_link
+    lidar_h: lidar_h_link
+    lidar_v: lidar_v_link
+    sonar: sonar_link
+    camera_f1: F1
+    camera_f2: F2
+    camera_f3: F3
+    camera_f4: F4
+    camera_f1_optical: F1_optical
+    camera_f2_optical: F2_optical
+    camera_f3_optical: F3_optical
+    camera_f4_optical: F4_optical
+  transforms:
+    imu:
+      parent: base_link
+      child: imu_link
+      translation:
+      - -0.012
+      - 0.0
+      - 0.25235
+      rotation_rpy:
+      - 3.141592653589793
+      - 0.0
+      - 0.0
+      rotation_quat_xyzw:
+      - 1.0
+      - 0.0
+      - 0.0
+      - 0.0
+      axes_in_base:
+        x_imu: +X_base
+        y_imu: -Y_base
+        z_imu: -Z_base
+    lidar_h:
+      parent: base_link
+      child: lidar_h_link
+      translation:
+      - 0.0
+      - 0.0
+      - 0.29654
+      rotation_rpy:
+      - 0.0
+      - 0.0
+      - 0.0
+      rotation_quat_xyzw:
+      - 0.0
+      - 0.0
+      - 0.0
+      - 1.0
+      axes_in_base:
+        x_lidar_h: +X_base
+        y_lidar_h: +Y_base
+        z_lidar_h: +Z_base
+    lidar_v:
+      parent: lidar_h_link
+      child: lidar_v_link
+      translation:
+      - 0.03781
+      - 0.0
+      - -0.08819
+      rotation_rpy:
+      - 1.5707963267948966
+      - 0.0
+      - 1.5707963267948966
+      rotation_quat_xyzw:
+      - 0.5
+      - 0.5
+      - 0.5
+      - 0.5
+      axes_in_lidar_h:
+        x_lidar_v: +Y_lidar_h
+        y_lidar_v: +Z_lidar_h
+        z_lidar_v: +X_lidar_h
+    sonar:
+      parent: base_link
+      child: sonar_link
+      translation:
+      - 0.0
+      - 0.0
+      - -0.08
+      rotation_rpy:
+      - 0.0
+      - 1.5708
+      - 0.0
+    camera_f1_optical:
+      parent: base_link
+      child: F1_optical
+      role: front-facing right / starboard
+      translation:
+      - 0.03445
+      - -0.089655
+      - 0.22909
+      rotation_rpy:
+      - -1.5707963267948966
+      - 0.0
+      - -1.5707963267948966
+      axes_in_base:
+        x_cam: -Y_base
+        y_cam: -Z_base
+        z_cam: +X_base
+    camera_f2_optical:
+      parent: base_link
+      child: F2_optical
+      role: front-facing left / port
+      translation:
+      - 0.03445
+      - 0.089655
+      - 0.22909
+      rotation_rpy:
+      - -1.5707963267948966
+      - 0.0
+      - -1.5707963267948966
+      axes_in_base:
+        x_cam: -Y_base
+        y_cam: -Z_base
+        z_cam: +X_base
+    camera_f3_optical:
+      parent: base_link
+      child: F3_optical
+      role: upward-facing left / port
+      translation:
+      - 0.03445
+      - 0.136515
+      - 0.18339
+      rotation_rpy:
+      - 0.0
+      - 0.0
+      - -1.5707963267948966
+      axes_in_base:
+        x_cam: -Y_base
+        y_cam: +X_base
+        z_cam: +Z_base
+    camera_f4_optical:
+      parent: base_link
+      child: F4_optical
+      role: upward-facing right / starboard
+      translation:
+      - 0.03445
+      - -0.136515
+      - 0.18339
+      rotation_rpy:
+      - 0.0
+      - 0.0
+      - -1.5707963267948966
+      axes_in_base:
+        x_cam: -Y_base
+        y_cam: +X_base
+        z_cam: +Z_base
+  geometry_reference:
+    measurements:
+      lidar_h:
+        x_base_m: 0.0
+        y_left_of_boat_center_m: 0.0
+        base_height_above_boat_frame_origin_m: 0.26035
+        base_height_source: 10.25 in = 260.35 mm, measured to base/bottom of horizontal
+          VLP-16
+      lidar_v:
+        base_forward_offset_from_lidar_h_origin_m: 0.074
+        base_forward_offset_source: Approximate measured vertical LiDAR base point
+          74 mm in front of horizontal LiDAR center.
+        center_height_below_lidar_h_base_m: 0.052
+        center_height_source: Approximate measured vertical LiDAR center 52 mm below
+          horizontal LiDAR base.
+        lateral_relation_m: 0.0
+      imu:
+        base_height_above_boat_frame_origin_m: 0.24535
+        base_to_lidar_h_base_vertical_gap_m: 0.015
+        origin_height_above_imu_base_m: 0.007
+        mounting_note: 'IMU remains flipped: +X forward, +Y starboard/right, +Z down.'
+      cameras:
+        front_camera_center_spacing_m: 0.17931
+        front_camera_center_spacing_expression_mm: 95.95 + 83.36 = 179.31
+        front_camera_half_spacing_m: 0.089655
+        front_cameras_behind_lidar_h_forward_point_m: -0.00112
+        front_cameras_behind_lidar_h_forward_point_expression_mm: 0.05086 - (0.03445
+          + 0.017526) = -1.12
+        front_camera_top_below_lidar_h_base_m: 0.00876
+        front_camera_top_below_lidar_h_base_expression_mm: 52.69 - 43.93 = 8.76
+        upward_camera_lateral_offset_from_respective_forward_camera_m: 0.04686
+        upward_camera_front_edge_lower_than_front_camera_top_m: 0.05067
+        upward_camera_front_edge_lower_than_front_camera_top_expression_mm: 24.87
+          - 18.98 + 44.78 = 50.67
+    reference_points:
+      lidar_h_origin_xyz_m:
+      - 0.0
+      - 0.0
+      - 0.29654
+      lidar_h_cable_point_xyz_m:
+      - -0.05086
+      - 0.0
+      - 0.27035
+      lidar_h_most_forward_point_xyz_m:
+      - 0.05086
+      - 0.0
+      - 0.29654
+      lidar_v_origin_xyz_m:
+      - 0.03781
+      - 0.0
+      - 0.20835
+      lidar_v_base_point_xyz_m:
+      - 0.074
+      - 0.0
+      - 0.20835
+      lidar_v_cable_point_xyz_m:
+      - 0.01162
+      - -0.05086
+      - 0.20835
+      imu_connector_reference_xyz_m:
+      - -0.0547
+      - -0.00473
+      - 0.25294
+      imu_base_plate_xyz_m:
+      - -0.012
+      - 0.0
+      - 0.24535
+      imu_origin_xyz_m:
+      - -0.012
+      - 0.0
+      - 0.25235
+      camera_front_common:
+        lidar_h_base_z_m: 0.26035
+        lidar_h_most_forward_x_m: 0.05086
+        front_camera_front_face_x_m: 0.05198
+        front_camera_origin_x_m: 0.034454
+        front_camera_top_z_m: 0.25159
+        front_camera_origin_z_m: 0.22909
+      camera_upward_common:
+        upward_camera_front_face_z_m: 0.20092
+        upward_camera_origin_z_m: 0.18339
+    derived_transforms:
+      base_link_to_lidar_v_link:
+        translation_xyz_m:
+        - 0.03781
+        - 0.0
+        - 0.20835
+        rotation_rpy:
+        - 1.5707963267948966
+        - 0.0
+        - 1.5707963267948966
+        rotation_quat_xyzw:
+        - 0.5
+        - 0.5
+        - 0.5
+        - 0.5
+      lidar_h_link_to_lidar_v_link:
+        translation_xyz_m:
+        - 0.03781
+        - 0.0
+        - -0.08819
+        rotation_rpy:
+        - 1.5707963267948966
+        - 0.0
+        - 1.5707963267948966
+        rotation_quat_xyzw:
+        - 0.5
+        - 0.5
+        - 0.5
+        - 0.5
+    urdf_body_transforms:
+      lidar_h_mount:
+        parent: base_link
+        child: lidar_h_mount
+        translation:
+        - 0.0
+        - 0.0
+        - 0.16
+        rotation_rpy:
+        - 0.0
+        - 0.0
+        - 0.0
+      lidar_v_mount:
+        parent: base_link
+        child: lidar_v_mount
+        translation:
+        - 0.074
+        - 0.0
+        - 0.11
+        rotation_rpy:
+        - 0.0
+        - 0.0
+        - 0.0
+      camera_mount:
+        parent: base_link
+        child: camera_mount
+        translation:
+        - 0.03445
+        - 0.0
+        - 0.13
+        rotation_rpy:
+        - 0.0
+        - 0.0
+        - 0.0
+      F1:
+        parent: base_link
+        child: F1
+        translation:
+        - 0.03445
+        - -0.089655
+        - 0.22909
+        rotation_rpy:
+        - 0.0
+        - 0.0
+        - 0.0
+      F2:
+        parent: base_link
+        child: F2
+        translation:
+        - 0.03445
+        - 0.089655
+        - 0.22909
+        rotation_rpy:
+        - 0.0
+        - 0.0
+        - 0.0
+      F3:
+        parent: base_link
+        child: F3
+        translation:
+        - 0.03445
+        - 0.136515
+        - 0.18339
+        rotation_rpy:
+        - 0.0
+        - -1.5707963267948966
+        - 0.0
+      F4:
+        parent: base_link
+        child: F4
+        translation:
+        - 0.03445
+        - -0.136515
+        - 0.18339
+        rotation_rpy:
+        - 0.0
+        - -1.5707963267948966
+        - 0.0
+      optical_joint_rpy:
+        forward:
+        - -1.5707963267948966
+        - 0.0
+        - -1.5707963267948966
+        upward:
+        - -1.5707963267948966
+        - 0.0
+        - -1.5707963267948966
+    tf_ownership_recommendation:
+      preferred_runtime_edges:
+      - base_link -> lidar_h_link
+      - base_link -> lidar_v_link
+      - base_link -> imu_link
+      - base_link -> F1_optical
+      - base_link -> F2_optical
+      - base_link -> F3_optical
+      - base_link -> F4_optical
+      avoid:
+      - Do not publish both base_link -> lidar_v_link and lidar_h_link -> lidar_v_link
+        at the same time.
+    model_measurements:
+      xsens_mti30_ahrs:
+        origin_definition: accelerometer origin
+        approximate_external_dimensions_m:
+          length_x: 0.057
+          width_y: 0.0419
+          height_z: 0.0236
+        origin_from_xsens_reference:
+          reference: center of screw closest to connector, bottom plate for z
+          origin_from_screw_imu_frame_m:
+            x: 0.0375
+            y: -0.015
+            z: 0.007
+        measured_connector_reference_xyz_m:
+        - -0.0547
+        - -0.00473
+        - 0.25294
+        connector_to_origin_offset_base_m:
+        - 0.0427
+        - 0.00473
+        - -0.00059
+        mounted_axes:
+          x_imu: +X_base
+          y_imu: -Y_base
+          z_imu: -Z_base
+      velodyne_vlp16:
+        diameter_m: 0.10172
+        radius_m: 0.05086
+        height_m: 0.07238
+        half_height_m: 0.03619
+        cable_height_above_lidar_base_m: 0.01
+        cable_offset_from_lidar_origin_lidar_frame_m:
+        - -0.05086
+        - 0.0
+        - -0.02619
+        horizontal_fov_deg: 360.0
+        vertical_fov_deg: 30.0
+        max_range_m: 200.0
+        default_frame_rate_hz: 10.0
+        max_frame_rate_hz: 20.0
+        azimuth_resolution_deg_at_600_rpm: 0.2
+      forge_ip67:
+        body_dimensions_m:
+          diameter: 0.045
+          radius: 0.0225
+          length_along_optical_axis: 0.05
+        origin_definition: image sensor optical center
+        c_mount_front_face_to_sensor_origin_m: 0.017526
+        megapixels: 5
+        max_frame_rate_standard_hz: 24
+        max_frame_rate_lossless_compression_hz: 33
+        image_sensor:
+          resolution_px:
+          - 2448
+          - 2048
+          pixel_size_um:
+          - 3.45
+          - 3.45
+          sensor_format: 2/3 inch
+      imagenex_dt100:
+        frequency_khz: 240
+        cross_track_swath_deg: 120.0
+        along_track_beam_width_deg: 3.0

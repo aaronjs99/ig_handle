@@ -226,12 +226,8 @@ roslaunch ig_handle collect_raw_data.launch
 Output:
 `~/bags/YYYY_MM_DD_HH_MM_SS_raw.bag`
 
-`collect_raw_data.launch` starts the sensor adapter from `ig_handle`, but the
-bag recorder itself is owned by `slam_grande`:
-
-```bash
-rosrun slam_grande record_bag.sh --profile raw ~/bags
-```
+`ig_handle` owns the sensor adapters. Use the active integration recorder, or a
+direct `rosbag record`, for run-level evidence capture.
 
 ---
 
@@ -310,33 +306,19 @@ For a direct Motive/NatNet lab run where Motive is configured for multicast:
 roslaunch "$(rospack find ig_handle)/launch/core/natnet_bridge.launch" transport:=natnet natnet_use_multicast:=true
 ```
 
-For a full DLiO-vs-mocap run, `slam_grande` can start this receiver and the
-relative comparison topics from one bringup:
+For a full DLiO-vs-mocap run, the integration launch can start this receiver and
+the relative comparison topics from one bringup. Initialize the comparison frame
+after DLiO, mocap, and IMU samples are available:
 
 ```bash
-roslaunch slam_grande bringup.launch mode:=real use_mocap_comparison:=true bag_prefix:=mocap_dlio
 rostopic pub -1 /mocap/initialize_alignment std_msgs/Bool "data: true"
 ```
 
-The canonical `slam_grande` bag recorder includes these mocap topics in the raw
-profile, so use the same recorder instead of maintaining a separate mocap
-recording command:
-
-```bash
-rosrun slam_grande record_bag.sh --profile raw ~/bags
-```
-
-Visualize mocap against canonical odometry from `slam_grande`:
-
-```bash
-rosrun slam_grande plot_mocap_odom.py _mocap_topic:=/mocap/rigid_body_1/pose _odom_topic:=/state/odometry
-```
-
-`collect_raw_data.launch` invokes `slam_grande/scripts/utils/record_bag.sh` with
-the `raw` profile. The default raw profile matches the current Heron field rig:
-F1/F2/F3/F4 cameras, IMU, both LiDARs, DT100 sonar, base telemetry, TF, and
-optional mocap comparison topics. Thermal camera topics remain available from
-the recorder with `--include-all-cameras`.
+The integration recorder should include these mocap topics in the raw profile
+instead of maintaining a separate mocap recording command. A complete raw field
+profile should cover F1/F2/F3/F4 cameras, IMU, both LiDARs, DT100 sonar, base
+telemetry, TF, and optional mocap comparison topics. Thermal camera topics
+remain available when the active recorder is configured to include them.
 
 | Topic                                     | Message type                   |
 |-------------------------------------------|--------------------------------|
@@ -381,7 +363,6 @@ Additional sensors:
   capture should be verified from the active image transport before assuming a
   `/compressed` bag topic exists.
 
-To add or remove bag topics, edit `slam_grande/scripts/utils/record_bag.sh`.
 Keep both `/sensors/sonar/raw` and `/sensors/sonar/scan` in field bags: raw
 packets prove sonar reception, while the MARINER-produced scan cloud is the
 basic geometry/map surface when the DT100 packet format can be decoded.
@@ -430,11 +411,8 @@ post-processing still require live or bag-backed operator validation.
 
 ## Raw Data Processing
 
-The canonical raw-bag processor lives beside the recorder in `slam_grande`:
-
-```bash
-rosrun slam_grande process_raw_bag.py --bag raw.bag
-```
+Use the raw-bag post-processor supplied by the active integration or evaluation
+layer.
 
 **Processing steps:**
 - Restamp camera and IMU messages using hardware timestamps

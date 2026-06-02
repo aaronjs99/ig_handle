@@ -3,11 +3,11 @@
        server/client behavior; set natnet_use_multicast:=true when Motive is
        configured for multicast streaming. -->
   <arg name="transport" default="natnet"/>
-  <arg name="server_ip" default="192.168.1.199"/>
-  <arg name="client_ip" default="192.168.1.8"/>
+  <arg name="server_ip" default="$(eval eval(open(find('ig_handle') + '/scripts/network_launch_eval.py').read())(find('ig_handle'), 'mocap_natnet_server_ip'))"/>
+  <arg name="client_ip" default="$(eval eval(open(find('ig_handle') + '/scripts/network_launch_eval.py').read())(find('ig_handle'), 'mocap_natnet_client_ip'))"/>
   <arg name="natnet_use_multicast" default="false"/>
-  <arg name="natnet_multicast_address" default="239.255.42.99"/>
-  <arg name="udp_bind_ip" default="0.0.0.0"/>
+  <arg name="natnet_multicast_address" default="$(eval eval(open(find('ig_handle') + '/scripts/network_launch_eval.py').read())(find('ig_handle'), 'mocap_natnet_multicast_address'))"/>
+  <arg name="udp_bind_ip" default="$(eval eval(open(find('ig_handle') + '/scripts/network_launch_eval.py').read())(find('ig_handle'), 'mocap_udp_bind_ip'))"/>
   <arg name="udp_port" default="5005"/>
 
   <!-- ROS topic and frame mapping. -->

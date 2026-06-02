@@ -7,12 +7,16 @@ from pathlib import Path
 
 PACKAGE_DIR = Path(__file__).resolve().parents[1]
 SONAR_SCRIPT_DIR = PACKAGE_DIR / "scripts" / "sonar"
+SCRIPTS_DIR = PACKAGE_DIR / "scripts"
 SONAR_PROFILE_CONFIG = PACKAGE_DIR / "config" / "sensors" / "sonar" / "profiles.yaml"
+if str(SCRIPTS_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPTS_DIR))
 if str(SONAR_SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SONAR_SCRIPT_DIR))
 
 from include.deltat_runner import DeltaTRunner
 from include.profiles import load_sonar_profile
+from network_config import network_value
 
 
 def test_sonar_profile_config_selects_harbor_values():
@@ -47,4 +51,4 @@ def test_deltat_launcher_generates_ini_from_profile(tmp_path):
     assert "Range:\n10\n" in ini_text
     assert "Gain:\n16\n" in ini_text
     assert "SoundVelocity:\n1482\n" in ini_text
-    assert "UDPAddress:\n192.168.0.3\n" in ini_text
+    assert f"UDPAddress:\n{network_value('sonar_lan_ip')}\n" in ini_text

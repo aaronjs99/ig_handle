@@ -11,6 +11,7 @@ from typing import Optional, Tuple
 
 import rospy
 from std_msgs.msg import UInt8MultiArray
+from network_config import network_value
 
 
 @dataclass(frozen=True)
@@ -27,7 +28,9 @@ class SonarRawReceiver:
     def __init__(self):
         self.port = int(rospy.get_param("~port", 4040))
         self.topic = str(rospy.get_param("~topic", "/sensors/sonar/raw"))
-        self.bind_ip = str(rospy.get_param("~bind_ip", "0.0.0.0"))
+        self.bind_ip = str(
+            rospy.get_param("~bind_ip", network_value("mocap_udp_bind_ip"))
+        )
         self.publisher = rospy.Publisher(self.topic, UInt8MultiArray, queue_size=50)
         self.socket = self._open_socket()
         self.last_packet: Optional[RawSonarPacket] = None

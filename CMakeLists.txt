@@ -18,6 +18,7 @@ catkin_install_python(
     scripts/frames/export.py
     scripts/frames/broadcast.py
     scripts/imu/force_wakeup.py
+    scripts/network_config.py
     scripts/teensy/teensy_rosserial_launcher.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
@@ -26,6 +27,18 @@ install(
   PROGRAMS
     scripts/sonar/Linux_DeltaT_v1023_x86_64
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/scripts/sonar
+)
+
+install(
+  PROGRAMS
+    scripts/network_config.py
+  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/scripts
+)
+
+install(
+  FILES
+    scripts/network_launch_eval.py
+  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/scripts
 )
 
 install(

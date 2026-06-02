@@ -76,7 +76,7 @@ config:
 graph TD
 
     subgraph Remote
-        Mocap["Mocap Computer<br/>192.168.1.199"]
+        Mocap["Mocap Computer"]
         VPN["VPN (Tailscale)"]
     end
 
@@ -87,28 +87,28 @@ graph TD
     subgraph "PoE Switch Wired Network"
         Switch["PoE Switch"]
 
-        subgraph "192.168.131.0/24"
-            Heron["<b>Heron Boat PC</b><br/>192.168.131.1"]
+        subgraph "Boat LAN"
+            Heron["<b>Heron Boat PC</b>"]
         end
 
-        subgraph "192.168.50.0/24"
-            Cam1["Camera 1<br/>192.168.50.101"]
-            Cam2["Camera 2<br/>192.168.50.102"]
-            Cam3["Camera 3<br/>192.168.50.103"]
-            Cam4["Camera 4<br/>192.168.50.104"]
+        subgraph "Sensor LAN"
+            Cam1["Camera 1"]
+            Cam2["Camera 2"]
+            Cam3["Camera 3"]
+            Cam4["Camera 4"]
 
-            LidarH["LiDAR H<br/>192.168.50.201"]
-            LidarV["LiDAR V<br/>192.168.50.202"]
+            LidarH["LiDAR H"]
+            LidarV["LiDAR V"]
         end
 
-        subgraph "192.168.0.0/24"
-            Sonar["Imagenex Sonar<br/>192.168.0.2"]
+        subgraph "Sonar LAN"
+            Sonar["Imagenex Sonar"]
         end
     end
 
     VPN -. "tailscale0" .-> PC
-    Mocap -. "Wi-Fi (wlo1): SriLab<br/>192.168.1.8" .-> PC
-    PC ---|"Ethernet (enp2s0)<br/>192.168.131.2 + 192.168.50.10 + 192.168.0.3"| Switch
+    Mocap -. "Wi-Fi (wlo1): SriLab" .-> PC
+    PC ---|"Ethernet (enp2s0)"| Switch
 
     Switch --- Heron
     Switch --- Cam1
@@ -168,50 +168,27 @@ This provides deterministic timing for:
 
 The sensing stack uses dedicated IPv4 subnets for the different device groups.
 The PoE switch is connected to `enp2s0`; Heron, LiDARs, cameras, and sonar all
-share that physical switch path while keeping separate IPv4 subnets.
-
-| Network | Subnet | Devices |
-| :--- | :--- | :--- |
-| Boat LAN | 192.168.131.0/24 | Heron, handle PC |
-| Sensor network | 192.168.50.0/24 | LiDAR + cameras |
-| Sonar network | 192.168.0.0/24 | Imagenex sonar |
-| Mocap network | 192.168.1.0/24 | motion capture |
-
-The handle computer uses static addresses configured with Netplan + systemd-networkd.
+share that physical switch path while keeping separate IPv4 subnets. The
+authoritative endpoint values are in `config/network/sensor_network.yaml`; the
+Netplan interface values are in `config/network/01-netplan.yaml`.
 
 ### Host interface configuration
 
-| Interface | Address | Purpose |
+| Interface | Address Source | Purpose |
 | :--- | :--- | :--- |
-| **enp2s0** | 192.168.131.2 | Heron internal network on PoE switch |
-| **enp2s0** | 192.168.50.10 | LiDAR + cameras on PoE switch |
-| **enp2s0** | 192.168.0.3 | sonar on PoE switch |
-| **wlo1** | DHCP (192.168.1.8 on SriLab Wi-Fi) | mocap Wi-Fi connection |
+| **enp2s0** | `config/network/01-netplan.yaml` | Heron, LiDAR, camera, and sonar networks on the PoE switch |
+| **wlo1** | DHCP on SriLab Wi-Fi | mocap Wi-Fi connection |
 | **tailscale0** | VPN | remote access |
 
-Wi-Fi connects the handle computer to the motion capture workstation (192.168.1.199).
+Wi-Fi connects the handle computer to the motion capture workstation configured
+in `config/network/sensor_network.yaml`.
 
 ---
 
 ## Sensor Hostnames
 
-Sensor hostnames are defined in `/etc/hosts`.
-
-Example:
-
-```text
-192.168.50.201 lidar_h
-192.168.50.202 lidar_v
-
-192.168.50.101 cam1
-192.168.50.102 cam2
-192.168.50.103 cam3
-192.168.50.104 cam4
-
-192.168.0.2 sonar
-```
-
-This allows launch files to reference sensors by name instead of IP.
+Sensor hostnames may be mirrored in `/etc/hosts`, but
+`config/network/sensor_network.yaml` is the package source for launch defaults.
 
 ---
 
@@ -233,10 +210,10 @@ direct `rosbag record`, for run-level evidence capture.
 
 ## Remote Operation
 
-Connect to the handle computer through the sensor subnet on the PoE switch:
+Connect to the handle computer through the configured sensor subnet address:
 
 ```bash
-ssh ig-handle@192.168.50.10
+ssh ig-handle@$(rosrun ig_handle network_config.py sensor_lan_ip)
 ```
 
 For long captures, start the recorder inside `screen` or `tmux`.
@@ -286,8 +263,8 @@ entrypoint, `scripts/mocap/natnet/` contains the bundled NatNet client, and
 The UDP transport republishes the same Heron pose topic, plus optional marker
 and potential-object point clouds on `/mocap/heron/markers` and
 `/mocap/potential_objects`, and status JSON on `/mocap/datacollect_status`.
-In the current lab setup the Motive-side datacollect packets arrive from
-`192.168.8.6` on local UDP port `5005`.
+In the current lab setup the Motive-side datacollect source is configured in
+`config/network/sensor_network.yaml` and arrives on local UDP port `5005`.
 
 Mocap remains a lab testing and ground-truth comparison path. It does not feed
 `/state/odometry` and should not be a field dependency. The datacollect UDP
@@ -351,7 +328,7 @@ Additional sensors:
   converted into invented geometry.
   The default launch path uses the bundled native `Linux_DeltaT` binary at
   `scripts/sonar/Linux_DeltaT_v1023_x86_64` to talk to the sonar head and
-  forward vendor UDP packets; it is not a ROS decoder. The legacy Windows VM
+  forward vendor UDP packets; it is not a ROS decoder. The Windows VM
   path can still be selected with `use_vm:=true`, but it should not run at the
   same time as the native binary.
   The native launch path selects a DT100 settings profile with
@@ -388,8 +365,8 @@ and confirm the Clearpath controller path is present from `/cmd_vel` to
 ```bash
 source /opt/ros/noetic/setup.bash
 source ~/catkin_ws/heron_ws/devel/setup.bash
-export ROS_MASTER_URI=http://192.168.131.1:11311
-export ROS_IP=192.168.131.10
+export ROS_MASTER_URI=http://$(rosrun ig_handle network_config.py heron_ip):11311
+export ROS_IP=$(rosrun ig_handle network_config.py heron_local_ip)
 unset ROS_HOSTNAME
 
 pytest -q ig_handle/tests/test_heron_base.py
@@ -427,11 +404,8 @@ layer.
 ip -br addr
 ```
 
-**Expected result:**
-```text
-enp2s0           192.168.131.2/24 192.168.50.10/24 192.168.0.3/24
-wlo1             DHCP, commonly 192.168.1.8/24 on SriLab Wi-Fi
-```
+Compare the output against `config/network/01-netplan.yaml` and
+`config/network/sensor_network.yaml`.
 
 ---
 

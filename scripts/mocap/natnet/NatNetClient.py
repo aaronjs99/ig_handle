@@ -25,9 +25,16 @@ import threading  # type: ignore  # noqa F401
 import struct
 from threading import Thread
 import copy
+import os
 import time
 from . import DataDescriptions
 from . import MoCapData
+
+_SCRIPT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+if _SCRIPT_ROOT not in sys.path:
+    sys.path.insert(0, _SCRIPT_ROOT)
+
+from network_config import network_value
 
 
 def trace(*args):
@@ -75,10 +82,10 @@ class NatNetClient:
 
     def __init__(self):
         # Change this value to the IP address of the NatNet server.
-        self.server_ip_address = "127.0.0.1"
+        self.server_ip_address = network_value("local_ros_ip")
 
         # Change this value to the IP address of your local network interface
-        self.local_ip_address = "127.0.0.1"
+        self.local_ip_address = network_value("local_ros_ip")
 
         # Should match multicast address listed in Motive's streaming settings.
         self.multicast_address = "239.255.42.99"
@@ -605,7 +612,7 @@ class NatNetClient:
 
         return offset, sizeInBytes
 
-    def __unpack_legacy_other_markers(self, data, packet_size, major, minor):
+    def __unpack_other_markers(self, data, packet_size, major, minor):
         offset = 0
 
         # Markerset count (4 bytes)
@@ -617,10 +624,8 @@ class NatNetClient:
         offset_tmp, unpackedDataSize = self.__unpack_data_size(data[offset:], major, minor)  # type: ignore  # noqa E501
         offset += offset_tmp
 
-        other_marker_data = MoCapData.LegacyMarkerData()
+        other_marker_data = MoCapData.OtherMarkerData()
         if other_marker_count > 0:
-            # get legacy_marker positions
-            # legacy_marker_data
             for j in range(0, other_marker_count):
                 pos = Vector3.unpack(data[offset : offset + 12])
                 offset += 12
@@ -1037,12 +1042,12 @@ class NatNetClient:
         marker_set_count = marker_set_data.get_marker_set_count()
         unlabeled_markers_count = marker_set_data.get_unlabeled_marker_count()
 
-        # Legacy Other Markers
-        rel_offset, legacy_other_markers = self.__unpack_legacy_other_markers(data[offset:], (packet_size - offset), major, minor)  # type: ignore  # noqa E501
+        # Other Markers
+        rel_offset, other_markers = self.__unpack_other_markers(data[offset:], (packet_size - offset), major, minor)  # type: ignore  # noqa E501
         offset += rel_offset
-        mocap_data.set_legacy_other_markers(legacy_other_markers)
-        marker_set_count = legacy_other_markers.get_marker_count()
-        legacy_other_markers_count = marker_set_data.get_unlabeled_marker_count()  # type: ignore  # noqa F401
+        mocap_data.set_other_markers(other_markers)
+        marker_set_count = other_markers.get_marker_count()
+        other_markers_count = marker_set_data.get_unlabeled_marker_count()  # type: ignore  # noqa F401
 
         # Rigid Body Data
         rel_offset, rigid_body_data = self.__unpack_rigid_body_data(data[offset:], (packet_size - offset), major, minor)  # type: ignore  # noqa E501

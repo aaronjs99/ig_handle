@@ -12,6 +12,7 @@ from tf2_ros import TransformBroadcaster
 
 THIS_DIR = os.path.dirname(os.path.abspath(__file__))
 MODULE_DIRS = (
+    os.path.dirname(THIS_DIR),
     THIS_DIR,
     os.path.join(
         os.path.dirname(os.path.dirname(THIS_DIR)),
@@ -26,6 +27,7 @@ for module_dir in reversed(MODULE_DIRS):
         sys.path.insert(0, module_dir)
 
 from udp.datacollect import DatacollectUdpReceiver, as_bool
+from network_config import network_value
 
 
 def quat_xyzw(q):
@@ -36,13 +38,18 @@ def quat_xyzw(q):
 class MocapBridge:
     def __init__(self):
         self.transport = rospy.get_param("~transport", "natnet").strip().lower()
-        self.server_ip = rospy.get_param("~server_ip", "192.168.1.199")
-        self.client_ip = rospy.get_param("~client_ip", "192.168.1.8")
+        self.server_ip = rospy.get_param(
+            "~server_ip", network_value("mocap_natnet_server_ip")
+        )
+        self.client_ip = rospy.get_param(
+            "~client_ip", network_value("mocap_natnet_client_ip")
+        )
         self.natnet_use_multicast = as_bool(
             rospy.get_param("~natnet_use_multicast", False)
         )
         self.natnet_multicast_address = rospy.get_param(
-            "~natnet_multicast_address", "239.255.42.99"
+            "~natnet_multicast_address",
+            network_value("mocap_natnet_multicast_address"),
         ).strip()
         self.frame_id = rospy.get_param("~frame_id", "mocap_world")
         self.pub_prefix = rospy.get_param("~topic_prefix", "/mocap")
@@ -57,7 +64,9 @@ class MocapBridge:
         self.datacollect_reject_unexpected_source = as_bool(
             rospy.get_param("~datacollect_reject_unexpected_source", False)
         )
-        self.udp_bind_ip = rospy.get_param("~udp_bind_ip", "0.0.0.0")
+        self.udp_bind_ip = rospy.get_param(
+            "~udp_bind_ip", network_value("mocap_udp_bind_ip")
+        )
         self.udp_port = int(rospy.get_param("~udp_port", 5005))
         self.heron_pose_topic = rospy.get_param(
             "~heron_pose_topic", f"{self.pub_prefix}/rigid_body_1/pose"

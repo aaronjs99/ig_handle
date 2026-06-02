@@ -31,3 +31,17 @@ sensor_network:
     heron:
       label: Heron Base Computer
       host: 192.168.131.1
+  ros:
+    heron_local_ip: 192.168.131.10
+    local_master_uri: http://127.0.0.1:11311
+    local_ros_ip: 127.0.0.1
+  mocap:
+    natnet_server_ip: 192.168.1.199
+    natnet_client_ip: 192.168.1.8
+    natnet_multicast_address: 239.255.42.99
+    udp_bind_ip: 0.0.0.0
+    datacollect_source_ip: 192.168.8.6
+  local_interfaces:
+    heron_lan_ip: 192.168.131.2
+    sensor_lan_ip: 192.168.50.10
+    sonar_lan_ip: 192.168.0.3

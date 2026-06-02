@@ -4,11 +4,19 @@ from __future__ import annotations
 
 from math import isfinite
 import os
+from pathlib import Path
 import socket
+import sys
 import time
 from urllib.parse import urlparse
 
 import pytest
+
+SCRIPTS_DIR = Path(__file__).resolve().parents[1] / "scripts"
+if str(SCRIPTS_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPTS_DIR))
+
+from network_config import network_value
 
 
 LIVE_HARDWARE_ENV = "IG_HANDLE_RUN_LIVE_HARDWARE_TESTS"
@@ -82,7 +90,7 @@ def _topic_nodes(topic: str, *, state_index: int) -> set[str]:
 
 
 def _assert_ros_master_reachable(timeout_sec: float = 2.0) -> None:
-    master_uri = os.environ.get("ROS_MASTER_URI", "http://localhost:11311")
+    master_uri = os.environ.get("ROS_MASTER_URI", network_value("local_master_uri"))
     parsed = urlparse(master_uri)
     host = parsed.hostname
     port = parsed.port or 11311

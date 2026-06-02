@@ -238,7 +238,7 @@ class MarkerSetData:
         return out_str
 
 
-class LegacyMarkerData:
+class OtherMarkerData:
     def __init__(self):
         self.marker_pos_list = []
 
@@ -254,7 +254,7 @@ class LegacyMarkerData:
         out_tab_str2 = get_tab_str(tab_str, level + 1)
         out_str = ""
         marker_count = len(self.marker_pos_list)
-        out_str += "%sLegacy Marker Count :%3.1d\n" % (out_tab_str, marker_count)
+        out_str += "%sOther Marker Count :%3.1d\n" % (out_tab_str, marker_count)
         for i in range(marker_count):
             pos = self.marker_pos_list[i]
             out_str += "%sMarker %3.1d pos : [x=%3.2f,y=%3.2f,z=%3.2f]\n" % (
@@ -890,7 +890,7 @@ class MoCapData:
         # Packet Parts
         self.prefix_data = None
         self.marker_set_data = None
-        self.legacy_other_markers = None
+        self.other_markers = None
         self.rigid_body_data = None
         self.asset_data = None
         self.skeleton_data = None
@@ -905,8 +905,8 @@ class MoCapData:
     def set_marker_set_data(self, new_marker_set_data):
         self.marker_set_data = new_marker_set_data
 
-    def set_legacy_other_markers(self, new_marker_set_data):
-        self.legacy_other_markers = new_marker_set_data
+    def set_other_markers(self, new_marker_set_data):
+        self.other_markers = new_marker_set_data
 
     def set_rigid_body_data(self, new_rigid_body_data):
         self.rigid_body_data = new_rigid_body_data

@@ -32,10 +32,12 @@
   <arg name="camera_f2_info_url" default="package://ig_handle/config/sensors/cameras/25152257.yaml"/>
   <arg name="camera_f3_info_url" default="package://ig_handle/config/sensors/cameras/25110061.yaml"/>
   <arg name="camera_f4_info_url" default="package://ig_handle/config/sensors/cameras/25110065.yaml"/>
-  <arg name="camera_f1_ip" default="192.168.50.101"/>
-  <arg name="camera_f2_ip" default="192.168.50.102"/>
-  <arg name="camera_f3_ip" default="192.168.50.103"/>
-  <arg name="camera_f4_ip" default="192.168.50.104"/>
+  <arg name="camera_f1_ip" default="$(eval eval(open(find('ig_handle') + '/scripts/network_launch_eval.py').read())(find('ig_handle'), 'camera_f1_ip'))"/>
+  <arg name="camera_f2_ip" default="$(eval eval(open(find('ig_handle') + '/scripts/network_launch_eval.py').read())(find('ig_handle'), 'camera_f2_ip'))"/>
+  <arg name="camera_f3_ip" default="$(eval eval(open(find('ig_handle') + '/scripts/network_launch_eval.py').read())(find('ig_handle'), 'camera_f3_ip'))"/>
+  <arg name="camera_f4_ip" default="$(eval eval(open(find('ig_handle') + '/scripts/network_launch_eval.py').read())(find('ig_handle'), 'camera_f4_ip'))"/>
+  <arg name="lidar_h_ip" default="$(eval eval(open(find('ig_handle') + '/scripts/network_launch_eval.py').read())(find('ig_handle'), 'lidar_h_ip'))"/>
+  <arg name="lidar_v_ip" default="$(eval eval(open(find('ig_handle') + '/scripts/network_launch_eval.py').read())(find('ig_handle'), 'lidar_v_ip'))"/>
   <arg name="camera_timeout_sec" default="12.0"/>
   <arg name="camera_f1_startup_delay_sec" default="6.0"/>
   <arg name="camera_f2_startup_delay_sec" default="8.0"/>
@@ -58,7 +60,7 @@
 
   <include if="$(arg use_lidar_h)" file="$(find ig_handle)/launch/sensors/start_lidar.launch">
     <arg name="name"      value="hori"/>
-    <arg name="device_ip" value="192.168.50.201"/>
+    <arg name="device_ip" value="$(arg lidar_h_ip)"/>
     <arg name="port"      value="2368"/>
     <arg name="frame_id"  value="lidar_h_link"/>
     <arg name="topic"     value="$(arg topic_lidar_h)"/>
@@ -66,7 +68,7 @@
 
   <include if="$(arg use_lidar_v)" file="$(find ig_handle)/launch/sensors/start_lidar.launch">
     <arg name="name"      value="vert"/>
-    <arg name="device_ip" value="192.168.50.202"/>
+    <arg name="device_ip" value="$(arg lidar_v_ip)"/>
     <arg name="port"      value="2369"/>
     <arg name="frame_id"  value="lidar_v_link"/>
     <arg name="topic"     value="$(arg topic_lidar_v)"/>

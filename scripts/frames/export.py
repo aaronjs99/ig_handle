@@ -272,6 +272,7 @@ def _axis_trace(
 
 
 def _emit_frame_html(sensors: Mapping[str, object]) -> None:
+    excluded_body_frames = {"lidar_h_mount", "lidar_v_mount", "camera_mount"}
     positions: dict[str, list[float]] = {
         "map": [0.0, 0.0, 0.0],
         "odom": [0.0, 0.0, 0.0],
@@ -349,7 +350,11 @@ def _emit_frame_html(sensors: Mapping[str, object]) -> None:
     if not isinstance(body_transforms, dict):
         body_transforms = {}
     for name, transform in body_transforms.items():
-        if name == "optical_joint_rpy" or not isinstance(transform, dict):
+        if (
+            name == "optical_joint_rpy"
+            or name in excluded_body_frames
+            or not isinstance(transform, dict)
+        ):
             continue
         add_edge(str(name), "body reference", transform)
 
@@ -357,13 +362,7 @@ def _emit_frame_html(sensors: Mapping[str, object]) -> None:
     sensor_frames = [
         frame
         for frame in positions
-        if frame not in set(nav_frames)
-        and frame not in {"lidar_h_mount", "lidar_v_mount", "camera_mount"}
-    ]
-    support_frames = [
-        frame
-        for frame in ("lidar_h_mount", "lidar_v_mount", "camera_mount")
-        if frame in positions
+        if frame not in set(nav_frames) and frame not in excluded_body_frames
     ]
 
     traces = [
@@ -374,7 +373,6 @@ def _emit_frame_html(sensors: Mapping[str, object]) -> None:
         _edge_trace("body reference edges", "#2a3f5f", edge_groups["body reference"]),
         _marker_trace("navigation frames", "#636efa", nav_frames, positions),
         _marker_trace("sensor frames", "#00a67d", sorted(sensor_frames), positions),
-        _marker_trace("support frames", "#2a3f5f", support_frames, positions),
         _axis_trace("X", "#ef553b", [1.0, 0.0, 0.0], positions, rotations),
         _axis_trace("Y", "#00cc96", [0.0, 1.0, 0.0], positions, rotations),
         _axis_trace("Z", "#636efa", [0.0, 0.0, 1.0], positions, rotations),

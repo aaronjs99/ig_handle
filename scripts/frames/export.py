@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 import argparse
-import html
 import json
 import math
 import os
@@ -392,7 +391,6 @@ def _emit_frame_html(sensors: Mapping[str, object]) -> None:
             "camera": {"eye": {"x": 1.55, "y": -1.85, "z": 1.05}},
         },
     }
-    generated_from = html.escape(str(sensors.get("version", "sensor_frames.yaml")))
     print(
         "\n".join(
             [
@@ -400,7 +398,6 @@ def _emit_frame_html(sensors: Mapping[str, object]) -> None:
                 '<head><meta charset="utf-8" /></head>',
                 "<body>",
                 '<div id="heron-sensor-frames" style="height:800px; width:1200px;"></div>',
-                f"<p>Generated from sensor_frames.yaml version: {generated_from}</p>",
                 '<script src="https://cdn.plot.ly/plotly-3.3.1.min.js"></script>',
                 "<script>",
                 "const traces = " + json.dumps(traces, sort_keys=True) + ";",

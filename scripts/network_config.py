@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Read the IG Handle network endpoint contract."""
+"""Read the IG Handle network endpoints."""
 
 from __future__ import annotations
 

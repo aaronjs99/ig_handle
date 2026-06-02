@@ -1,4 +1,4 @@
-# IG Handle live sensor and host endpoint contract.
+# IG Handle live sensor and host endpoints.
 # Frame geometry and model specifications live under config/sensors/.
 
 sensor_network:

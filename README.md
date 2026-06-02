@@ -20,7 +20,7 @@ same core idea: synchronized acquisition on a dedicated onboard computer.
 
 ## Current Integration Notes
 
-- The minimal SLAM sensor contract is horizontal LiDAR
+- The minimal SLAM sensor set is horizontal LiDAR
   `/sensors/lidar/hori/points` plus Xsens IMU `/sensors/imu/data`.
 - `robot:=heron` is the primary boat adapter and starts the shared IG sensor
   suite: four Forge IP67 cameras, horizontal and vertical LiDAR, IMU, and sonar.
@@ -222,7 +222,7 @@ For long captures, start the recorder inside `screen` or `tmux`.
 
 ## Runtime Topics vs Recorded Topics
 
-The live driver contract uses raw ROS topics. The recorder captures many camera
+The live driver path uses raw ROS topics. The recorder captures many camera
 streams through their `/compressed` transport to keep bags manageable. Do not
 confuse the two:
 
@@ -246,7 +246,7 @@ stack does not need broad top-level remaps. This bridge is opt-in.
 
 The mocap bridge is a standalone logging and comparison tool. It publishes raw
 rigid-body poses under `/mocap`, normally
-`/mocap/rigid_body_1/pose`. It has one publication contract and two input
+`/mocap/rigid_body_1/pose`. It has one publication topic and two input
 transports:
 
 - `transport:=natnet`: receive Motive/NatNet directly.

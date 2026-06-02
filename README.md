@@ -254,7 +254,7 @@ transports:
   from the Motive-side datacollect broadcaster on port `5005`.
 - `transport:=natnet natnet_use_multicast:=true`: join Motive's multicast data
   stream directly. The default remains the existing direct server/client NatNet
-  mode for backwards compatibility.
+  mode.
 
 The source layout follows the same split: `scripts/mocap/mocap.py` is the ROS
 entrypoint, `scripts/mocap/natnet/` contains the bundled NatNet client, and

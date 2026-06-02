@@ -1,6 +1,7 @@
 # Local ignores
 .vscode/
 scripts/mocap/natnet/natnet_sdk_*/
+config/sensors/*.html
 
 # Python
 # Byte-compiled / optimized / DLL files

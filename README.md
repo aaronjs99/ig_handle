@@ -283,9 +283,9 @@ For a direct Motive/NatNet lab run where Motive is configured for multicast:
 roslaunch "$(rospack find ig_handle)/launch/core/natnet_bridge.launch" transport:=natnet natnet_use_multicast:=true
 ```
 
-For a full DLiO-vs-mocap run, the integration launch can start this receiver and
-the relative comparison topics from one bringup. Initialize the comparison frame
-after DLiO, mocap, and IMU samples are available:
+For a full state-odometry-vs-mocap run, the integration launch can start this
+receiver and the relative comparison topics from one bringup. Initialize the
+comparison frame after odometry, mocap, and IMU samples are available:
 
 ```bash
 rostopic pub -1 /mocap/initialize_alignment std_msgs/Bool "data: true"

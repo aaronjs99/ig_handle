@@ -112,32 +112,30 @@ def _emit_shell(sensors: Mapping[str, object]) -> None:
         print(f"export {key}={_shell_quote(value)}")
 
 
-def _emit_dlio_geometry(sensors: Mapping[str, object]) -> None:
+def _emit_lio_geometry(sensors: Mapping[str, object]) -> None:
     frames = sensors.get("frames", {})
     if not isinstance(frames, dict):
         raise ValueError("sensor_frames.frames must be a mapping")
     imu = _transform(sensors, "imu")
     lidar = _transform(sensors, "lidar_h")
     payload = {
-        "dlio": {
-            "frames": {
-                "map": frames.get("map", "map"),
-                "odom": frames.get("odom", "odom"),
-                "baselink": frames.get("base", "base_link"),
-                "lidar": frames.get("lidar_h", "lidar_h_link"),
-                "imu": frames.get("imu", "imu_link"),
+        "frames": {
+            "map": frames.get("map", "map"),
+            "odom": frames.get("odom", "odom"),
+            "baselink": frames.get("base", "base_link"),
+            "lidar": frames.get("lidar_h", "lidar_h_link"),
+            "imu": frames.get("imu", "imu_link"),
+        },
+        "extrinsics": {
+            "baselink2imu": {
+                "t": _vec(imu, "translation"),
+                "R": _rpy_to_matrix(_vec(imu, "rotation_rpy")),
             },
-            "extrinsics": {
-                "baselink2imu": {
-                    "t": _vec(imu, "translation"),
-                    "R": _rpy_to_matrix(_vec(imu, "rotation_rpy")),
-                },
-                "baselink2lidar": {
-                    "t": _vec(lidar, "translation"),
-                    "R": _rpy_to_matrix(_vec(lidar, "rotation_rpy")),
-                },
+            "baselink2lidar": {
+                "t": _vec(lidar, "translation"),
+                "R": _rpy_to_matrix(_vec(lidar, "rotation_rpy")),
             },
-        }
+        },
     }
     yaml.safe_dump(payload, sys.stdout, sort_keys=False)
 
@@ -439,7 +437,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     )
     parser.add_argument(
         "--format",
-        choices=("shell", "dlio-geometry", "html"),
+        choices=("shell", "lio-geometry", "html"),
         default="shell",
     )
     args = parser.parse_args(argv)
@@ -447,8 +445,8 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     sensors = _load(args.sensor_frames)
     if args.format == "shell":
         _emit_shell(sensors)
-    elif args.format == "dlio-geometry":
-        _emit_dlio_geometry(sensors)
+    elif args.format == "lio-geometry":
+        _emit_lio_geometry(sensors)
     elif args.format == "html":
         _emit_frame_html(sensors)
     return 0

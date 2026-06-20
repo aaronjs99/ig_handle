@@ -332,7 +332,9 @@ Additional sensors:
   path can still be selected with `use_vm:=true`, but it should not run at the
   same time as the native binary.
   The native launch path selects a DT100 settings profile with
-  `sonar_profile:=pool` or `sonar_profile:=harbor`; the default is `pool`.
+  `sonar_profile:=pool` or `sonar_profile:=harbor`; the standalone ig_handle
+  launch default is `pool`. Top-level GRANDE bringup resolves the sonar profile
+  from the selected scenario.
   Profile range/gain/sound-velocity values live in `config/sensors/sonar/profiles.yaml`, and
   `sonar.py deltat` generates the runtime `Linux_DeltaT.INI` from that config.
   Use `verbose_deltat_ini:=true` to print the generated INI before exec.

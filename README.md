@@ -1,368 +1,164 @@
 # IG Handle
 
-IG Handle is the synchronized sensing and data-collection layer for the SLAM
-GRANDE platform.
+IG Handle is the synchronized sensing and data-collection package for the
+GRANDE platform. It owns real sensor bringup, hardware endpoint configuration,
+timing surfaces, and raw capture support.
 
-Its job is straightforward: collect the raw sensor data the rest of the stack
-depends on, and make the timestamps trustworthy enough that perception and SLAM
-can use the data without guesswork.
+It does not own navigation, mapping, mission planning, or simulation. MARINER
+consumes the sensor topics for localization and mapping; `grande` composes the
+full runtime.
 
-## Typical Sensor Stack
+## Sensor Stack
 
-- horizontal and vertical Velodyne VLP-16 LiDARs
-- four Forge IP67 GigE cameras on supported platforms
-- IMU / AHRS
-- Imagenex DT100 multibeam sonar
-- optional motion-capture link
+The Heron platform profile is organized around:
 
-The exact hardware can vary by platform, but the package is organized around the
-same core idea: synchronized acquisition on a dedicated onboard computer.
+- horizontal Velodyne VLP-16 LiDAR
+- vertical Velodyne VLP-16 LiDAR
+- Xsens IMU / AHRS
+- four Forge IP67 GigE cameras
+- Imagenex DT100 sonar
+- optional motion-capture comparison link
+- optional Teensy timing bridge
 
-## Current Integration Notes
+The minimal SLAM input set is:
 
-- The minimal SLAM sensor set is horizontal LiDAR
-  `/sensors/lidar/hori/points` plus Xsens IMU `/sensors/imu/data`.
-- `robot:=heron` is the primary boat adapter and starts the shared IG sensor
-  suite: four Forge IP67 cameras, horizontal and vertical LiDAR, IMU, and sonar.
-- `use_cameras:=false` disables all configured platform cameras.
-- `use_camera_f1`, `use_camera_f2`, `use_camera_f3`, and `use_camera_f4`
-  enable or disable individual Forge cameras under the global camera switch.
-  The Heron adapter defaults to all four Forge cameras.
-- Each Forge camera launch passes both the camera serial and expected GigE IP
-  to `spinnaker_camera_driver`. This keeps ROS selection deterministic even
-  when one host NIC has additional lab subnets and the Spinnaker SDK enumerates
-  duplicate wrong-subnet entries for the same physical cameras.
-- The default Forge ROS config uses continuous/free-run acquisition. Do not
-  enable Line0 hardware trigger mode unless the trigger source is connected and
-  verified; otherwise the driver can connect but publish no image buffers.
-- The integrated bringup camera profile is intentionally conservative: 10 Hz,
-  continuous exposure/gain with a 10 ms exposure ceiling, `BayerRG8`, ISP
-  disabled, and a centered 1280x1024 ROI. Placeholder CameraInfo YAMLs for the
-  four Forge serials live under `config/sensors/cameras/`; they suppress missing
-  file warnings and keep the camera-info topics present, but `K[0] = 0` marks
-  them as uncalibrated. Full native 2448x2048 capture or metric vision should
-  be paired with a real calibration and GigE throughput check.
-- Physical layout metadata treats F1/F4 as right/starboard mounts when looking
-  from behind and F2/F3 as left/port mounts. The authoritative sensor geometry
-  lives in `config/sensors/sensor_frames.yaml`; the old
-  horizontal/vertical VLP-16 updater has been removed for this rig, so that
-  transform should not be updated from a separate report.
-- Sensor model specifications live separately in
-  `config/sensors/sensor_models.yaml`; live IP/device endpoint facts live in
-  `config/network/sensor_network.yaml`.
-- `use_teensy:=false` is the current default. The Teensy/rosserial timing path is
-  still kept for lab hardware, but normal boat bringup does not start it.
-- Motion capture is salvageable as an explicit localization source through the
-  NatNet/datacollect bridge for standalone mocap logging.
-- The stable udev aliases in `config/udev/99-udev.rules` exist, but some
-  launch defaults still use `/dev/serial/by-id/...` paths. If a device serial
-  changes, check both the udev rule and the launch argument.
+| Topic | Type | Purpose |
+| --- | --- | --- |
+| `/sensors/lidar/hori/points` | `sensor_msgs/PointCloud2` | Primary LiDAR geometry |
+| `/sensors/imu/data` | `sensor_msgs/Imu` | Inertial input for LIO backends |
 
----
+## Network Configuration
 
-## System Architecture
+Sensor endpoint facts live in:
 
-IG Handle coordinates the sensors through a hardware timing system and a single
-PoE-switch-connected wired network.
-
-### Network Topology
-
-```mermaid
----
-config:
-  theme: neo
-  layout: elk
----
-graph TD
-
-    subgraph Remote
-        Mocap["Mocap Computer"]
-        VPN["VPN (Tailscale)"]
-    end
-
-    subgraph "Boat Computers"
-        PC["<b>IG-Handle PC</b>"]
-    end
-
-    subgraph "PoE Switch Wired Network"
-        Switch["PoE Switch"]
-
-        subgraph "Boat LAN"
-            Heron["<b>Heron Boat PC</b>"]
-        end
-
-        subgraph "Sensor LAN"
-            Cam1["Camera 1"]
-            Cam2["Camera 2"]
-            Cam3["Camera 3"]
-            Cam4["Camera 4"]
-
-            LidarH["LiDAR H"]
-            LidarV["LiDAR V"]
-        end
-
-        subgraph "Sonar LAN"
-            Sonar["Imagenex Sonar"]
-        end
-    end
-
-    VPN -. "tailscale0" .-> PC
-    Mocap -. "Wi-Fi (wlo1): SriLab" .-> PC
-    PC ---|"Ethernet (enp2s0)"| Switch
-
-    Switch --- Heron
-    Switch --- Cam1
-    Switch --- Cam2
-    Switch --- Cam3
-    Switch --- Cam4
-    Switch --- LidarH
-    Switch --- LidarV
-    Switch --- Sonar
+```text
+config/network/sensor_network.yaml
+config/network/01-netplan.yaml
 ```
 
-### Hardware Timing
+Use those files as the source of truth for IP addresses, interfaces, and launch
+defaults. `/etc/hosts` entries can mirror the same values, but they are not the
+package authority.
 
-```mermaid
----
-config:
-  layout: elk
----
-graph LR
-    RTC["<b>DS3231 RTC</b><br/>±2 ppm Reference"] --> Teensy["<b>Teensy 4.1</b><br/>Orchestrator"]
-    
-    subgraph "Synchronized Signals"
-        Teensy --> PPS["<b>PPS</b><br/>LiDAR Alignment"]
-        Teensy --> Trigger["<b>Camera Trigger</b><br/>20 Hz Deterministic"]
-        Teensy --> Interrupt["<b>IMU Interrupt</b><br/>200 Hz Sampling"]
-    end
+Typical host roles:
+
+| Interface | Purpose |
+| --- | --- |
+| `enp2s0` | PoE switch path for Heron, LiDARs, cameras, and sonar |
+| `wlo1` | Lab Wi-Fi and optional mocap link |
+| `tailscale0` | Remote access |
+
+Check the live machine against the tracked config:
+
+```bash
+ip -br addr
 ```
 
----
+## Launch
 
-## Synchronization Architecture
+Full-stack real runs should normally start through GRANDE:
 
-Hardware synchronization is implemented around:
+```bash
+roslaunch grande bringup.launch mode:=real
+```
 
-- **Teensy 4.1**
-- **DS3231 RTC**
-
-This provides deterministic timing for:
-
-| Signal | Purpose |
-| :--- | :--- |
-| **PPS** | LiDAR time alignment |
-| **Camera trigger** | deterministic frame capture |
-| **IMU interrupt** | stable sampling |
-
-**Typical rates:**
-
-| Sensor | Rate |
-| :--- | :--- |
-| Cameras | 20 Hz |
-| IMU | 200 Hz |
-| LiDAR | device native |
-
----
-
-## Network Architecture
-
-The sensing stack uses dedicated IPv4 subnets for the different device groups.
-The PoE switch is connected to `enp2s0`; Heron, LiDARs, cameras, and sonar all
-share that physical switch path while keeping separate IPv4 subnets. The
-authoritative endpoint values are in `config/network/sensor_network.yaml`; the
-Netplan interface values are in `config/network/01-netplan.yaml`.
-
-### Host interface configuration
-
-| Interface | Address Source | Purpose |
-| :--- | :--- | :--- |
-| **enp2s0** | `config/network/01-netplan.yaml` | Heron, LiDAR, camera, and sonar networks on the PoE switch |
-| **wlo1** | DHCP on SriLab Wi-Fi | mocap Wi-Fi connection |
-| **tailscale0** | VPN | remote access |
-
-Wi-Fi connects the handle computer to the motion capture workstation configured
-in `config/network/sensor_network.yaml`.
-
----
-
-## Sensor Hostnames
-
-Sensor hostnames may be mirrored in `/etc/hosts`, but
-`config/network/sensor_network.yaml` is the package source for launch defaults.
-
----
-
-## Recording Data
-
-Start recording:
+Raw sensor collection can be launched directly when testing the sensor layer:
 
 ```bash
 roslaunch ig_handle collect_raw_data.launch
 ```
 
-Output:
-`~/bags/YYYY_MM_DD_HH_MM_SS_raw.bag`
-
-`ig_handle` owns the sensor adapters. Use the active integration recorder, or a
-direct `rosbag record`, for run-level evidence capture.
-
----
-
-## Remote Operation
-
-Connect to the handle computer through the configured sensor subnet address:
+The Heron adapter starts the shared IG sensor suite. Use the global camera
+switch or per-camera switches when isolating camera issues:
 
 ```bash
-ssh ig-handle@$(rosrun ig_handle network_config.py sensor_lan_ip)
+roslaunch grande bringup.launch mode:=real use_cameras:=false
+roslaunch grande bringup.launch mode:=real use_camera_f2:=false
 ```
 
-For long captures, start the recorder inside `screen` or `tmux`.
+## Camera Notes
 
----
+Forge cameras are selected by serial and expected GigE IP so the Spinnaker SDK
+does not accidentally bind to duplicate wrong-subnet entries.
 
-## Runtime Topics vs Recorded Topics
+The default Forge profile is conservative:
 
-The live driver path uses raw ROS topics. The recorder captures many camera
-streams through their `/compressed` transport to keep bags manageable. Do not
-confuse the two:
+- continuous/free-run acquisition
+- 10 Hz
+- 10 ms exposure ceiling
+- `BayerRG8`
+- ISP disabled
+- centered 1280 x 1024 ROI
 
-| Live runtime topic | Type |
-| --- | --- |
-| `/sensors/camera/f1/image_raw` | `sensor_msgs/Image` |
-| `/sensors/camera/f4/image_raw` | `sensor_msgs/Image` |
-| `/sensors/imu/data` | `sensor_msgs/Imu` |
-| `/sensors/lidar/hori/points` | `sensor_msgs/PointCloud2` |
-| `/sensors/lidar/hori/packets` | `velodyne_msgs/VelodyneScan` |
+Do not enable Line0 hardware trigger mode unless the trigger source is connected
+and verified. Placeholder CameraInfo files keep topics present but are marked
+uncalibrated.
 
-ROS `image_transport` may also advertise sibling transport topics under each
-camera root. This stack intentionally uses the raw root for runtime consumers
-and `/compressed` for bagging or web streaming. Do not install or depend on
-unused non-JPEG transport plugins for the Forge cameras.
+## Sonar Notes
 
-The Teensy firmware publishes hardware-native timing names such as `/pps/time`,
-`/cam/time`, and `/imu/time`; the rosserial bridge remaps those names locally to
-`/sensors/pps/time`, `/sensors/camera/time`, and `/sensors/imu/time` so the full
-stack does not need broad top-level remaps. This bridge is opt-in.
+IG Handle publishes DT100 raw packets on:
 
-The mocap bridge is a standalone logging and comparison tool. It publishes raw
-rigid-body poses under `/mocap`, normally
-`/mocap/rigid_body_1/pose`. It has one publication topic and two input
-transports:
+```text
+/sensors/sonar/raw
+```
 
-- `transport:=natnet`: receive Motive/NatNet directly.
-- `transport:=datacollect_udp`: receive `datacollect.heron.v1` UDP JSON packets
-  from the Motive-side datacollect broadcaster on port `5005`.
-- `transport:=natnet natnet_use_multicast:=true`: join Motive's multicast data
-  stream directly. The default remains the existing direct server/client NatNet
-  mode.
+MARINER owns the downstream decoder that turns supported profile packets into:
 
-The source layout follows the same split: `scripts/mocap/mocap.py` is the ROS
-entrypoint, `scripts/mocap/natnet/` contains the bundled NatNet client, and
-`scripts/mocap/udp/` contains the datacollect UDP receiver.
+```text
+/sensors/sonar/scan
+```
 
-The UDP transport republishes the same Heron pose topic, plus optional marker
-and potential-object point clouds on `/mocap/heron/markers` and
-`/mocap/potential_objects`, and status JSON on `/mocap/datacollect_status`.
-In the current lab setup the Motive-side datacollect source is configured in
-`config/network/sensor_network.yaml` and arrives on local UDP port `5005`.
+Keep both raw and decoded sonar topics in field bags. Raw packets prove device
+reception; decoded scan clouds prove that the packet mode can be mapped.
 
-Mocap remains a lab testing and ground-truth comparison path. It does not feed
-`/state/odometry` and should not be a field dependency. The datacollect UDP
-receiver also leaves TF publishing off by default, so it only republishes raw
-comparison/logging topics unless explicitly overridden.
+The standalone IG Handle sonar default is `sonar_profile:=pool`. Top-level
+GRANDE bringup resolves the sonar profile from the selected scenario.
 
-Run the receiver directly when the Motive-side broadcaster is active:
+## Motion Capture
+
+Mocap is a lab logging and comparison path, not the production odometry source.
+The bridge publishes raw comparison topics under `/mocap` and leaves TF
+publishing disabled by default.
+
+Run the datacollect UDP receiver when the Motive-side broadcaster is active:
 
 ```bash
-roslaunch "$(rospack find ig_handle)/launch/core/natnet_bridge.launch" transport:=datacollect_udp
+roslaunch "$(rospack find ig_handle)/launch/core/natnet_bridge.launch" \
+  transport:=datacollect_udp
 ```
 
-For a direct Motive/NatNet lab run where Motive is configured for multicast:
-
-```bash
-roslaunch "$(rospack find ig_handle)/launch/core/natnet_bridge.launch" transport:=natnet natnet_use_multicast:=true
-```
-
-For a full state-odometry-vs-mocap run, the integration launch can start this
-receiver and the relative comparison topics from one bringup. Initialize the
-comparison frame after odometry, mocap, and IMU samples are available:
+Initialize odometry-vs-mocap alignment only after odometry, mocap, and IMU
+samples are available:
 
 ```bash
 rostopic pub -1 /mocap/initialize_alignment std_msgs/Bool "data: true"
 ```
 
-The integration recorder should include these mocap topics in the raw profile
-instead of maintaining a separate mocap recording command. A complete raw field
-profile should cover F1/F2/F3/F4 cameras, IMU, both LiDARs, DT100 sonar, base
-telemetry, TF, and optional mocap comparison topics. Thermal camera topics
-remain available when the active recorder is configured to include them.
+## Recording
 
-| Topic                                     | Message type                   |
-|-------------------------------------------|--------------------------------|
-| `/sensors/camera/f1/image_raw/compressed` | `sensor_msgs/CompressedImage`  |
-| `/sensors/camera/f4/image_raw/compressed` | `sensor_msgs/CompressedImage`  |
-| `/sensors/camera/time`                    | `sensor_msgs/TimeReference`    |
-| `/sensors/imu/data`                       | `sensor_msgs/Imu`              |
-| `/sensors/imu/time`                       | `sensor_msgs/TimeReference`    |
-| `/sensors/lidar/hori/packets`             | `velodyne_msgs/VelodyneScan`   |
-| `/sensors/lidar/hori/points`              | `sensor_msgs/PointCloud2`      |
-| `/mocap/rigid_body_1/pose`                | `geometry_msgs/PoseStamped`    |
-| `/mocap/heron/markers`                    | `sensor_msgs/PointCloud2`      |
-| `/mocap/potential_objects`                | `sensor_msgs/PointCloud2`      |
-| `/mocap/datacollect_status`               | `std_msgs/String`              |
-| `/sensors/pps/time`                       | `sensor_msgs/TimeReference`    |
+The integration recorder should capture:
 
-### Optional camera topics
+- all active cameras
+- IMU
+- horizontal and vertical LiDAR
+- DT100 sonar raw and decoded scan
+- Heron base telemetry
+- TF
+- optional mocap comparison topics
 
-| Topic                                     | Message type                   |
-|-------------------------------------------|--------------------------------|
-| `/sensors/camera/f2/image_raw/compressed` | `sensor_msgs/CompressedImage`  |
-| `/sensors/camera/f3/image_raw/compressed` | `sensor_msgs/CompressedImage`  |
-| `/sensors/camera/thermal/image_raw/compressed` | `sensor_msgs/CompressedImage` |
+Runtime capture topics often use compressed image transports to keep bags
+manageable. Live consumers should use raw image roots unless a launch profile
+explicitly says otherwise.
 
-Additional sensors:
-- **ig-heron** keeps the DT100 receiver raw on `/sensors/sonar/raw` as
-  `std_msgs/UInt8MultiArray`. MARINER owns the downstream typed adapter that
-  decodes supported profile-point packets into `/sensors/sonar/scan` as
-  `sensor_msgs/PointCloud2`. Raw beam packets remain raw instead of being
-  converted into invented geometry.
-  The default launch path uses the bundled native `Linux_DeltaT` binary at
-  `scripts/sonar/Linux_DeltaT_v1023_x86_64` to talk to the sonar head and
-  forward vendor UDP packets; it is not a ROS decoder. The Windows VM
-  path can still be selected with `use_vm:=true`, but it should not run at the
-  same time as the native binary.
-  The native launch path selects a DT100 settings profile with
-  `sonar_profile:=pool` or `sonar_profile:=harbor`; the standalone ig_handle
-  launch default is `pool`. Top-level GRANDE bringup resolves the sonar profile
-  from the selected scenario.
-  Profile range/gain/sound-velocity values live in `config/sensors/sonar/profiles.yaml`, and
-  `sonar.py deltat` generates the runtime `Linux_DeltaT.INI` from that config.
-  Use `verbose_deltat_ini:=true` to print the generated INI before exec.
-- Optional thermal live topic is `/sensors/thermal/image_raw`; compressed
-  capture should be verified from the active image transport before assuming a
-  `/compressed` bag topic exists.
+## Hardware Validation
 
-Keep both `/sensors/sonar/raw` and `/sensors/sonar/scan` in field bags: raw
-packets prove sonar reception, while the MARINER-produced scan cloud is the
-basic geometry/map surface when the DT100 packet format can be decoded.
-
-## Live Hardware Pytests
-
-The `ig_handle/tests` suite includes unit and live hardware checks. Hardware
-endpoint facts live in `config/network/sensor_network.yaml`; update that file when
-sensor IPs, topics, or udev aliases change.
-
-Connectivity checks ping network sensors and verify the IMU serial device path:
+Connectivity checks:
 
 ```bash
 pytest -q ig_handle/tests/test_hardware_connectivity.py
 ```
 
-Heron status checks validate the boat base path instead of forcing every sensor
-to stream raw data. They read `/sense` and `/status`, enforce a configurable
-battery-voltage floor, confirm MCU-facing command topics reach `/serial_node`,
-and confirm the Clearpath controller path is present from `/cmd_vel` to
-`/cmd_drive`.
+Heron base checks:
 
 ```bash
 source /opt/ros/noetic/setup.bash
@@ -374,46 +170,11 @@ unset ROS_HOSTNAME
 pytest -q ig_handle/tests/test_heron_base.py
 ```
 
-The default battery floor is `14.0 V`; override it with
-`IG_HANDLE_HERON_MIN_BATTERY_V` if the lab threshold changes.
+The default Heron battery floor is `14.0 V`; override with
+`IG_HANDLE_HERON_MIN_BATTERY_V` only when the lab threshold intentionally
+changes.
 
-The F1/F2/F3/F4 camera connectivity tests are all enabled by default.
-
-## Validation
-
-The tracked pytest files are live hardware checks. Use static checks, script
-help/import checks, `catkin build`, and live topic-rate checks for local
-validation. Hardware timing, calibration, sonar decoding, and full raw-bag
-post-processing still require live or bag-backed operator validation.
-
----
-
-## Raw Data Processing
-
-Use the raw-bag post-processor supplied by the active integration or evaluation
-layer.
-
-**Processing steps:**
-- Restamp camera and IMU messages using hardware timestamps
-- Align sonar timestamps with PPS
-- Detect timing dropouts
-
----
-
-## Verify Network Configuration
-
-```bash
-ip -br addr
-```
-
-Compare the output against `config/network/01-netplan.yaml` and
-`config/network/sensor_network.yaml`.
-
----
-
-## Udev
-
-Install device rules for stable device names:
+## Udev Rules
 
 ```bash
 sudo cp config/udev/99-udev.rules /etc/udev/rules.d/
@@ -421,8 +182,9 @@ sudo udevadm control --reload-rules
 sudo udevadm trigger
 ```
 
----
+Some launch defaults still use `/dev/serial/by-id/...` paths. If a serial
+device changes, check both the udev rule and the launch argument.
 
 ## ROS 2
 
-A ROS 2 version of the package exists on the `ros2` branch.
+A ROS 2 version of this package exists on the `ros2` branch.

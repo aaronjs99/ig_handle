@@ -18,12 +18,20 @@
   <build_depend>geometry_msgs</build_depend>
   <build_depend>tf2_ros</build_depend>
 
+  <exec_depend>dt100_driver</exec_depend>
+  <exec_depend>flir_boson_usb</exec_depend>
   <exec_depend>geometry_msgs</exec_depend>
+  <exec_depend>image_proc</exec_depend>
+  <exec_depend>nodelet</exec_depend>
   <exec_depend>rosserial_python</exec_depend>
   <exec_depend>rospkg</exec_depend>
   <exec_depend>rospy</exec_depend>
   <exec_depend>sensor_msgs</exec_depend>
+  <exec_depend>spinnaker_camera_driver</exec_depend>
   <exec_depend>std_msgs</exec_depend>
   <exec_depend>tf2_ros</exec_depend>
+  <exec_depend>velodyne_driver</exec_depend>
+  <exec_depend>velodyne_pointcloud</exec_depend>
+  <exec_depend>xsens_mti_driver</exec_depend>
   <exec_depend>python3-yaml</exec_depend>
 </package>

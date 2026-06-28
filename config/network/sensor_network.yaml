@@ -26,7 +26,7 @@ sensor_network:
       host: 192.168.0.2
     imu:
       label: Xsens IMU
-      device_path: /dev/imu
+      device_path: /dev/sensors/imu
       device_id: 0368319D
     heron:
       label: Heron Base Computer

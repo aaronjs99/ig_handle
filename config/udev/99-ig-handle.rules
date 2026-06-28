@@ -1,0 +1,17 @@
+# IG Handle hardware identity rules.
+# Install as /etc/udev/rules.d/99-ig-handle.rules.
+
+# Prolific USB serial adapter used by the base serial link.
+ACTION=="add|change", SUBSYSTEM=="tty", ATTRS{idVendor}=="067b", ATTRS{idProduct}=="2303", GROUP="dialout", MODE="0660", SYMLINK+="prolific"
+
+# Xsens MTi devices with VID:PID 2639:0003 need an explicit FTDI binding on this host.
+ACTION=="add|change", SUBSYSTEM=="usb", ATTR{idVendor}=="2639", ATTR{idProduct}=="0003", RUN+="/bin/sh -c 'echo 2639 0003 > /sys/bus/usb-serial/drivers/ftdi_sio/new_id 2>/dev/null || true'"
+
+# The Xsens MTi exposes multiple tty interfaces; interface 01 is the ROS data port.
+ACTION=="add|change", SUBSYSTEM=="tty", ATTRS{idVendor}=="2639", ATTRS{idProduct}=="0003", ENV{ID_USB_INTERFACE_NUM}=="01", GROUP="dialout", MODE="0660", SYMLINK+="sensors/imu"
+
+# Keep the Xsens serial latency low when the kernel exposes a latency_timer.
+ACTION=="add|change", SUBSYSTEM=="tty", ATTRS{idVendor}=="2639", ATTRS{idProduct}=="0003", ENV{ID_USB_INTERFACE_NUM}=="01", RUN+="/bin/sh -c 'LAT=/sys/bus/usb-serial/devices/%k/latency_timer; [ -f $$LAT ] && echo 1 > $$LAT || true'"
+
+# Teensy timing bridge.
+ACTION=="add|change", SUBSYSTEM=="tty", ATTRS{idVendor}=="16c0", ATTRS{idProduct}=="0483", GROUP="dialout", MODE="0660", SYMLINK+="teensy"

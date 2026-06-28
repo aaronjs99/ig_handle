@@ -1,6 +1,6 @@
 <launch>
   <arg name="topic" default="/imu/data"/>
-  <arg name="port" default="/dev/imu"/>
+  <arg name="port" default="/dev/sensors/imu"/>
   <arg name="baudrate" default="115200"/>
   <arg name="scan_for_devices" default="false"/>
 

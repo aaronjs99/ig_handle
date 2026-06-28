@@ -177,13 +177,21 @@ changes.
 ## Udev Rules
 
 ```bash
-sudo cp config/udev/99-udev.rules /etc/udev/rules.d/
+sudo rm -f \
+  /etc/udev/rules.d/99-udev.rules \
+  /etc/udev/rules.d/99-xsens.rules \
+  /etc/udev/rules.d/99-xsens-mti-ftdi.rules \
+  /etc/udev/rules.d/99-ig_handle_udev.rules \
+  /etc/udev/rules.d/99-ig2_udev.rules
+sudo install -m 0644 config/udev/99-ig-handle.rules /etc/udev/rules.d/99-ig-handle.rules
 sudo udevadm control --reload-rules
 sudo udevadm trigger
+sudo udevadm settle
+udevadm info -q property -n /dev/sensors/imu | egrep 'ID_VENDOR_ID|ID_MODEL_ID|ID_USB_INTERFACE_NUM|DEVLINKS'
 ```
 
-Some launch defaults still use `/dev/serial/by-id/...` paths. If a serial
-device changes, check both the udev rule and the launch argument.
+The canonical Xsens port is `/dev/sensors/imu`. Keep the driver binding, stable
+device name, and serial permissions in `config/udev/99-ig-handle.rules`.
 
 ## ROS 2
 

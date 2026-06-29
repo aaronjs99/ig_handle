@@ -1,144 +1,17 @@
 <launch>
-  <!-- Shared IG Handle sensor suite. Platform launchers should include this
-       file instead of copying sensor wiring. -->
-  <arg name="use_cameras" default="true"/>
-  <arg name="use_camera_f1" default="true"/>
-  <arg name="use_camera_f2" default="true"/>
-  <arg name="use_camera_f3" default="true"/>
-  <arg name="use_camera_f4" default="true"/>
-  <arg name="use_lidar_h" default="true"/>
-  <arg name="use_lidar_v" default="true"/>
-  <arg name="use_sonar" default="true"/>
-  <arg name="use_thermal" default="false"/>
-  <arg name="use_teensy" default="false"/>
+  <arg name="sensor_contract_file" default="$(find ig_handle)/config/sensors/sensor_contract.yaml"/>
+  <arg name="extra_sensor_ids" default=""/>
+  <arg name="disabled_sensor_ids" default=""/>
+  <arg name="sensor_reachability_check" default="true"/>
 
-  <arg name="topic_imu"        default="/sensors/imu/data"/>
-  <arg name="topic_lidar_h"    default="/sensors/lidar/hori/points"/>
-  <arg name="topic_lidar_v"    default="/sensors/lidar/vert/points"/>
-  <arg name="topic_cam_f1_raw" default="/sensors/camera/f1/image_raw"/>
-  <arg name="topic_cam_f2_raw" default="/sensors/camera/f2/image_raw"/>
-  <arg name="topic_cam_f3_raw" default="/sensors/camera/f3/image_raw"/>
-  <arg name="topic_cam_f4_raw" default="/sensors/camera/f4/image_raw"/>
-  <arg name="topic_cam_f1_info" default="/sensors/camera/f1/camera_info"/>
-  <arg name="topic_cam_f2_info" default="/sensors/camera/f2/camera_info"/>
-  <arg name="topic_cam_f3_info" default="/sensors/camera/f3/camera_info"/>
-  <arg name="topic_cam_f4_info" default="/sensors/camera/f4/camera_info"/>
-  <arg name="topic_sonar_raw"  default="/sensors/sonar/raw"/>
-  <arg name="topic_thermal"    default="/sensors/thermal/image_raw"/>
-  <arg name="topic_pps_time"   default="/sensors/pps/time"/>
-  <arg name="topic_camera_time" default="/sensors/camera/time"/>
-  <arg name="topic_imu_time" default="/sensors/imu/time"/>
-  <arg name="camera_f1_info_url" default="package://ig_handle/config/sensors/cameras/25110056.yaml"/>
-  <arg name="camera_f2_info_url" default="package://ig_handle/config/sensors/cameras/25152257.yaml"/>
-  <arg name="camera_f3_info_url" default="package://ig_handle/config/sensors/cameras/25110061.yaml"/>
-  <arg name="camera_f4_info_url" default="package://ig_handle/config/sensors/cameras/25110065.yaml"/>
-  <arg name="camera_f1_ip" default="$(eval eval(open(find('ig_handle') + '/scripts/network_launch_eval.py').read())(find('ig_handle'), 'camera_f1_ip'))"/>
-  <arg name="camera_f2_ip" default="$(eval eval(open(find('ig_handle') + '/scripts/network_launch_eval.py').read())(find('ig_handle'), 'camera_f2_ip'))"/>
-  <arg name="camera_f3_ip" default="$(eval eval(open(find('ig_handle') + '/scripts/network_launch_eval.py').read())(find('ig_handle'), 'camera_f3_ip'))"/>
-  <arg name="camera_f4_ip" default="$(eval eval(open(find('ig_handle') + '/scripts/network_launch_eval.py').read())(find('ig_handle'), 'camera_f4_ip'))"/>
-  <arg name="lidar_h_ip" default="$(eval eval(open(find('ig_handle') + '/scripts/network_launch_eval.py').read())(find('ig_handle'), 'lidar_h_ip'))"/>
-  <arg name="lidar_v_ip" default="$(eval eval(open(find('ig_handle') + '/scripts/network_launch_eval.py').read())(find('ig_handle'), 'lidar_v_ip'))"/>
-  <arg name="camera_timeout_sec" default="12.0"/>
-  <arg name="camera_f1_startup_delay_sec" default="6.0"/>
-  <arg name="camera_f2_startup_delay_sec" default="8.0"/>
-  <arg name="camera_f3_startup_delay_sec" default="10.0"/>
-  <arg name="camera_f4_startup_delay_sec" default="12.0"/>
-  <arg name="teensy_port" default="/dev/teensy"/>
-  <arg name="teensy_baud" default="115200"/>
-
-  <include if="$(arg use_teensy)" file="$(find ig_handle)/launch/core/start_rosserial.launch">
-    <arg name="port" value="$(arg teensy_port)"/>
-    <arg name="baud" value="$(arg teensy_baud)"/>
-    <arg name="pps_time_topic" value="$(arg topic_pps_time)"/>
-    <arg name="camera_time_topic" value="$(arg topic_camera_time)"/>
-    <arg name="imu_time_topic" value="$(arg topic_imu_time)"/>
-  </include>
-
-  <include file="$(find ig_handle)/launch/sensors/start_imu.launch">
-    <arg name="topic" value="$(arg topic_imu)"/>
-  </include>
-
-  <include if="$(arg use_lidar_h)" file="$(find ig_handle)/launch/sensors/start_lidar.launch">
-    <arg name="name"      value="hori"/>
-    <arg name="device_ip" value="$(arg lidar_h_ip)"/>
-    <arg name="port"      value="2368"/>
-    <arg name="frame_id"  value="lidar_h_link"/>
-    <arg name="topic"     value="$(arg topic_lidar_h)"/>
-  </include>
-
-  <include if="$(arg use_lidar_v)" file="$(find ig_handle)/launch/sensors/start_lidar.launch">
-    <arg name="name"      value="vert"/>
-    <arg name="device_ip" value="$(arg lidar_v_ip)"/>
-    <arg name="port"      value="2369"/>
-    <arg name="frame_id"  value="lidar_v_link"/>
-    <arg name="topic"     value="$(arg topic_lidar_v)"/>
-  </include>
-
-  <include if="$(arg use_sonar)" file="$(find ig_handle)/launch/sensors/start_sonar.launch">
-    <arg name="raw_topic" value="$(arg topic_sonar_raw)"/>
-  </include>
-
-  <!-- F1/F2 are forward-facing camera slots; F3/F4 are upward-facing
-       camera slots. F1/F4 are right/starboard mounts when looking from behind;
-       F2/F3 are left/port mounts. Empty info URLs leave uncalibrated cameras
-       online. -->
-  <group if="$(eval str(arg('use_cameras')).lower() == 'true' and str(arg('use_camera_f1')).lower() == 'true')">
-    <include file="$(find ig_handle)/launch/sensors/start_cam.launch">
-      <arg name="camera_name"     value="F1"/>
-      <arg name="frame_id"        value="F1_optical"/>
-      <arg name="camera_serial"   value="25110056"/>
-      <arg name="camera_ip"       value="$(arg camera_f1_ip)"/>
-      <arg name="camera_info_url" value="$(arg camera_f1_info_url)"/>
-      <arg name="topic"           value="$(arg topic_cam_f1_raw)"/>
-      <arg name="camera_info_topic" value="$(arg topic_cam_f1_info)"/>
-      <arg name="timeout" value="$(arg camera_timeout_sec)"/>
-      <arg name="startup_delay_sec" value="$(arg camera_f1_startup_delay_sec)"/>
-    </include>
-  </group>
-
-  <group if="$(eval str(arg('use_cameras')).lower() == 'true' and str(arg('use_camera_f2')).lower() == 'true')">
-    <include file="$(find ig_handle)/launch/sensors/start_cam.launch">
-      <arg name="camera_name"     value="F2"/>
-      <arg name="frame_id"        value="F2_optical"/>
-      <arg name="camera_serial"   value="25152257"/>
-      <arg name="camera_ip"       value="$(arg camera_f2_ip)"/>
-      <arg name="camera_info_url" value="$(arg camera_f2_info_url)"/>
-      <arg name="topic"           value="$(arg topic_cam_f2_raw)"/>
-      <arg name="camera_info_topic" value="$(arg topic_cam_f2_info)"/>
-      <arg name="timeout" value="$(arg camera_timeout_sec)"/>
-      <arg name="startup_delay_sec" value="$(arg camera_f2_startup_delay_sec)"/>
-    </include>
-  </group>
-
-  <group if="$(eval str(arg('use_cameras')).lower() == 'true' and str(arg('use_camera_f3')).lower() == 'true')">
-    <include file="$(find ig_handle)/launch/sensors/start_cam.launch">
-      <arg name="camera_name"   value="F3"/>
-      <arg name="frame_id"      value="F3_optical"/>
-      <arg name="camera_serial" value="25110061"/>
-      <arg name="camera_ip"     value="$(arg camera_f3_ip)"/>
-      <arg name="camera_info_url" value="$(arg camera_f3_info_url)"/>
-      <arg name="topic"         value="$(arg topic_cam_f3_raw)"/>
-      <arg name="camera_info_topic" value="$(arg topic_cam_f3_info)"/>
-      <arg name="timeout" value="$(arg camera_timeout_sec)"/>
-      <arg name="startup_delay_sec" value="$(arg camera_f3_startup_delay_sec)"/>
-    </include>
-  </group>
-
-  <group if="$(eval str(arg('use_cameras')).lower() == 'true' and str(arg('use_camera_f4')).lower() == 'true')">
-    <include file="$(find ig_handle)/launch/sensors/start_cam.launch">
-      <arg name="camera_name"   value="F4"/>
-      <arg name="frame_id"      value="F4_optical"/>
-      <arg name="camera_serial" value="25110065"/>
-      <arg name="camera_ip"     value="$(arg camera_f4_ip)"/>
-      <arg name="camera_info_url" value="$(arg camera_f4_info_url)"/>
-      <arg name="topic"         value="$(arg topic_cam_f4_raw)"/>
-      <arg name="camera_info_topic" value="$(arg topic_cam_f4_info)"/>
-      <arg name="timeout" value="$(arg camera_timeout_sec)"/>
-      <arg name="startup_delay_sec" value="$(arg camera_f4_startup_delay_sec)"/>
-    </include>
-  </group>
-
-  <include if="$(arg use_thermal)" file="$(find ig_handle)/launch/sensors/start_thermal.launch">
-    <arg name="topic" value="$(arg topic_thermal)"/>
-  </include>
+  <node pkg="ig_handle"
+        type="sensor_bringup.py"
+        name="sensor_bringup"
+        output="screen"
+        required="true">
+    <param name="sensor_contract_file" value="$(arg sensor_contract_file)"/>
+    <param name="extra_sensor_ids" value="$(arg extra_sensor_ids)"/>
+    <param name="disabled_sensor_ids" value="$(arg disabled_sensor_ids)"/>
+    <param name="sensor_reachability_check" value="$(arg sensor_reachability_check)"/>
+  </node>
 </launch>

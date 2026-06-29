@@ -19,6 +19,8 @@ catkin_install_python(
     scripts/frames/broadcast.py
     scripts/imu/force_wakeup.py
     scripts/network_config.py
+    scripts/sensor_bringup.py
+    scripts/sensor_contract.py
     scripts/teensy/teensy_rosserial_launcher.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
@@ -32,12 +34,14 @@ install(
 install(
   PROGRAMS
     scripts/network_config.py
+    scripts/sensor_contract.py
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/scripts
 )
 
 install(
   FILES
     scripts/network_launch_eval.py
+    scripts/sensor_contract_launch_eval.py
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/scripts
 )
 

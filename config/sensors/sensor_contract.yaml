@@ -1,0 +1,388 @@
+# Canonical IG Handle sensor contract.
+#
+# Platform launchers should read this contract instead of copying sensor
+# defaults, topics, frames, endpoints, calibration files, or startup policy.
+sensor_contract:
+  defaults:
+    reachability_timeout_sec: 1.0
+  platform_topics:
+    pps_time: /sensors/pps/time
+    camera_time: /sensors/camera/time
+  deployment_bindings:
+    state_input:
+      sensor: "1"
+      topic: topics.data
+      frame: frame
+    state_input_time:
+      sensor: "1"
+      topic: topics.time
+    mapping_primary:
+      sensor: "2"
+      topic: topics.points
+      frame: frame
+    mapping_secondary:
+      sensor: "3"
+      topic: topics.points
+      frame: frame
+    inspection_front_right:
+      sensor: "4"
+      topic: topics.image_raw
+      info_topic: topics.camera_info
+      frame: frame
+      role: role
+    inspection_front_left:
+      sensor: "5"
+      topic: topics.image_raw
+      info_topic: topics.camera_info
+      frame: frame
+      role: role
+    inspection_top_left:
+      sensor: "6"
+      topic: topics.image_raw
+      info_topic: topics.camera_info
+      frame: frame
+      role: role
+    inspection_top_right:
+      sensor: "7"
+      topic: topics.image_raw
+      info_topic: topics.camera_info
+      frame: frame
+      role: role
+    ranging_raw:
+      sensor: "8"
+      topic: topics.raw
+      frame: frame
+      profile_config: profile_config
+      profile: profile
+      endian: endian
+      min_range_m: min_range_m
+      sim_max_range_m: sim_max_range_m
+    ranging_cloud:
+      sensor: "8"
+      topic: topics.scan
+      frame: frame
+    ranging_sim_rays:
+      sensor: "8"
+      topic: topics.ray_sim
+      frame: frame
+    ranging_map_cloud:
+      sensor: "8"
+      topic: topics.map_cloud
+      frame: frame
+      max_retained_points: map_cloud_max_retained_points
+      voxel_resolution_m: map_cloud_voxel_resolution_m
+      max_point_age_sec: map_cloud_max_point_age_sec
+      publish_rate_hz: map_cloud_publish_rate_hz
+      min_points_per_slice: map_cloud_min_points_per_slice
+    ranging_latest_slice:
+      sensor: "8"
+      topic: topics.latest_slice_map
+      frame: frame
+  deployment_binding_groups:
+    inspection_streams:
+      - inspection_top_left
+      - inspection_front_left
+      - inspection_top_right
+      - inspection_front_right
+  # Sensor ids are opaque inventory keys. They are not positions, counts, array
+  # indexes, or a promise that ids are contiguous; consumers must iterate this
+  # mapping or resolve deployment bindings above.
+  sensors:
+    "1":
+      label: Xsens IMU
+      family: imu
+      dashboard_kind: imu
+      dashboard_mode: ROS telemetry
+      startup_order: 10
+      default_requested: true
+      reachability: device
+      device_path: /dev/sensors/imu
+      frame: imu_link
+      topics:
+        data: /sensors/imu/data
+        time: /sensors/imu/time
+      launch:
+        file: package://ig_handle/launch/sensors/start_imu.launch
+        args:
+          topic:
+            field: topics.data
+          time_topic:
+            field: topics.time
+          frame_id:
+            field: frame
+          port:
+            field: device_path
+
+    "2":
+      label: Horizontal VLP-16 LiDAR
+      family: lidar
+      dashboard_kind: pointcloud
+      dashboard_mode: ROS point cloud
+      startup_order: 20
+      default_requested: true
+      reachability: network
+      endpoint_key: lidar_h_ip
+      frame: lidar_h_link
+      driver_name: hori
+      port: 2368
+      topics:
+        points: /sensors/lidar/hori/points
+      launch:
+        file: package://ig_handle/launch/sensors/start_lidar.launch
+        args:
+          name:
+            field: driver_name
+          device_ip:
+            endpoint: true
+          port:
+            field: port
+          frame_id:
+            field: frame
+          topic:
+            field: topics.points
+
+    "3":
+      label: Vertical VLP-16 LiDAR
+      family: lidar
+      dashboard_kind: pointcloud
+      dashboard_mode: ROS point cloud
+      startup_order: 30
+      default_requested: true
+      reachability: network
+      endpoint_key: lidar_v_ip
+      frame: lidar_v_link
+      driver_name: vert
+      port: 2369
+      topics:
+        points: /sensors/lidar/vert/points
+      launch:
+        file: package://ig_handle/launch/sensors/start_lidar.launch
+        args:
+          name:
+            field: driver_name
+          device_ip:
+            endpoint: true
+          port:
+            field: port
+          frame_id:
+            field: frame
+          topic:
+            field: topics.points
+
+    "4":
+      label: Forge F1 camera
+      family: camera
+      dashboard_kind: camera
+      dashboard_mode: Live MJPEG
+      role: front_right
+      startup_order: 40
+      default_requested: true
+      reachability: network
+      endpoint_key: camera_f1_ip
+      driver_name: F1
+      frame: F1_optical
+      serial: "25110056"
+      camera_info_url: package://ig_handle/config/sensors/cameras/25110056.yaml
+      startup_delay_sec: 0.0
+      topics:
+        image_raw: /sensors/camera/f1/image_raw
+        camera_info: /sensors/camera/f1/camera_info
+      launch:
+        file: package://ig_handle/launch/sensors/start_cam.launch
+        args:
+          camera_name:
+            field: driver_name
+          frame_id:
+            field: frame
+          camera_serial:
+            field: serial
+          camera_ip:
+            endpoint: true
+          camera_info_url:
+            field: camera_info_url
+          topic:
+            field: topics.image_raw
+          camera_info_topic:
+            field: topics.camera_info
+          startup_delay_sec:
+            field: startup_delay_sec
+
+    "5":
+      label: Forge F2 camera
+      family: camera
+      dashboard_kind: camera
+      dashboard_mode: Live MJPEG
+      role: front_left
+      startup_order: 50
+      default_requested: true
+      reachability: network
+      endpoint_key: camera_f2_ip
+      driver_name: F2
+      frame: F2_optical
+      serial: "25152257"
+      camera_info_url: package://ig_handle/config/sensors/cameras/25152257.yaml
+      startup_delay_sec: 20.0
+      topics:
+        image_raw: /sensors/camera/f2/image_raw
+        camera_info: /sensors/camera/f2/camera_info
+      launch:
+        file: package://ig_handle/launch/sensors/start_cam.launch
+        args:
+          camera_name:
+            field: driver_name
+          frame_id:
+            field: frame
+          camera_serial:
+            field: serial
+          camera_ip:
+            endpoint: true
+          camera_info_url:
+            field: camera_info_url
+          topic:
+            field: topics.image_raw
+          camera_info_topic:
+            field: topics.camera_info
+          startup_delay_sec:
+            field: startup_delay_sec
+
+    "6":
+      label: Forge F3 camera
+      family: camera
+      dashboard_kind: camera
+      dashboard_mode: Live MJPEG
+      role: top_left
+      startup_order: 60
+      default_requested: true
+      reachability: network
+      endpoint_key: camera_f3_ip
+      driver_name: F3
+      frame: F3_optical
+      serial: "25110061"
+      camera_info_url: package://ig_handle/config/sensors/cameras/25110061.yaml
+      startup_delay_sec: 40.0
+      topics:
+        image_raw: /sensors/camera/f3/image_raw
+        camera_info: /sensors/camera/f3/camera_info
+      launch:
+        file: package://ig_handle/launch/sensors/start_cam.launch
+        args:
+          camera_name:
+            field: driver_name
+          frame_id:
+            field: frame
+          camera_serial:
+            field: serial
+          camera_ip:
+            endpoint: true
+          camera_info_url:
+            field: camera_info_url
+          topic:
+            field: topics.image_raw
+          camera_info_topic:
+            field: topics.camera_info
+          startup_delay_sec:
+            field: startup_delay_sec
+
+    "7":
+      label: Forge F4 camera
+      family: camera
+      dashboard_kind: camera
+      dashboard_mode: Live MJPEG
+      role: top_right
+      startup_order: 70
+      default_requested: true
+      reachability: network
+      endpoint_key: camera_f4_ip
+      driver_name: F4
+      frame: F4_optical
+      serial: "25110065"
+      camera_info_url: package://ig_handle/config/sensors/cameras/25110065.yaml
+      startup_delay_sec: 60.0
+      topics:
+        image_raw: /sensors/camera/f4/image_raw
+        camera_info: /sensors/camera/f4/camera_info
+      launch:
+        file: package://ig_handle/launch/sensors/start_cam.launch
+        args:
+          camera_name:
+            field: driver_name
+          frame_id:
+            field: frame
+          camera_serial:
+            field: serial
+          camera_ip:
+            endpoint: true
+          camera_info_url:
+            field: camera_info_url
+          topic:
+            field: topics.image_raw
+          camera_info_topic:
+            field: topics.camera_info
+          startup_delay_sec:
+            field: startup_delay_sec
+
+    "8":
+      label: Imagenex DT100 sonar
+      family: sonar
+      dashboard_kind: pointcloud
+      dashboard_mode: ROS point cloud
+      startup_order: 80
+      default_requested: false
+      reachability: network
+      endpoint_key: sonar_ip
+      bind_ip_key: mocap_udp_bind_ip
+      udp_dest_ip_key: sonar_lan_ip
+      frame: sonar_link
+      profile: pool
+      profile_config: package://ig_handle/config/sensors/sonar/profiles.yaml
+      udp_port: 4040
+      endian: little
+      min_range_m: 0.5
+      sim_max_range_m: 100.0
+      map_cloud_max_retained_points: 150000
+      map_cloud_voxel_resolution_m: 0.10
+      map_cloud_max_point_age_sec: 1800.0
+      map_cloud_publish_rate_hz: 2.0
+      map_cloud_min_points_per_slice: 3
+      topics:
+        raw: /sensors/sonar/raw
+        scan: /sensors/sonar/scan
+        ray_sim: /sim/sensors/sonar/multibeam_points
+        map_cloud: /sensors/sonar/map_cloud
+        latest_slice_map: /sensors/sonar/latest_slice_map
+      launch:
+        file: package://ig_handle/launch/sensors/start_sonar.launch
+        args:
+          sensor_contract_file:
+            contract_file: true
+          sensor_reachability_check:
+            reachability_check: true
+          sensor_id:
+            sensor_id: true
+          raw_topic:
+            field: topics.raw
+
+    "9":
+      label: Boson thermal camera
+      family: thermal
+      dashboard_kind: camera
+      dashboard_mode: Live MJPEG
+      startup_order: 90
+      default_requested: false
+      reachability: none
+      namespace: thermal
+      frame: thermal_link
+      device_path: /dev/video0
+      topics:
+        image_raw: /sensors/thermal/image_raw
+      launch:
+        file: package://ig_handle/launch/sensors/start_thermal.launch
+        args:
+          topic:
+            field: topics.image_raw
+          namespace:
+            field: namespace
+          frame_id:
+            field: frame
+          dev:
+            field: device_path

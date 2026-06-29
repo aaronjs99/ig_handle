@@ -1,24 +1,19 @@
 <launch>
-  <arg name="topic" default="/imu/data"/>
+  <arg name="topic"/>
+  <arg name="time_topic"/>
   <arg name="port" default="/dev/sensors/imu"/>
   <arg name="baudrate" default="115200"/>
   <arg name="scan_for_devices" default="false"/>
+  <arg name="frame_id" default="imu_link"/>
 
-  <group ns="/sensors/imu">
-    <node name="driver" pkg="xsens_mti_driver" type="xsens_mti_node" output="screen">
-      <param name="port" value="$(arg port)"/>
-      <param name="baudrate" value="$(arg baudrate)"/>
-      <param name="scan_for_devices" value="$(arg scan_for_devices)"/>
-      <rosparam command="load" file="$(find xsens_mti_driver)/param/xsens_mti_node.yaml" />
-      <param name="frame_id" value="imu_link"/>
-      <param name="pub_transform" value="false"/>
-      <remap from="imu/data"             to="data"/>
-      <remap from="imu/acceleration"     to="acceleration"/>
-      <remap from="imu/angular_velocity" to="angular_velocity"/>
-      <remap from="imu/mag"              to="mag"/>
-      <remap from="imu/time"             to="time"/>
-      <remap from="imu/time_ref"         to="time_ref"/>
-      <remap from="filter/quaternion"    to="quaternion"/>
-    </node>
-  </group>
+  <node name="driver" pkg="xsens_mti_driver" type="xsens_mti_node" output="screen">
+    <param name="port" value="$(arg port)"/>
+    <param name="baudrate" value="$(arg baudrate)"/>
+    <param name="scan_for_devices" value="$(arg scan_for_devices)"/>
+    <rosparam command="load" file="$(find xsens_mti_driver)/param/xsens_mti_node.yaml" />
+    <param name="frame_id" value="$(arg frame_id)"/>
+    <param name="pub_transform" value="false"/>
+    <remap from="imu/data"             to="$(arg topic)"/>
+    <remap from="imu/time"             to="$(arg time_topic)"/>
+  </node>
 </launch>

@@ -68,13 +68,20 @@ Raw sensor collection can be launched directly when testing the sensor layer:
 roslaunch ig_handle collect_raw_data.launch
 ```
 
-The Heron adapter starts the shared IG sensor suite. Use the global camera
-switch or per-camera switches when isolating camera issues:
+The Heron adapter starts the shared IG sensor suite from the sensor contract.
+Use contract ids when isolating individual sensors:
 
 ```bash
-roslaunch grande bringup.launch mode:=real use_cameras:=false
-roslaunch grande bringup.launch mode:=real use_camera_f2:=false
+roslaunch grande bringup.launch mode:=real disabled_sensor_ids:=<contract-id>
+roslaunch grande bringup.launch mode:=real extra_sensor_ids:=<contract-id>
 ```
+
+Contract ids are opaque inventory keys. They are not positions, counts, or a
+contiguous sequence, so callers should never infer the sensor count from the id
+values. Runtime packages should use deployment bindings such as `state_input`,
+`mapping_primary`, `ranging_raw`, and binding groups such as
+`inspection_streams`; only IG Handle should translate those bindings into the
+physical devices, endpoints, frames, and topics.
 
 ## Camera Notes
 
@@ -176,6 +183,15 @@ changes.
 
 ## Udev Rules
 
+IG Handle owns hardware identity. Session scripts should never patch Xsens
+ports, create ad-hoc symlinks, or guess `ttyUSB*`.
+
+What happened on June 26, 2026: the Xsens MTi appeared as more than one USB
+serial interface. A broad `/dev/imu` rule could bind the ROS driver to the
+wrong interface, so the launch sometimes opened a port that was not the live
+data stream. The permanent fix is one package-owned rule that binds the Xsens
+VID/PID and exposes only USB interface `01` as `/dev/sensors/imu`.
+
 ```bash
 sudo rm -f \
   /etc/udev/rules.d/99-udev.rules \
@@ -190,8 +206,13 @@ sudo udevadm settle
 udevadm info -q property -n /dev/sensors/imu | egrep 'ID_VENDOR_ID|ID_MODEL_ID|ID_USB_INTERFACE_NUM|DEVLINKS'
 ```
 
+The verification should show `ID_VENDOR_ID=2639`, `ID_MODEL_ID=0003`,
+`ID_USB_INTERFACE_NUM=01`, and `DEVLINKS` containing `/dev/sensors/imu`.
+
 The canonical Xsens port is `/dev/sensors/imu`. Keep the driver binding, stable
-device name, and serial permissions in `config/udev/99-ig-handle.rules`.
+device name, serial permissions, and latency setting together in
+`config/udev/99-ig-handle.rules`. Keep `ig_handle/config/sensors/sensor_contract.yaml`
+and `launch/sensors/start_imu.launch` pointed at that canonical device path.
 
 ## ROS 2
 

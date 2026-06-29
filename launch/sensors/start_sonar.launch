@@ -4,35 +4,44 @@
   <arg name="bridge_adapter" default="br0"/>
   <arg name="headless"       default="false"/>
   <arg name="udp_port"       default="4040"/>
-  <arg name="raw_topic"      default="/sensors/sonar/raw"/>
-  <arg name="bind_ip"        default="$(eval eval(open(find('ig_handle') + '/scripts/network_launch_eval.py').read())(find('ig_handle'), 'mocap_udp_bind_ip'))"/>
-  <arg name="sonar_ip"       default="$(eval eval(open(find('ig_handle') + '/scripts/network_launch_eval.py').read())(find('ig_handle'), 'sonar_ip'))"/>
-  <arg name="udp_dest_ip"    default="$(eval eval(open(find('ig_handle') + '/scripts/network_launch_eval.py').read())(find('ig_handle'), 'sonar_lan_ip'))"/>
-  <arg name="sonar_profile"  default="pool"/>
-  <arg name="sonar_profile_config" default="$(find ig_handle)/config/sensors/sonar/profiles.yaml"/>
+  <arg name="raw_topic"/>
+  <arg name="sensor_contract_file" default="$(find ig_handle)/config/sensors/sensor_contract.yaml"/>
+  <arg name="sensor_id"/>
+  <arg name="bind_ip"        default="$(eval eval(open(find('ig_handle') + '/scripts/sensor_contract_launch_eval.py').read())(find('ig_handle'), 'network', arg('sensor_id'), 'bind_ip_key', '', arg('sensor_contract_file')))"/>
+  <arg name="sonar_ip"       default="$(eval eval(open(find('ig_handle') + '/scripts/sensor_contract_launch_eval.py').read())(find('ig_handle'), 'endpoint', arg('sensor_id'), '', '', arg('sensor_contract_file')))"/>
+  <arg name="udp_dest_ip"    default="$(eval eval(open(find('ig_handle') + '/scripts/sensor_contract_launch_eval.py').read())(find('ig_handle'), 'network', arg('sensor_id'), 'udp_dest_ip_key', '', arg('sensor_contract_file')))"/>
+  <arg name="sensor_reachability_check" default="true"/>
+  <arg name="sonar_reachable"
+       default="$(eval eval(open(find('ig_handle') + '/scripts/sensor_contract_launch_eval.py').read())(find('ig_handle'), 'reachable', arg('sensor_id'), '', '', arg('sensor_contract_file'), '', '', arg('sensor_reachability_check')))"/>
+  <arg name="sonar_profile" default="$(eval eval(open(find('ig_handle') + '/scripts/sensor_contract_launch_eval.py').read())(find('ig_handle'), 'value', arg('sensor_id'), 'profile', '', arg('sensor_contract_file')))"/>
+  <arg name="sonar_profile_config" default="$(eval eval(open(find('ig_handle') + '/scripts/sensor_contract_launch_eval.py').read())(find('ig_handle'), 'value', arg('sensor_id'), 'profile_config', '', arg('sensor_contract_file')))"/>
   <arg name="verbose_deltat_ini" default="false"/>
 
+  <param name="/ig_handle/sensors/$(arg sensor_id)/reachable" value="$(arg sonar_reachable)"/>
+
+  <group if="$(arg sonar_reachable)">
   <!-- Default native path: Linux_DeltaT talks to the sonar head and forwards
        DT100 UDP packets to this ROS host. If use_vm=true, the Windows
        VM/DT100.exe path provides that UDP stream instead. -->
-  <node unless="$(arg use_vm)"
-        pkg="ig_handle" type="sonar.py" name="deltat_tx" output="log"
-        args="deltat --profile-config $(arg sonar_profile_config) --profile $(arg sonar_profile) --sonar-ip $(arg sonar_ip) --udp-ip $(arg udp_dest_ip) --udp-port $(arg udp_port)">
-    <env name="VERBOSE" value="$(arg verbose_deltat_ini)"/>
-  </node>
+    <node unless="$(arg use_vm)"
+          pkg="ig_handle" type="sonar.py" name="deltat_tx" output="log"
+          args="deltat --profile-config $(arg sonar_profile_config) --profile $(arg sonar_profile) --sonar-ip $(arg sonar_ip) --udp-ip $(arg udp_dest_ip) --udp-port $(arg udp_port)">
+      <env name="VERBOSE" value="$(arg verbose_deltat_ini)"/>
+    </node>
 
   <!-- Windows VM path: keep this available for systems that still need DT100.exe. -->
-  <group if="$(arg use_vm)">
-    <node pkg="dt100_driver" type="dt100_vm.bash" name="dt100_vm_node" output="log">
-      <param name="bridge_adapter" value="$(arg bridge_adapter)"/>
-      <param name="headless" value="$(arg headless)"/>
-    </node>
-  </group>
+    <group if="$(arg use_vm)">
+      <node pkg="dt100_driver" type="dt100_vm.bash" name="dt100_vm_node" output="log">
+        <param name="bridge_adapter" value="$(arg bridge_adapter)"/>
+        <param name="headless" value="$(arg headless)"/>
+      </node>
+    </group>
 
   <!-- Common: keep DT100 bytes raw. MARINER owns raw -> PointCloud2. -->
-  <node pkg="ig_handle" type="sonar.py" name="sonar_raw_receiver" output="log" args="receiver">
-    <param name="port" value="$(arg udp_port)"/>
-    <param name="topic" value="$(arg raw_topic)"/>
-    <param name="bind_ip" value="$(arg bind_ip)"/>
-  </node>
+    <node pkg="ig_handle" type="sonar.py" name="sonar_raw_receiver" output="log" args="receiver">
+      <param name="port" value="$(arg udp_port)"/>
+      <param name="topic" value="$(arg raw_topic)"/>
+      <param name="bind_ip" value="$(arg bind_ip)"/>
+    </node>
+  </group>
 </launch>

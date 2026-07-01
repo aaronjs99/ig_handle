@@ -95,7 +95,7 @@ The default Forge profile is conservative:
 - 10 ms exposure ceiling
 - `BayerRG8`
 - ISP disabled
-- centered 1280 x 1024 ROI
+- centered 640 x 512 ROI
 
 Do not enable Line0 hardware trigger mode unless the trigger source is connected
 and verified. Placeholder CameraInfo files keep topics present but are marked

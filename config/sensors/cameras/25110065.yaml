@@ -1,8 +1,8 @@
 # Placeholder CameraInfo for Forge F4 serial 25110065.
-# Capture a real calibration for the active 1280x1024 ROI before using this for
+# Capture a real calibration for the active 640x512 ROI before using this for
 # metric vision. K[0] = 0 marks the camera as uncalibrated to ROS consumers.
-image_width: 1280
-image_height: 1024
+image_width: 640
+image_height: 512
 camera_name: "25110065"
 camera_matrix:
   rows: 3

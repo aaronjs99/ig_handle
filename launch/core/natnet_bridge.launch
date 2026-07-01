@@ -1,4 +1,7 @@
 <launch>
+  <arg name="config_eval"
+       default="$(eval open(find('mariner') + '/launch/include/config_launch_eval.py').read())"/>
+  <arg name="runtime_surface_file" default="$(find ig_handle)/config/runtime_surface.yaml"/>
   <!-- Network configuration. NatNet defaults preserve the existing direct
        server/client behavior; set natnet_use_multicast:=true when Motive is
        configured for multicast streaming. -->
@@ -18,10 +21,10 @@
   <arg name="child_frame_prefix" default="rigid_body_"/>
   <arg name="stale_timeout_sec" default="1.0"/>
 
-  <arg name="heron_pose_topic" default="/mocap/rigid_body_1/pose"/>
-  <arg name="markers_topic" default="/mocap/heron/markers"/>
-  <arg name="potential_objects_topic" default="/mocap/potential_objects"/>
-  <arg name="status_topic" default="/mocap/datacollect_status"/>
+  <arg name="heron_pose_topic" default="$(eval eval(arg('config_eval'))(arg('runtime_surface_file'), 'topics.mocap_pose'))"/>
+  <arg name="markers_topic" default="$(eval eval(arg('config_eval'))(arg('runtime_surface_file'), 'topics.mocap_markers'))"/>
+  <arg name="potential_objects_topic" default="$(eval eval(arg('config_eval'))(arg('runtime_surface_file'), 'topics.mocap_potential_objects'))"/>
+  <arg name="status_topic" default="$(eval eval(arg('config_eval'))(arg('runtime_surface_file'), 'topics.mocap_status'))"/>
 
   <!-- Datacollect UDP options. Used only with transport:=datacollect_udp. -->
   <arg name="datacollect_schema" default="datacollect.heron.v1"/>

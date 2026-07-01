@@ -1,0 +1,8 @@
+topics:
+  mocap_pose: /mocap/heron/pose
+  mocap_aligned_pose: /mocap/heron/pose/aligned
+  mocap_relative_pose: /mocap/heron/pose/relative
+  mocap_initialize: /mocap/initialize
+  mocap_markers: /mocap/heron/markers
+  mocap_potential_objects: /mocap/potential_objects
+  mocap_status: /mocap/datacollect_status

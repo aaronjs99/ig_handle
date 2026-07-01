@@ -124,8 +124,8 @@ GRANDE bringup resolves the sonar profile from the selected scenario.
 ## Motion Capture
 
 Mocap is a lab logging and comparison path, not the production odometry source.
-The bridge publishes raw comparison topics under `/mocap` and leaves TF
-publishing disabled by default.
+The bridge publishes raw comparison topics from `ig_handle/config/runtime_surface.yaml`
+and leaves TF publishing disabled by default.
 
 Run the datacollect UDP receiver when the Motive-side broadcaster is active:
 
@@ -138,7 +138,7 @@ Initialize odometry-vs-mocap alignment only after odometry, mocap, and IMU
 samples are available:
 
 ```bash
-rostopic pub -1 /mocap/initialize_alignment std_msgs/Bool "data: true"
+rostopic pub -1 /mocap/initialize std_msgs/Bool "data: true"
 ```
 
 ## Recording

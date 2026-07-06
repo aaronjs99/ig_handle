@@ -1,0 +1,32 @@
+sensor_readiness:
+  update_rate_hz: 1.0
+  sensors:
+    - name: imu
+      topic: /imu/data
+      message_type: sensor_msgs/Imu
+      min_frequency_hz: 20.0
+      timeout_sec: 1.0
+      max_header_age_sec: 0.5
+
+    - name: camera
+      topic: /camera/image_raw
+      message_type: sensor_msgs/Image
+      min_frequency_hz: 10.0
+      timeout_sec: 1.0
+      max_header_age_sec: 0.5
+      ping_host: 192.168.1.20
+
+    - name: lidar
+      topic: /scan
+      message_type: sensor_msgs/LaserScan
+      min_frequency_hz: 5.0
+      timeout_sec: 1.0
+      max_header_age_sec: 0.5
+      ping_host: 192.168.1.30
+
+    - name: sonar
+      topic: /sonar/range
+      message_type: sensor_msgs/Range
+      min_frequency_hz: 2.0
+      timeout_sec: 2.0
+      max_header_age_sec: 0.5

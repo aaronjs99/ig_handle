@@ -2,7 +2,7 @@ sensor_readiness:
   update_rate_hz: 1.0
   sensors:
     - name: imu
-      topic: /imu/data
+      topic: /sensors/imu/data
       message_type: sensor_msgs/Imu
       min_frequency_hz: 20.0
       timeout_sec: 1.0

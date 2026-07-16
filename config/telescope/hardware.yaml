@@ -78,13 +78,15 @@ mechanics:
   sonar_mount_offset_from_arm_tip_m: 0.0 # DUMMY: measure sonar datum offset.
   encoder_zero_count_at_min_length: 0 # DUMMY until the minimum limit is homed.
   calibrated_count_span_to_max_length: 0 # DUMMY until both endpoints are measured.
+  encoder_count_increases_on_extension: true # DUMMY: verify while moving outward.
+  motor_duty_sign_for_extension: 1 # DUMMY: verify motor polarity while moving outward.
   calibration_source: endpoint_homing_and_measurement
   limit_reference_policy:
     min_limit_action: rebase_encoder_zero
     max_limit_action: clamp_to_max_length
     minimum_length_datum_m: 0.0
     debounce_ms: 25
-    require_direction_consistency: true
+    require_direction_consistency: false # Minimum contact is always a valid zero reference.
   spool:
     enabled: false # DUMMY: set true only if cable winds directly on the spool.
     bare_radius_m: 0.0 # DUMMY: measure spool radius if enabled.
@@ -108,3 +110,7 @@ mechanics:
       stall_timeout_s: 1.00 # DUMMY: tune after motor current feedback is verified.
       max_motor_duty_fraction: 0.50 # DUMMY: conservative provisional limit.
       require_redundant_limit_agreement: true
+      current_sense_configured: false # DUMMY: ADC-to-amp calibration is still required.
+      motor_current_a_per_adc_count: 0.0 # DUMMY: calibrate against a trusted meter.
+      motor_current_zero_adc_count: 0.0 # DUMMY: measure with the driver disabled.
+      max_motor_current_a: 0.0 # DUMMY: set below the verified driver/motor limit.

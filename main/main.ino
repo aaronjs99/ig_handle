@@ -1,9 +1,12 @@
 #include "../config/teensy/firmware_config.h"
 #include <ros.h>
 #include <sensor_msgs/TimeReference.h>
+#include <std_msgs/Float32.h>
+#include <std_msgs/String.h>
 #include <RTClib.h>
 #include <TimeLib.h>
 #include "telescope_control.h"
+#include "telescope_runtime.h"
 
 using namespace ig_handle_firmware_config;
 
@@ -25,6 +28,24 @@ ros::Publisher pps_time_pub(kPpsTimeTopic, &pps_time_msg);
 ros::Publisher cam_time_pub(kCameraTimeTopic, &cam_time_msg);
 ros::Publisher imu_time_pub(kImuTimeTopic, &imu_time_msg);
 
+// Telescope topics use metres for desired/actual length and amperes for
+// motor_current. The runtime itself keeps all motor pins inert until its
+// measured firmware configuration is explicitly enabled.
+telescope::Runtime telescope_runtime;
+std_msgs::Float32 telescope_actual_length_msg;
+std_msgs::Float32 telescope_motor_current_msg;
+std_msgs::String telescope_status_msg;
+char telescope_status_buffer[48];
+ros::Publisher telescope_actual_length_pub(
+    ig_handle_firmware_config::telescope::kStateLengthTopic,
+                                           &telescope_actual_length_msg);
+ros::Publisher telescope_motor_current_pub(
+    ig_handle_firmware_config::telescope::kStateMotorCurrentTopic,
+                                           &telescope_motor_current_msg);
+ros::Publisher telescope_status_pub(
+    ig_handle_firmware_config::telescope::kStateStatusTopic,
+    &telescope_status_msg);
+
 // time-sync indicators
 time_t rtc_time{0};
 elapsedMillis nmea_delay;
@@ -34,6 +55,33 @@ unsigned long cam_open_t_sec, cam_mid_t_sec, cam_close_t_sec;
 unsigned long cam_open_t_nsec, cam_mid_t_nsec, cam_close_t_nsec;
 volatile bool pub_pps_time = false, send_nmea = false;
 volatile bool cam_captured = false, imu_sampled = false;
+
+void telescopeDesiredLengthCallback(const std_msgs::Float32& message) {
+  telescope_runtime.setDesiredLength(message.data, millis());
+}
+
+ros::Subscriber<std_msgs::Float32> telescope_desired_length_sub(
+    ig_handle_firmware_config::telescope::kCommandLengthTopic,
+    telescopeDesiredLengthCallback);
+
+void telescopeEncoderISR(void) { telescope_runtime.onEncoderEdge(); }
+
+void publishTelescopeState(uint32_t now_ms) {
+  static uint32_t last_telescope_publish_ms = 0;
+  if (now_ms - last_telescope_publish_ms <
+      ig_handle_firmware_config::telescope::kTelemetryPublishPeriodMs) {
+    return;
+  }
+  last_telescope_publish_ms = now_ms;
+  telescope_actual_length_msg.data = telescope_runtime.actualLengthM();
+  telescope_motor_current_msg.data = telescope_runtime.motorCurrentA();
+  snprintf(telescope_status_buffer, sizeof(telescope_status_buffer), "%s",
+           telescope_runtime.status());
+  telescope_status_msg.data = telescope_status_buffer;
+  telescope_actual_length_pub.publish(&telescope_actual_length_msg);
+  telescope_motor_current_pub.publish(&telescope_motor_current_msg);
+  telescope_status_pub.publish(&telescope_status_msg);
+}
 
 /*
    Initial setup for the arduino sketch
@@ -60,6 +108,10 @@ void setup() {
   nh.advertise(pps_time_pub);
   nh.advertise(cam_time_pub);
   nh.advertise(imu_time_pub);
+  nh.advertise(telescope_actual_length_pub);
+  nh.advertise(telescope_motor_current_pub);
+  nh.advertise(telescope_status_pub);
+  nh.subscribe(telescope_desired_length_sub);
   while (!nh.connected()) {
     nh.spinOnce();
   }
@@ -99,6 +151,17 @@ void setup() {
 
   // enable interrupt
   attachInterrupt(digitalPinToInterrupt(kPpsInPin), ppsISR, RISING);
+
+  // This only configures telescope pins when every measured safety gate is
+  // true. The committed dummy configuration returns false and stays inert.
+  if (telescope_runtime.begin(millis())) {
+    attachInterrupt(
+        digitalPinToInterrupt(ig_handle_firmware_config::telescope::kEncoderPhaseAPin),
+        telescopeEncoderISR, CHANGE);
+    attachInterrupt(
+        digitalPinToInterrupt(ig_handle_firmware_config::telescope::kEncoderPhaseBPin),
+        telescopeEncoderISR, CHANGE);
+  }
 }
 
 /*
@@ -165,6 +228,9 @@ void loop() {
     imu_time_pub.publish(&imu_time_msg);
     imu_sampled = false;
   }
+
+  telescope_runtime.update(millis());
+  publishTelescopeState(millis());
 
   nh.spinOnce();
 }

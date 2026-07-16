@@ -29,21 +29,22 @@ The minimal SLAM input set is:
 | `/sensors/imu/data` | `sensor_msgs/Imu` | Inertial input for LIO backends |
 
 The telescope command and feedback names are defined in
-`config/runtime_surface.yaml`. GRANDE sends a desired arm length on
-`/telescope/desired_length`. The telescope MCU ownership is reserved for the
-future motor/encoder module; the current `main.ino` is only the timing bridge
-and does not subscribe to or publish telescope motion topics. The telescope
-remains disabled until its hardware configuration is measured and explicitly
-enabled, so these names are currently a contract rather than a live actuator
-interface.
+`config/runtime_surface.yaml`. GRANDE sends a desired arm length in metres on
+`/actuators/telescope/command/length`; the Teensy publishes metres on
+`/actuators/telescope/state/length`, calibrated amperes on
+`/actuators/telescope/state/motor_current`, and a textual state on
+`/actuators/telescope/state/status`. `main.ino` owns this command path
+alongside timing. It will not configure any telescope pin or energize the
+motor until wiring, geometry, encoder direction, motor polarity, and current
+sense calibration are measured and the three firmware enable gates are true.
 
 The firmware-side values live in `config/teensy/firmware_config.h`, while the
-human-readable hardware record lives in `config/telescope/hardware.yaml`. The
-side-effect-free conversion scaffold in `main/telescope_control.h` keeps
-the intended mapping explicit: calibrated encoder counts map linearly to arm
-length, and arm length maps to motor revolutions using measured travel per
-revolution and motor polarity. It rejects the dummy configuration, so including
-it in `main.ino` cannot energize a motor or accept an uncalibrated command.
+human-readable hardware record lives in `config/telescope/hardware.yaml`.
+`main/telescope_control.h` maps calibrated encoder counts to arm length and
+length to motor revolutions. `main/telescope_runtime.h` implements the guarded
+position loop: minimum-limit homing rebases the encoder zero, maximum travel
+clamps extension, both NO/NC contacts are checked, stale commands and encoder
+stalls stop the motor, and every command is range-checked before a PWM output.
 
 
 ## Network Configuration

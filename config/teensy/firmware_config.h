@@ -64,6 +64,8 @@ static constexpr float kMaxLengthM = 0.0f; // DUMMY: measure.
 static constexpr float kLinearTravelPerMotorRevolutionM = 0.0f; // DUMMY: measure.
 static constexpr int32_t kEncoderZeroCountAtMinLength = 0; // DUMMY: home.
 static constexpr int32_t kEncoderCountSpanToMaxLength = 0; // DUMMY: calibrate.
+static constexpr bool kEncoderCountIncreasesOnExtension = true; // DUMMY: verify.
+static constexpr int8_t kMotorDutySignForExtension = 1; // DUMMY: verify.
 
 // DUMMY: provisional pins; replace only after wiring is verified.
 static constexpr uint8_t kMotorRightPwmPin = 22;
@@ -78,6 +80,37 @@ static constexpr uint8_t kMinLimitNoPin = 31;
 static constexpr uint8_t kMinLimitNcPin = 32;
 static constexpr uint8_t kMaxLimitNoPin = 33;
 static constexpr uint8_t kMaxLimitNcPin = 34;
+
+// Compile-time mirror of config/runtime_surface.yaml. The telescope is an
+// actuator; its carried sonar remains under the separate /sensors/sonar tree.
+static const char kCommandLengthTopic[] =
+    "/actuators/telescope/command/length";
+static const char kStateLengthTopic[] = "/actuators/telescope/state/length";
+static const char kStateStatusTopic[] = "/actuators/telescope/state/status";
+static const char kStateMotorCurrentTopic[] =
+    "/actuators/telescope/state/motor_current";
+
+// Compile-time mirrors of telescope/hardware.yaml control values.
+static constexpr uint32_t kPwmFrequencyHz = 20000;
+static constexpr uint32_t kControlUpdatePeriodMs = 10;
+static constexpr uint32_t kTelemetryPublishPeriodMs = 100;
+static constexpr uint32_t kLimitDebounceMs = 25;
+static constexpr uint32_t kCommandTimeoutMs = 500;
+static constexpr uint32_t kStallTimeoutMs = 1000;
+static constexpr uint32_t kHomingTimeoutMs = 30000;
+static constexpr int8_t kHomingDirection = -1;
+static constexpr float kHomingDutyFraction = 0.10f;
+static constexpr float kMaxDutyFraction = 0.25f;
+static constexpr float kMaxDutyAccelerationPerSec = 0.50f;
+static constexpr float kPositionKp = 1.0f;
+static constexpr bool kRequireRedundantLimitAgreement = true;
+
+// DUMMY: no current feedback is treated as calibrated until this is measured
+// against a trusted meter. Motion remains gated off while this is false.
+static constexpr bool kCurrentSenseConfigured = false;
+static constexpr float kMotorCurrentAPerAdcCount = 0.0f;
+static constexpr float kMotorCurrentZeroAdcCount = 0.0f;
+static constexpr float kMaxMotorCurrentA = 0.0f; // DUMMY: set after calibration.
 
 }  // namespace telescope
 }  // namespace ig_handle_firmware_config

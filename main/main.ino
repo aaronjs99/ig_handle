@@ -47,14 +47,94 @@ ros::Publisher telescope_status_pub(
     &telescope_status_msg);
 
 // time-sync indicators
-time_t rtc_time{0};
+volatile time_t rtc_time{0};
 elapsedMillis nmea_delay;
 elapsedMicros micros_since_pps;
-ros::Time pps_stamp, cam_mid_stamp, imu_stamp;
 unsigned long cam_open_t_sec, cam_mid_t_sec, cam_close_t_sec;
 unsigned long cam_open_t_nsec, cam_mid_t_nsec, cam_close_t_nsec;
+volatile uint32_t pps_stamp_sec = 0;
+volatile uint32_t pps_stamp_nsec = 0;
+volatile uint32_t cam_mid_stamp_sec = 0;
+volatile uint32_t cam_mid_stamp_nsec = 0;
+volatile uint32_t imu_stamp_sec = 0;
+volatile uint32_t imu_stamp_nsec = 0;
+volatile uint32_t pps_edge_count = 0;
+volatile bool pps_time_initialized = false;
+volatile bool pps_stamp_valid = false;
+volatile bool camera_open_valid = false;
 volatile bool pub_pps_time = false, send_nmea = false;
 volatile bool cam_captured = false, imu_sampled = false;
+
+ros::Time snapshotPpsStamp() {
+  noInterrupts();
+  const uint32_t sec = pps_stamp_sec;
+  const uint32_t nsec = pps_stamp_nsec;
+  interrupts();
+  ros::Time stamp;
+  stamp.sec = sec;
+  stamp.nsec = nsec;
+  return stamp;
+}
+
+bool takePpsStamp(ros::Time* stamp) {
+  noInterrupts();
+  const bool ready = pub_pps_time;
+  if (ready) {
+    stamp->sec = pps_stamp_sec;
+    stamp->nsec = pps_stamp_nsec;
+    pub_pps_time = false;
+  }
+  interrupts();
+  return ready;
+}
+
+bool takeCameraStamp(ros::Time* stamp) {
+  noInterrupts();
+  const bool ready = cam_captured;
+  if (ready) {
+    stamp->sec = cam_mid_stamp_sec;
+    stamp->nsec = cam_mid_stamp_nsec;
+    cam_captured = false;
+  }
+  interrupts();
+  return ready;
+}
+
+bool takeImuStamp(ros::Time* stamp) {
+  noInterrupts();
+  const bool ready = imu_sampled;
+  if (ready) {
+    stamp->sec = imu_stamp_sec;
+    stamp->nsec = imu_stamp_nsec;
+    imu_sampled = false;
+  }
+  interrupts();
+  return ready;
+}
+
+void initializeRtcTimeFromRos() {
+  noInterrupts();
+  const uint32_t edge_count_before = pps_edge_count;
+  const bool already_initialized = pps_time_initialized;
+  interrupts();
+  if (already_initialized) {
+    return;
+  }
+  const ros::Time ros_now = nh.now();
+  if (ros_now.sec == 0) {
+    return;
+  }
+  // Only arm after an interval without a PPS edge. If an edge arrives while
+  // ROS time is sampled, retry on the next loop so the counter still denotes
+  // the next physical PPS edge.
+  const time_t next_pps_sec = ros_now.sec + 1;
+  noInterrupts();
+  if (!pps_time_initialized && pps_edge_count == edge_count_before) {
+    rtc_time = next_pps_sec;
+    pps_time_initialized = true;
+  }
+  interrupts();
+}
 
 void telescopeDesiredLengthCallback(const std_msgs::Float32& message) {
   telescope_runtime.setDesiredLength(message.data, millis());
@@ -173,11 +253,15 @@ void setup() {
 */
 void loop() {
   nh.spinOnce(); // Handle ROS communication at the start
+  initializeRtcTimeFromRos();
 
   // publish PPS time as a reference for soft-synch
-  if (pub_pps_time) {
+  ros::Time pps_snapshot;
+  if (takePpsStamp(&pps_snapshot)) {
+    pps_time_msg.header.seq = pps_snapshot.sec;
+    pps_time_msg.header.stamp = pps_snapshot;
+    pps_time_msg.time_ref = pps_snapshot;
     pps_time_pub.publish(&pps_time_msg);
-    pub_pps_time = false;
   }
 
   // ensure PPS width satisfied
@@ -190,9 +274,9 @@ void loop() {
       if (!kNmeaPayloadEnabled) {
         send_nmea = false;
       } else {
-      // get PPS time and adjust to time zone
+      // Snapshot the ISR-owned PPS value before using it in the foreground.
       const time_t t_sec_gmt =
-          pps_stamp.sec - kTimeZoneOffsetHours * 3600;
+          snapshotPpsStamp().sec - kTimeZoneOffsetHours * 3600;
 
       // create GPRMC sentence
       char time_now[7], date_now[7];
@@ -221,20 +305,20 @@ void loop() {
     }
   }
 
-  if (cam_captured) {
-    cam_time_msg.time_ref = cam_mid_stamp;
+  ros::Time camera_snapshot;
+  if (takeCameraStamp(&camera_snapshot)) {
+    cam_time_msg.time_ref = camera_snapshot;
     cam_time_msg.header.seq++;
-    cam_time_msg.header.stamp = cam_mid_stamp;
+    cam_time_msg.header.stamp = camera_snapshot;
     cam_time_pub.publish(&cam_time_msg);
-    cam_captured = false;
   }
 
-  if (imu_sampled) {
-    imu_time_msg.time_ref = imu_stamp;
+  ros::Time imu_snapshot;
+  if (takeImuStamp(&imu_snapshot)) {
+    imu_time_msg.time_ref = imu_snapshot;
     imu_time_msg.header.seq++;
-    imu_time_msg.header.stamp = imu_stamp;
+    imu_time_msg.header.stamp = imu_snapshot;
     imu_time_pub.publish(&imu_time_msg);
-    imu_sampled = false;
   }
 
   telescope_runtime.update(millis());
@@ -245,45 +329,50 @@ void loop() {
 
 // Timestamp creation interrupts
 void ppsISR(void) {
-  // set RTC time in interrupt for correct ROS time
-  if (rtc_time == 0) {
-    rtc_time = nh.now().toSec();
-    // ros::Time rtc_time_stamp(rtc_time, 0);            // DEBUG
-    // printROSTime("RTC Start Time:", rtc_time_stamp);  // DEBUG
+  ++pps_edge_count;
+  if (!pps_time_initialized) {
+    return;
+  }
+  const time_t pps_time_sec = rtc_time;
+  if (pps_time_sec == 0) {
+    return;
   }
 
   // reset elapsed microseconds
   micros_since_pps = 0;
 
   // set time of PPS according to RTC clock
-  pps_stamp.sec = rtc_time;
-  pps_stamp.nsec = 0;
-  // printROSTime("PPS Time:", pps_stamp);  // DEBUG
-
-  // set time of PPS time reference with respect to ROS time
-  pps_time_msg.header.seq = rtc_time;
-  pps_time_msg.header.stamp = nh.now();
-  pps_time_msg.time_ref = pps_stamp;
+  pps_stamp_sec = pps_time_sec;
+  pps_stamp_nsec = 0;
+  pps_stamp_valid = true;
 
   // toggle to HIGH
   digitalToggleFast(kPpsOutPin);
 
   // counters and resets
-  rtc_time++;           // increment time
+  rtc_time = pps_time_sec + 1;  // increment time
   pub_pps_time = true;  // enable pps time ref publication
   send_nmea = true;     // enable nmea send
   nmea_delay = 0;       // reset delay counter
 }
 
 void camOpenISR(void) {
-  cam_open_t_sec = pps_stamp.sec;
+  if (!pps_stamp_valid) {
+    return;
+  }
+  cam_open_t_sec = pps_stamp_sec;
   cam_open_t_nsec = micros_since_pps * 1000;
+  camera_open_valid = true;
   // ros::Time cam_open_stamp(cam_open_t_sec, cam_open_t_nsec);  // DEBUG
   // printROSTime("CAM OPN Time:", cam_open_stamp);              // DEBUG
 }
 
 void camCloseISR(void) {
-  cam_close_t_sec = pps_stamp.sec;
+  if (!pps_stamp_valid || !camera_open_valid) {
+    return;
+  }
+  camera_open_valid = false;
+  cam_close_t_sec = pps_stamp_sec;
   cam_close_t_nsec = micros_since_pps * 1000;
 
   // Compute the midpoint in absolute nanoseconds so a capture crossing a
@@ -302,8 +391,8 @@ void camCloseISR(void) {
   cam_mid_t_sec = static_cast<unsigned long>(mid_ns / 1000000000ULL);
   cam_mid_t_nsec = static_cast<unsigned long>(mid_ns % 1000000000ULL);
 
-  cam_mid_stamp.sec = cam_mid_t_sec;
-  cam_mid_stamp.nsec = cam_mid_t_nsec;
+  cam_mid_stamp_sec = cam_mid_t_sec;
+  cam_mid_stamp_nsec = cam_mid_t_nsec;
   cam_captured = true;
 
   // ros::Time cam_close_stamp(cam_close_t_sec, cam_close_t_nsec);  // DEBUG
@@ -312,8 +401,11 @@ void camCloseISR(void) {
 }
 
 void imuISR(void) {
-  imu_stamp.sec = pps_stamp.sec;
-  imu_stamp.nsec = micros_since_pps * 1000;
+  if (!pps_stamp_valid) {
+    return;
+  }
+  imu_stamp_sec = pps_stamp_sec;
+  imu_stamp_nsec = micros_since_pps * 1000;
   imu_sampled = true;
   // printROSTime("IMU Time:", imu_stamp);  // DEBUG
 }

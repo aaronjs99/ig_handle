@@ -11,6 +11,8 @@ sensor_frames:
   notes:
   - All translations are in meters unless explicitly marked otherwise.
   - All rotations are expressed as parent-to-child transforms.
+  - Physical orientation is not currently verified; estimator copies may be
+    config-consistent while still being physically wrong.
   - Prefer runtime TF edges base_link->lidar_h_link, lidar_h_link->lidar_v_link, base_link->imu_link,
     and base_link->F*_optical.
   - Do not publish both base_link->lidar_v_link and lidar_h_link->lidar_v_link at
@@ -33,6 +35,15 @@ sensor_frames:
     camera_f2_optical: F2_optical
     camera_f3_optical: F3_optical
     camera_f4_optical: F4_optical
+  physical_verification:
+    translation_status: partially_measured
+    orientation_status: unverified
+    orientation_verified: false
+    # Empty means no physical verification has been recorded yet. ROS1
+    # parameter XML-RPC cannot marshal YAML null values.
+    last_verified: ""
+    note: Software consumers must treat these rotations as seed values until
+      lab/field physical axis checks confirm each sensor frame.
   transforms:
     imu:
       parent: base_link

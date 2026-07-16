@@ -1,0 +1,110 @@
+# Telescope hardware contract for the Teensy 4.1 timing bridge.
+#
+# This file is intentionally disabled until the assembled mechanism is
+# measured. A zero geometry value is invalid and must never be treated as a
+# usable fallback by the controller.
+
+schema_version: 1
+enabled: false
+board: teensy_4_1
+configuration_status: provisional_dummy_values
+wiring_verified: false
+motion_enable_requires_measured_config: true
+
+components:
+  motor:
+    catalog_id: B08M5TFNKL
+    type: dc_worm_gearmotor
+    nominal_voltage_v: 12.0
+    nominal_output_rpm: 66.0
+    nominal_torque_kg_cm: 3.0
+    direction_sign: 1 # DUMMY: verify motor polarity after wiring.
+
+  driver:
+    catalog_id: B00WSN98DC
+    type: bts7960_ibt2
+    motor_supply_min_v: 6.0
+    motor_supply_max_v: 27.0
+    control_interface: rpwm_lpwm_enable
+    pwm_frequency_hz: 20000
+    current_sense_outputs_available: true
+
+  encoder:
+    catalog_id: B07MX1SYXB
+    type: incremental_optical_quadrature
+    pulses_per_revolution: 600
+    decode: x4
+    counts_per_revolution: 2400
+    output_type: npn_open_collector
+    signal_pullup_voltage_v: 3.3
+    mount_location: must_verify_motor_or_output_shaft
+
+  limits:
+    catalog_id: B09VGL29HS
+    type: spdt_roller_lever
+    quantity: 2
+    nominal_contact_rating_a: 5.0
+    ip_rating: IP67
+    input_mode: input_pullup
+    active_level: low
+    channels:
+      min_no: 31
+      min_nc: 32
+      max_no: 33
+      max_nc: 34
+
+pins:
+  # DUMMY: provisional Teensy pins; replace after the assembled wiring is verified.
+  motor_driver:
+    rpwm: 22 # DUMMY
+    lpwm: 23 # DUMMY
+    r_enable: 24 # DUMMY
+    l_enable: 25 # DUMMY
+    r_is_current_sense: 38 # DUMMY
+    l_is_current_sense: 39 # DUMMY
+  encoder:
+    phase_a: 26 # DUMMY
+    phase_b: 27 # DUMMY
+
+mechanics:
+  # Required measurements. Keep configured false until these are measured.
+  configured: false
+  transmission_type: constant_pitch_pulley # DUMMY: verify pulley/spool arrangement.
+  min_length_m: 0.0 # DUMMY: measure minimum arm length.
+  max_length_m: 0.0 # DUMMY: measure maximum arm length.
+  pulley_pitch_diameter_m: 0.0 # DUMMY: measure cable pulley pitch diameter.
+  linear_travel_per_motor_revolution_m: 0.0 # DUMMY: measure from the assembled mechanism.
+  motor_to_pulley_ratio: 1.0 # DUMMY: verify gear/pulley ratio.
+  sonar_mount_offset_from_arm_tip_m: 0.0 # DUMMY: measure sonar datum offset.
+  encoder_zero_count_at_min_length: 0 # DUMMY until the minimum limit is homed.
+  calibrated_count_span_to_max_length: 0 # DUMMY until both endpoints are measured.
+  calibration_source: endpoint_homing_and_measurement
+  limit_reference_policy:
+    min_limit_action: rebase_encoder_zero
+    max_limit_action: clamp_to_max_length
+    minimum_length_datum_m: 0.0
+    debounce_ms: 25
+    require_direction_consistency: true
+  spool:
+    enabled: false # DUMMY: set true only if cable winds directly on the spool.
+    bare_radius_m: 0.0 # DUMMY: measure spool radius if enabled.
+    cable_diameter_m: 0.0 # DUMMY: measure cable diameter if enabled.
+    layer_count_at_max: 0 # DUMMY: determine from the full travel.
+
+  control:
+    homing:
+      direction_to_min: -1 # DUMMY: verify after motor polarity is known.
+      speed_fraction: 0.10 # DUMMY: conservative provisional limit.
+      timeout_s: 30.0 # DUMMY: tune after travel and speed are measured.
+    position:
+      update_rate_hz: 100.0 # DUMMY: tune after the encoder is characterized.
+      max_speed_fraction: 0.25 # DUMMY: conservative provisional limit.
+      max_acceleration_fraction_per_s: 0.50 # DUMMY: tune after mechanics are measured.
+      position_kp: 1.0 # DUMMY: tune after mechanics are measured.
+      velocity_kp: 0.0 # DUMMY: tune after mechanics are measured.
+      integral_limit: 0.0 # DUMMY: keep disabled until steady-state error is measured.
+    safety:
+      command_timeout_s: 0.50 # DUMMY: tune after the command path is implemented.
+      stall_timeout_s: 1.00 # DUMMY: tune after motor current feedback is verified.
+      max_motor_duty_fraction: 0.50 # DUMMY: conservative provisional limit.
+      require_redundant_limit_agreement: true

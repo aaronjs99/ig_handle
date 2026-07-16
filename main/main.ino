@@ -1,25 +1,15 @@
+#include "../config/teensy/firmware_config.h"
 #include <ros.h>
 #include <sensor_msgs/TimeReference.h>
 #include <RTClib.h>
 #include <TimeLib.h>
+#include "telescope_control.h"
 
-#define USE_USBCON
+using namespace ig_handle_firmware_config;
 
-// Electrical component pin numbers
-#define GPSERIAL Serial1  // LiDAR: GPS Serial Receive (White)
-#define PPS_OUT 2         // LiDAR: GPS Sync Pulse (Yellow)
-#define PPS_IN 3          // RTC: PPS Signal (SQW)
-#define CAM_OUT 10        // Cam: Line 0 (Black)
-#define CAM_OPEN_IN 29    // Cam: Line 1 (White)
-#define CAM_CLOSE_IN 30   // Cam: Line 1 (White)
-#define IMU_OUT 7         // IMU: SynchIn (Blue)
-#define IMU_IN 8          // IMU: SynchOut (Pink)
-
-// PPS/GPRMC time-synch
-constexpr int BAUD_RATE = 9600;              // baud/s
-constexpr int PPS_PULSE_WIDTH = 20;          // ms
-constexpr int PPS_NMEA_MIN_SEPARATION = 55;  // ms
-constexpr int TIME_ZONE_OFFSET = -7;         // hr from UTC (User Set)
+// Keep the existing serial alias readable while making its selection
+// configurable from config/teensy/firmware_config.h.
+#define GPSERIAL IG_HANDLE_GPSERIAL
 
 // ROS nodehandle
 ros::NodeHandle nh;
@@ -31,9 +21,9 @@ RTC_DS3231 rtc;
 sensor_msgs::TimeReference pps_time_msg;
 sensor_msgs::TimeReference cam_time_msg;
 sensor_msgs::TimeReference imu_time_msg;
-ros::Publisher pps_time_pub("/pps/time", &pps_time_msg);
-ros::Publisher cam_time_pub("/cam/time", &cam_time_msg);
-ros::Publisher imu_time_pub("/imu/time", &imu_time_msg);
+ros::Publisher pps_time_pub(kPpsTimeTopic, &pps_time_msg);
+ros::Publisher cam_time_pub(kCameraTimeTopic, &cam_time_msg);
+ros::Publisher imu_time_pub(kImuTimeTopic, &imu_time_msg);
 
 // time-sync indicators
 time_t rtc_time{0};
@@ -58,10 +48,10 @@ void setup() {
 
   // set GPSERIAL baud rate and transmission inversion for TTL RS-232
   // transmission
-  GPSERIAL.begin(BAUD_RATE, SERIAL_8N1_TXINV);
+  GPSERIAL.begin(kGpsBaudRate, IG_HANDLE_GPSERIAL_FORMAT);
 
   // set PPS synch pin
-  pinMode(PPS_OUT, OUTPUT);
+  pinMode(kPpsOutPin, OUTPUT);
 
   /* Camera and IMU */
 
@@ -75,24 +65,24 @@ void setup() {
   }
 
   // configure input and output pins
-  pinMode(CAM_OPEN_IN, INPUT_PULLUP);
-  pinMode(CAM_CLOSE_IN, INPUT_PULLUP);
-  pinMode(CAM_OUT, OUTPUT);
-  pinMode(IMU_IN, INPUT);
-  pinMode(IMU_OUT, OUTPUT);
+  pinMode(kCameraOpenInPin, INPUT_PULLUP);
+  pinMode(kCameraCloseInPin, INPUT_PULLUP);
+  pinMode(kCameraTriggerOutPin, OUTPUT);
+  pinMode(kImuSyncInPin, INPUT);
+  pinMode(kImuTriggerOutPin, OUTPUT);
 
   // enable interrupts
-  attachInterrupt(digitalPinToInterrupt(CAM_OPEN_IN), camOpenISR, RISING);
-  attachInterrupt(digitalPinToInterrupt(CAM_CLOSE_IN), camCloseISR, FALLING);
-  attachInterrupt(digitalPinToInterrupt(IMU_IN), imuISR, RISING);
+  attachInterrupt(digitalPinToInterrupt(kCameraOpenInPin), camOpenISR, RISING);
+  attachInterrupt(digitalPinToInterrupt(kCameraCloseInPin), camCloseISR, FALLING);
+  attachInterrupt(digitalPinToInterrupt(kImuSyncInPin), imuISR, RISING);
 
   // set write frequency
-  analogWriteFrequency(CAM_OUT, 20.0);
-  digitalWrite(IMU_OUT, LOW);
+  analogWriteFrequency(kCameraTriggerOutPin, kCameraTriggerFrequencyHz);
+  digitalWrite(kImuTriggerOutPin, LOW);
 
   // enable triggers
-  analogWrite(CAM_OUT, 5);
-  digitalWrite(IMU_OUT, HIGH);
+  analogWrite(kCameraTriggerOutPin, kCameraTriggerDuty);
+  digitalWrite(kImuTriggerOutPin, HIGH);
 
   /* RTC */
 
@@ -104,11 +94,11 @@ void setup() {
   rtc.disable32K();
 
   // set PPS input pin and write signal
-  pinMode(PPS_IN, INPUT_PULLUP);
+  pinMode(kPpsInPin, INPUT_PULLUP);
   rtc.writeSqwPinMode(DS3231_SquareWave1Hz);
 
   // enable interrupt
-  attachInterrupt(digitalPinToInterrupt(PPS_IN), ppsISR, RISING);
+  attachInterrupt(digitalPinToInterrupt(kPpsInPin), ppsISR, RISING);
 }
 
 /*
@@ -128,14 +118,15 @@ void loop() {
   }
 
   // ensure PPS width satisfied
-  if (send_nmea && nmea_delay >= PPS_PULSE_WIDTH) {
+  if (send_nmea && nmea_delay >= kPpsPulseWidthMs) {
     // set PPS pin to low
-    digitalWriteFast(PPS_OUT, LOW);
+    digitalWriteFast(kPpsOutPin, LOW);
 
     // ensure min 50 ms width between end of PPS and start of NMEA message
-    if (nmea_delay >= PPS_NMEA_MIN_SEPARATION) {
+    if (nmea_delay >= kPpsNmeaMinSeparationMs) {
       // get PPS time and adjust to time zone
-      const time_t t_sec_gmt = pps_stamp.sec - TIME_ZONE_OFFSET * 3600;
+      const time_t t_sec_gmt =
+          pps_stamp.sec - kTimeZoneOffsetHours * 3600;
 
       // create GPRMC sentence
       char time_now[7], date_now[7];
@@ -143,9 +134,14 @@ void loop() {
               second(t_sec_gmt));
       sprintf(date_now, "%02i%02i%02i", day(t_sec_gmt), month(t_sec_gmt),
               year(t_sec_gmt) % 100);
-      String gprmc_sentence = F("GPRMC,") + String(time_now) +
-                              F(",A,4365.107,N,79347.702,E,022.4,084.4,") +
-                              String(date_now) + ",003.1,W";
+      String gprmc_sentence = String(kNmeaPrefix) + String(time_now) + "," +
+                              String(kNmeaStatus) + "," +
+                              String(kNmeaLatitude) + "," +
+                              String(kNmeaLongitude) + "," +
+                              String(kNmeaSpeedKnots) + "," +
+                              String(kNmeaCourseDegrees) + "," +
+                              String(date_now) + "," +
+                              String(kNmeaMagneticVariation);
       String chk = checksum(gprmc_sentence);
       gprmc_sentence = "$" + gprmc_sentence + "*" + chk + "\n";
 
@@ -196,7 +192,7 @@ void ppsISR(void) {
   pps_time_msg.time_ref = pps_stamp;
 
   // toggle to HIGH
-  digitalToggleFast(PPS_OUT);
+  digitalToggleFast(kPpsOutPin);
 
   // counters and resets
   rtc_time++;           // increment time
@@ -216,13 +212,21 @@ void camCloseISR(void) {
   cam_close_t_sec = pps_stamp.sec;
   cam_close_t_nsec = micros_since_pps * 1000;
 
-  // set camera capture time to midway between shutter open and close
-  cam_mid_t_sec = cam_open_t_sec;
-  cam_mid_t_nsec = (cam_close_t_nsec + cam_open_t_nsec) * 0.5;
-  if (cam_close_t_nsec < cam_open_t_nsec) {
-    cam_mid_t_nsec =
-        cam_open_t_nsec + 0.5 * (cam_close_t_nsec + 1E9 - cam_open_t_nsec);
+  // Compute the midpoint in absolute nanoseconds so a capture crossing a
+  // PPS boundary is handled without a one-second timestamp error.
+  const uint64_t open_ns = static_cast<uint64_t>(cam_open_t_sec) * 1000000000ULL +
+                           static_cast<uint64_t>(cam_open_t_nsec);
+  const uint64_t close_ns = static_cast<uint64_t>(cam_close_t_sec) * 1000000000ULL +
+                            static_cast<uint64_t>(cam_close_t_nsec);
+  if (close_ns < open_ns) {
+    // Do not publish a wrapped timestamp when the ISR state is incoherent or
+    // the shutter-open event was missed.
+    cam_captured = false;
+    return;
   }
+  const uint64_t mid_ns = open_ns + (close_ns - open_ns) / 2ULL;
+  cam_mid_t_sec = static_cast<unsigned long>(mid_ns / 1000000000ULL);
+  cam_mid_t_nsec = static_cast<unsigned long>(mid_ns % 1000000000ULL);
 
   cam_mid_stamp.sec = cam_mid_t_sec;
   cam_mid_stamp.nsec = cam_mid_t_nsec;

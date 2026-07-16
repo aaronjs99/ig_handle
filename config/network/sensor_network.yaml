@@ -22,8 +22,8 @@ sensor_network:
       label: Vertical VLP-16 LiDAR
       host: 192.168.50.202
     sonar:
-      label: Imagenex DT100 sonar
-      host: 192.168.0.2
+      label: Imaging sonar
+      host: 192.168.2.4
     imu:
       label: Xsens IMU
       device_path: /dev/sensors/imu
@@ -44,4 +44,4 @@ sensor_network:
   local_interfaces:
     heron_lan_ip: 192.168.131.2
     sensor_lan_ip: 192.168.50.10
-    sonar_lan_ip: 192.168.0.3
+    sonar_lan_ip: 192.168.2.10

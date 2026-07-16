@@ -101,6 +101,10 @@ sensor_contract:
       topics:
         data: /sensors/imu/data
         time: /sensors/imu/time
+      required_topics:
+        # Keep the remap available when the driver or MCU publishes it, but do
+        # not fail passive sensor checks when the unsynchronized time channel is absent.
+        time: false
       launch:
         file: package://ig_handle/launch/sensors/start_imu.launch
         args:
@@ -322,18 +326,21 @@ sensor_contract:
             field: startup_delay_sec
 
     "8":
-      label: Imagenex DT100 sonar
+      label: Imaging sonar
       family: sonar
-      dashboard_kind: pointcloud
-      dashboard_mode: ROS point cloud
+      dashboard_kind: raw
+      dashboard_mode: ROS raw UDP datagrams
       startup_order: 80
       default_requested: false
-      reachability: network
+      reachability: none
       endpoint_key: sonar_ip
       bind_ip_key: mocap_udp_bind_ip
       udp_dest_ip_key: sonar_lan_ip
+      driver_mode: udp_raw
+      decoder_mode: none
+      sonar_kind: imaging
       frame: sonar_link
-      profile: pool
+      profile: harbor
       profile_config: package://ig_handle/config/sensors/sonar/profiles.yaml
       udp_port: 4040
       endian: little
@@ -350,6 +357,14 @@ sensor_contract:
         ray_sim: /sim/sensors/sonar/multibeam_points
         map_cloud: /sensors/sonar/map_cloud
         latest_slice_map: /sensors/sonar/latest_slice_map
+      required_topics:
+        # The new sonar is not assumed to be DT100-protocol compatible yet.
+        # Always record raw UDP; decoded clouds are opportunistic until a
+        # model-specific decoder is confirmed.
+        scan: false
+        ray_sim: false
+        map_cloud: false
+        latest_slice_map: false
       launch:
         file: package://ig_handle/launch/sensors/start_sonar.launch
         args:
@@ -361,6 +376,8 @@ sensor_contract:
             sensor_id: true
           raw_topic:
             field: topics.raw
+          driver_mode:
+            field: driver_mode
 
     "9":
       label: Boson thermal camera

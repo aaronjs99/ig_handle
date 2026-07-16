@@ -19,6 +19,7 @@ The Heron platform profile is organized around:
 - Imagenex DT100 sonar
 - optional motion-capture comparison link
 - optional Teensy timing bridge
+- optional telescoping sonar arm driven by the Teensy bridge
 
 The minimal SLAM input set is:
 
@@ -26,6 +27,24 @@ The minimal SLAM input set is:
 | --- | --- | --- |
 | `/sensors/lidar/hori/points` | `sensor_msgs/PointCloud2` | Primary LiDAR geometry |
 | `/sensors/imu/data` | `sensor_msgs/Imu` | Inertial input for LIO backends |
+
+The telescope command and feedback names are defined in
+`config/runtime_surface.yaml`. GRANDE sends a desired arm length on
+`/telescope/desired_length`. The telescope MCU ownership is reserved for the
+future motor/encoder module; the current `main.ino` is only the timing bridge
+and does not subscribe to or publish telescope motion topics. The telescope
+remains disabled until its hardware configuration is measured and explicitly
+enabled, so these names are currently a contract rather than a live actuator
+interface.
+
+The firmware-side values live in `config/teensy/firmware_config.h`, while the
+human-readable hardware record lives in `config/telescope/hardware.yaml`. The
+side-effect-free conversion scaffold in `main/telescope_control.h` keeps
+the intended mapping explicit: calibrated encoder counts map linearly to arm
+length, and arm length maps to motor revolutions using measured travel per
+revolution and motor polarity. It rejects the dummy configuration, so including
+it in `main.ino` cannot energize a motor or accept an uncalibrated command.
+
 
 ## Network Configuration
 
@@ -162,7 +181,8 @@ explicitly says otherwise.
 Connectivity checks:
 
 ```bash
-pytest -q ig_handle/tests/test_hardware_connectivity.py
+rosrun ig_handle network_config.py heron_ip
+rosrun ig_handle network_config.py heron_local_ip
 ```
 
 Heron base checks:
@@ -174,7 +194,9 @@ export ROS_MASTER_URI=http://$(rosrun ig_handle network_config.py heron_ip):1131
 export ROS_IP=$(rosrun ig_handle network_config.py heron_local_ip)
 unset ROS_HOSTNAME
 
-pytest -q ig_handle/tests/test_heron_base.py
+rostopic list
+rostopic echo -n 1 /sense
+rostopic echo -n 1 /motor_enable
 ```
 
 The default Heron battery floor is `14.0 V`; override with

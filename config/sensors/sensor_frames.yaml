@@ -380,7 +380,7 @@ sensor_frames:
     tf_ownership_recommendation:
       preferred_runtime_edges:
       - base_link -> lidar_h_link
-      - base_link -> lidar_v_link
+      - lidar_h_link -> lidar_v_link
       - base_link -> imu_link
       - base_link -> F1_optical
       - base_link -> F2_optical

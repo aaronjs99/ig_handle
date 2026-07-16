@@ -175,6 +175,15 @@ class Runtime {
         status_ = "homing_timeout";
         return;
       }
+      const int32_t homing_count = encoderCount();
+      if (homing_count != last_encoder_count_) {
+        last_encoder_count_ = homing_count;
+        last_encoder_change_ms_ = now_ms;
+      } else if (now_ms - last_encoder_change_ms_ > kStallTimeoutMs) {
+        stopMotor();
+        status_ = "encoder_stall";
+        return;
+      }
       motor_duty_ = static_cast<float>(kHomingDirection) *
                     static_cast<float>(kMotorDutySignForExtension) *
                     kHomingDutyFraction;
@@ -242,6 +251,9 @@ class Runtime {
   const char* status() const { return status_; }
 
   float actualLengthM() const {
+    if (!active_ || !homed_) {
+      return NAN;
+    }
     float length_m = NAN;
     lengthFromEncoder(geometryFromFirmware(), encoderCount(), &length_m);
     return length_m;
@@ -335,8 +347,11 @@ class Runtime {
       *max_pressed = digitalRead(kMaxLimitNoPin) == LOW;
       return true;
     }
-    return decodeLimit(kMinLimitNoPin, kMinLimitNcPin, min_pressed) &&
-           decodeLimit(kMaxLimitNoPin, kMaxLimitNcPin, max_pressed);
+    if (!decodeLimit(kMinLimitNoPin, kMinLimitNcPin, min_pressed) ||
+        !decodeLimit(kMaxLimitNoPin, kMaxLimitNcPin, max_pressed)) {
+      return false;
+    }
+    return !(*min_pressed && *max_pressed);
   }
 
   static bool decodeLimit(uint8_t no_pin, uint8_t nc_pin, bool* pressed) {

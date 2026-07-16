@@ -93,18 +93,18 @@ sensor_frames:
       - 0.0
       - -0.08819
       rotation_rpy:
-      - 1.5707963267948966
+      - 3.141592653589793
       - 0.0
-      - 1.5707963267948966
+      - -1.5707963267948966
       rotation_quat_xyzw:
-      - 0.5
-      - 0.5
-      - 0.5
-      - 0.5
+      - 0.7071067811865476
+      - -0.7071067811865476
+      - 0.0
+      - 0.0
       axes_in_lidar_h:
-        x_lidar_v: +Y_lidar_h
-        y_lidar_v: +Z_lidar_h
-        z_lidar_v: +X_lidar_h
+        x_lidar_v: -Y_lidar_h
+        y_lidar_v: -X_lidar_h
+        z_lidar_v: -Z_lidar_h
     sonar:
       parent: base_link
       child: sonar_link
@@ -268,28 +268,28 @@ sensor_frames:
         - 0.0
         - 0.20835
         rotation_rpy:
-        - 1.5707963267948966
+        - 3.141592653589793
         - 0.0
-        - 1.5707963267948966
+        - -1.5707963267948966
         rotation_quat_xyzw:
-        - 0.5
-        - 0.5
-        - 0.5
-        - 0.5
+        - 0.7071067811865476
+        - -0.7071067811865476
+        - 0.0
+        - 0.0
       lidar_h_link_to_lidar_v_link:
         translation_xyz_m:
         - 0.03781
         - 0.0
         - -0.08819
         rotation_rpy:
-        - 1.5707963267948966
+        - 3.141592653589793
         - 0.0
-        - 1.5707963267948966
+        - -1.5707963267948966
         rotation_quat_xyzw:
-        - 0.5
-        - 0.5
-        - 0.5
-        - 0.5
+        - 0.7071067811865476
+        - -0.7071067811865476
+        - 0.0
+        - 0.0
     urdf_body_transforms:
       lidar_h_mount:
         parent: base_link

@@ -187,6 +187,9 @@ void loop() {
 
     // ensure min 50 ms width between end of PPS and start of NMEA message
     if (nmea_delay >= kPpsNmeaMinSeparationMs) {
+      if (!kNmeaPayloadEnabled) {
+        send_nmea = false;
+      } else {
       // get PPS time and adjust to time zone
       const time_t t_sec_gmt =
           pps_stamp.sec - kTimeZoneOffsetHours * 3600;
@@ -214,17 +217,22 @@ void loop() {
 
       // reset send
       send_nmea = false;
+      }
     }
   }
 
   if (cam_captured) {
     cam_time_msg.time_ref = cam_mid_stamp;
+    cam_time_msg.header.seq++;
+    cam_time_msg.header.stamp = cam_mid_stamp;
     cam_time_pub.publish(&cam_time_msg);
     cam_captured = false;
   }
 
   if (imu_sampled) {
     imu_time_msg.time_ref = imu_stamp;
+    imu_time_msg.header.seq++;
+    imu_time_msg.header.stamp = imu_stamp;
     imu_time_pub.publish(&imu_time_msg);
     imu_sampled = false;
   }

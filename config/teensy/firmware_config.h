@@ -26,10 +26,12 @@ static constexpr uint32_t kPpsPulseWidthMs = 20;
 static constexpr uint32_t kPpsNmeaMinSeparationMs = 55;
 static constexpr int32_t kTimeZoneOffsetHours = -7; // DUMMY: operator timezone.
 
-// DUMMY: current legacy GPRMC payload values; replace with a real navigation
-// source when the upstream sensor contract is changed.
+// Never transmit the placeholder GPRMC payload as a real navigation fix.
+// Enable only after these fields are supplied by a verified live source.
+static constexpr bool kNmeaPayloadEnabled = false;
+// DUMMY: legacy payload fields retained solely for a future verified source.
 static const char kNmeaPrefix[] = "GPRMC,";
-static const char kNmeaStatus[] = "A";
+static const char kNmeaStatus[] = "V";
 static const char kNmeaLatitude[] = "4365.107,N";
 static const char kNmeaLongitude[] = "79347.702,E";
 static const char kNmeaSpeedKnots[] = "022.4";

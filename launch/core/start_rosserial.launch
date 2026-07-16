@@ -8,8 +8,8 @@
   <node name="teensy_rosserial_launcher" pkg="ig_handle" type="teensy_rosserial_launcher.py" output="screen">
     <param name="port" value="$(arg port)"/>
     <param name="baud" value="$(arg baud)"/>
-    <remap from="/pps/time" to="$(arg pps_time_topic)"/>
-    <remap from="/cam/time" to="$(arg camera_time_topic)"/>
-    <remap from="/imu/time" to="$(arg imu_time_topic)"/>
+    <param name="pps_time_topic" value="$(arg pps_time_topic)"/>
+    <param name="camera_time_topic" value="$(arg camera_time_topic)"/>
+    <param name="imu_time_topic" value="$(arg imu_time_topic)"/>
   </node>
 </launch>

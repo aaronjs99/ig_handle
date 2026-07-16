@@ -108,7 +108,7 @@ mechanics:
     safety:
       command_timeout_s: 0.50 # DUMMY: tune after the command path is implemented.
       stall_timeout_s: 1.00 # DUMMY: tune after motor current feedback is verified.
-      max_motor_duty_fraction: 0.50 # DUMMY: conservative provisional limit.
+      max_motor_duty_fraction: 0.25 # DUMMY: must match firmware max duty.
       require_redundant_limit_agreement: true
       current_sense_configured: false # DUMMY: ADC-to-amp calibration is still required.
       motor_current_a_per_adc_count: 0.0 # DUMMY: calibrate against a trusted meter.

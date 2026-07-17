@@ -1,11 +1,20 @@
 #!/usr/bin/env python3
-"""Publish the Heron sensor TF tree from a shared YAML config."""
+"""Publish selected Heron sensor TF edges from the shared YAML config."""
 
 import math
 
 import rospy
 import tf2_ros
 from geometry_msgs.msg import TransformStamped
+
+
+def _csv_set(value):
+    """Return normalized comma-separated transform names."""
+    return {
+        item.strip()
+        for item in str(value or "").replace(";", ",").split(",")
+        if item.strip()
+    }
 
 
 def quaternion_from_euler(roll, pitch, yaw):
@@ -59,13 +68,29 @@ def main():
     rospy.init_node("sensor_tf_broadcaster", anonymous=False)
     config_ns = rospy.get_param("~config_ns", "/sensor_frames")
     transforms = rospy.get_param(f"{config_ns}/transforms", {})
+    allowed_names = _csv_set(rospy.get_param("~allowed_transform_names", ""))
     if not transforms:
         rospy.logfatal("sensor_tf_broadcaster: no transforms found under %s", config_ns)
         raise RuntimeError(f"missing transforms under {config_ns}")
 
+    selected = {
+        name: cfg
+        for name, cfg in transforms.items()
+        if not allowed_names or name in allowed_names
+    }
+    unknown = allowed_names - set(transforms)
+    if unknown:
+        raise RuntimeError(
+            "sensor_tf_broadcaster: configured transform names are unknown: {}".format(
+                sorted(unknown)
+            )
+        )
+    if not selected:
+        raise RuntimeError("sensor_tf_broadcaster: transform selection is empty")
+
     stamp = rospy.Time.now()
     broadcaster = tf2_ros.StaticTransformBroadcaster()
-    tf_msgs = [make_transform(stamp, name, cfg) for name, cfg in transforms.items()]
+    tf_msgs = [make_transform(stamp, name, cfg) for name, cfg in selected.items()]
     broadcaster.sendTransform(tf_msgs)
     rospy.spin()
 

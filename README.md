@@ -162,6 +162,20 @@ samples are available:
 rostopic pub -1 /mocap/initialize std_msgs/Bool "data: true"
 ```
 
+## Sensor Supervision
+
+`sensor_bringup.py` is the single process supervisor for enabled sensor
+contract entries. It records per-sensor topic freshness under its private
+`~health` topic and restarts only the affected launch process when its required
+topics stop arriving. This makes a ROS-master or network-switch recovery
+restart-safe without duplicating healthy sensor drivers. The supervisor uses the
+contract's declared startup delay before evaluating a topic as stale.
+
+Sensor geometry remains in `config/sensors/sensor_frames.yaml`. In real mode,
+GRANDE publishes the configured LiDAR chain and camera optical edges while the
+platform robot description remains the sole owner of `base_link -> imu_link`.
+Simulation relies entirely on its robot-state publisher for URDF-owned edges.
+
 ## Recording
 
 The integration recorder should capture:

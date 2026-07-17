@@ -33,8 +33,10 @@ sensor_network:
       host: 192.168.131.1
   ros:
     heron_local_ip: 192.168.131.10
-    local_master_uri: http://127.0.0.1:11311
-    local_ros_ip: 127.0.0.1
+    # The local simulation graph is reachable on IG Handle's lab interface.
+    # Update both values together if that host address changes.
+    local_master_uri: http://192.168.1.81:11311
+    local_ros_ip: 192.168.1.81
   mocap:
     natnet_server_ip: 192.168.1.199
     natnet_client_ip: 192.168.1.8

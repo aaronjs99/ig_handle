@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+"""Launch rosserial only when the optional configured Teensy is present."""
+
 import os
 import subprocess
 
@@ -12,9 +14,15 @@ class TeensyRosserialLauncher:
     def __init__(self):
         self.port = str(rospy.get_param("~port", "/dev/teensy"))
         self.baud = int(rospy.get_param("~baud", 115200))
-        self.pps_time_topic = str(rospy.get_param("~pps_time_topic", "/sensors/pps/time"))
-        self.camera_time_topic = str(rospy.get_param("~camera_time_topic", "/sensors/camera/time"))
-        self.imu_time_topic = str(rospy.get_param("~imu_time_topic", "/sensors/imu/time"))
+        self.pps_time_topic = str(
+            rospy.get_param("~pps_time_topic", "/sensors/pps/time")
+        )
+        self.camera_time_topic = str(
+            rospy.get_param("~camera_time_topic", "/sensors/camera/time")
+        )
+        self.imu_time_topic = str(
+            rospy.get_param("~imu_time_topic", "/sensors/imu/time")
+        )
 
     def command(self):
         return [

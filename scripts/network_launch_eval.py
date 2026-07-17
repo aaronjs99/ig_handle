@@ -1,3 +1,5 @@
+# Roslaunch eval expression: resolve one checked-in network configuration value.
+# This remains an expression because roslaunch loads it inline.
 (
     lambda package_root, key, default="": (
         (

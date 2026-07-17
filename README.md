@@ -79,7 +79,8 @@ ip -br addr
 Full-stack real runs should normally start through GRANDE:
 
 ```bash
-roslaunch grande bringup.launch mode:=real
+cd ~/catkin_ws/heron_ws/src/grande/grande
+python3 run.py bringup --mode real
 ```
 
 Raw sensor collection can be launched directly when testing the sensor layer:
@@ -92,8 +93,8 @@ The Heron adapter starts the shared IG sensor suite from the sensor contract.
 Use contract ids when isolating individual sensors:
 
 ```bash
-roslaunch grande bringup.launch mode:=real disabled_sensor_ids:=<contract-id>
-roslaunch grande bringup.launch mode:=real extra_sensor_ids:=<contract-id>
+python3 run.py bringup --mode real --launch-arg disabled_sensor_ids:=<contract-id>
+python3 run.py bringup --mode real --launch-arg extra_sensor_ids:=<contract-id>
 ```
 
 Contract ids are opaque inventory keys. They are not positions, counts, or a

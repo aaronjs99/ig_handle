@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+"""Bridge NatNet or DataCollect motion-capture observations into ROS topics."""
+
 import json
 import os
 import sys

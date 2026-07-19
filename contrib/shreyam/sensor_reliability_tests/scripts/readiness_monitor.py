@@ -1,4 +1,10 @@
 #!/usr/bin/env python3
+"""Publish aggregate readiness and diagnostics for configured sensor topics.
+
+This legacy-compatible monitor observes message freshness, frequency, header
+age, and optional network reachability. It never starts drivers or modifies
+the canonical IG Handle sensor contract.
+"""
 
 import subprocess
 from collections import deque

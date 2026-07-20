@@ -139,14 +139,12 @@ class SensorBringup:
             rate.sleep()
 
     def shutdown(self) -> None:
-        for proc in list(self.processes.values()):
-            self._stop_process(proc)
-        deadline = time.time() + 8.0
-        for proc in list(self.processes.values()):
-            while proc.poll() is None and time.time() < deadline:
-                time.sleep(0.1)
-            if proc.poll() is None:
-                self._stop_process(proc, signal.SIGTERM)
+        processes = list(self.processes.items())
+        failed = self._stop_and_reap_processes(proc for _, proc in processes)
+        for sensor_id, proc in processes:
+            if proc.pid in failed:
+                rospy.logerr("sensor_bringup could not reap id=%s during shutdown", sensor_id)
+        self.processes.clear()
 
     def _launch_sensor(self, sensor_id: str, sensor: Dict[str, Any]) -> None:
         launch = dict(sensor.get("launch", {}) or {})
@@ -183,13 +181,78 @@ class SensorBringup:
             )
 
     @staticmethod
-    def _stop_process(proc: subprocess.Popen, sig=signal.SIGINT) -> None:
-        if proc.poll() is not None:
-            return
+    def _pid_alive(pid: int) -> bool:
         try:
-            os.killpg(proc.pid, sig)
-        except ProcessLookupError:
-            return
+            stat_fields = Path(f"/proc/{pid}/stat").read_text().split()
+        except (FileNotFoundError, PermissionError, ProcessLookupError):
+            return False
+        return len(stat_fields) > 2 and stat_fields[2] != "Z"
+
+    @staticmethod
+    def _descendant_pids(root_pid: int) -> List[int]:
+        children: Dict[int, List[int]] = {}
+        for status_path in Path("/proc").glob("[0-9]*/status"):
+            try:
+                values = {}
+                for line in status_path.read_text().splitlines():
+                    if line.startswith(("Pid:", "PPid:")):
+                        key, value = line.split(":", 1)
+                        values[key] = int(value.strip())
+                pid = values["Pid"]
+                parent = values["PPid"]
+            except (FileNotFoundError, PermissionError, KeyError, ValueError):
+                continue
+            children.setdefault(parent, []).append(pid)
+
+        descendants: List[int] = []
+
+        def visit(parent: int) -> None:
+            for child in children.get(parent, []):
+                visit(child)
+                descendants.append(child)
+
+        visit(root_pid)
+        return descendants
+
+    @classmethod
+    def _stop_and_reap_process(cls, proc: subprocess.Popen) -> bool:
+        return not cls._stop_and_reap_processes([proc])
+
+    @classmethod
+    def _stop_and_reap_processes(
+        cls, processes: Iterable[subprocess.Popen]
+    ) -> set[int]:
+        roots = {proc.pid for proc in processes}
+        tracked_by_root = {
+            root_pid: {root_pid, *cls._descendant_pids(root_pid)}
+            for root_pid in roots
+        }
+        for sig, timeout_sec in (
+            (signal.SIGINT, 8.0),
+            (signal.SIGTERM, 2.0),
+            (signal.SIGKILL, 2.0),
+        ):
+            for root_pid in roots:
+                tracked_by_root[root_pid].update(cls._descendant_pids(root_pid))
+            tracked = set().union(*tracked_by_root.values()) if roots else set()
+            alive = [pid for pid in tracked if cls._pid_alive(pid)]
+            if not alive:
+                return set()
+            for pid in alive:
+                try:
+                    os.kill(pid, sig)
+                except ProcessLookupError:
+                    pass
+            deadline = time.monotonic() + timeout_sec
+            while time.monotonic() < deadline:
+                if not any(cls._pid_alive(pid) for pid in tracked):
+                    return set()
+                time.sleep(0.1)
+        return {
+            root_pid
+            for root_pid, pids in tracked_by_root.items()
+            if any(cls._pid_alive(pid) for pid in pids)
+        }
 
     def _sensor_unhealthy_reason(self, sensor_id: str, sensor: Dict[str, Any]) -> str:
         started = self.process_started.get(sensor_id, time.monotonic())
@@ -199,8 +262,14 @@ class SensorBringup:
             if isinstance(launch.get("args", {}).get("startup_delay_sec", {}), dict)
             else sensor.get("startup_delay_sec", 0.0)
         )
-        grace_sec = self.health_timeout_sec + max(
+        configured_delay = max(
             configured_delay, float(sensor.get("startup_delay_sec", 0.0))
+        )
+        startup_grace_sec = float(
+            sensor.get("startup_grace_sec", self.health_timeout_sec)
+        )
+        grace_sec = configured_delay + max(
+            self.health_timeout_sec, startup_grace_sec
         )
         if time.monotonic() - started <= grace_sec:
             return ""
@@ -223,16 +292,7 @@ class SensorBringup:
         self.last_restart[sensor_id] = now
         proc = self.processes.get(sensor_id)
         if proc is not None:
-            self._stop_process(proc)
-            deadline = time.monotonic() + 8.0
-            while proc.poll() is None and time.monotonic() < deadline:
-                time.sleep(0.1)
-            if proc.poll() is None:
-                self._stop_process(proc, signal.SIGTERM)
-                deadline = time.monotonic() + 2.0
-                while proc.poll() is None and time.monotonic() < deadline:
-                    time.sleep(0.1)
-            if proc.poll() is None:
+            if not self._stop_and_reap_process(proc):
                 rospy.logerr(
                     "sensor_bringup did not reap id=%s; replacement refused", sensor_id
                 )

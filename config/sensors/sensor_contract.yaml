@@ -187,6 +187,9 @@ sensor_contract:
       frame: F1_optical
       serial: "25110056"
       camera_info_url: file://package://ig_handle/config/sensors/cameras/25110056.yaml
+      # Spinnaker enumerates every GigE interface before selecting this serial.
+      # Allow that bounded discovery to finish before stale-topic supervision starts.
+      startup_grace_sec: 60.0
       startup_delay_sec: 0.0
       topics:
         image_raw: /sensors/camera/f1/image_raw
@@ -225,6 +228,7 @@ sensor_contract:
       frame: F2_optical
       serial: "25152257"
       camera_info_url: file://package://ig_handle/config/sensors/cameras/25152257.yaml
+      startup_grace_sec: 60.0
       startup_delay_sec: 20.0
       topics:
         image_raw: /sensors/camera/f2/image_raw
@@ -263,6 +267,7 @@ sensor_contract:
       frame: F3_optical
       serial: "25110061"
       camera_info_url: file://package://ig_handle/config/sensors/cameras/25110061.yaml
+      startup_grace_sec: 60.0
       startup_delay_sec: 40.0
       topics:
         image_raw: /sensors/camera/f3/image_raw
@@ -301,6 +306,7 @@ sensor_contract:
       frame: F4_optical
       serial: "25110065"
       camera_info_url: file://package://ig_handle/config/sensors/cameras/25110065.yaml
+      startup_grace_sec: 60.0
       startup_delay_sec: 60.0
       topics:
         image_raw: /sensors/camera/f4/image_raw

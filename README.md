@@ -169,7 +169,11 @@ contract entries. It records per-sensor topic freshness under its private
 `~health` topic and restarts only the affected launch process when its required
 topics stop arriving. This makes a ROS-master or network-switch recovery
 restart-safe without duplicating healthy sensor drivers. The supervisor uses the
-contract's declared startup delay before evaluating a topic as stale.
+contract's declared startup delay and startup grace before evaluating a topic as
+stale. The extra grace is important for GigE cameras because Spinnaker discovery
+can continue after the launch delay has elapsed. During restart or shutdown, the
+supervisor stops and reaps the complete launch tree, including nodelets that
+create their own process groups, before allowing a replacement driver to start.
 
 Sensor geometry remains in `config/sensors/sensor_frames.yaml`. In real mode,
 GRANDE publishes the configured LiDAR chain and camera optical edges while the

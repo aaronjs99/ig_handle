@@ -80,6 +80,10 @@ sensor_contract:
       sensor: "8"
       topic: topics.ray_sim
       frame: frame
+    ranging_ping360_sim_rays:
+      sensor: "8"
+      topic: topics.ping360_ray_sim
+      frame: frame
     ranging_map_cloud:
       sensor: "8"
       topic: topics.map_cloud
@@ -389,6 +393,7 @@ sensor_contract:
         diagnostics: /sensors/sonar/ping360/diagnostics
         scan: /sensors/sonar/scan
         ray_sim: /sim/sensors/sonar/multibeam_points
+        ping360_ray_sim: /sim/sensors/sonar/ping360_points
         map_cloud: /sensors/sonar/map_cloud
         latest_slice_map: /sensors/sonar/latest_slice_map
       required_topics:
@@ -397,6 +402,7 @@ sensor_contract:
         # model-specific decoder is confirmed.
         scan: false
         ray_sim: false
+        ping360_ray_sim: false
         map_cloud: false
         latest_slice_map: false
         ping360_raw: false

@@ -1,0 +1,11 @@
+std_msgs/Header header
+string packet_id
+string provider
+string source_address
+uint16 source_port
+uint32 sequence
+uint16 message_id
+uint8 source_device_id
+uint8 destination_device_id
+bool checksum_valid
+uint8[] data

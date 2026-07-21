@@ -13,6 +13,7 @@ COMMAND_ALIASES = {
     "raw": "receiver",
     "deltat": "deltat",
     "tx": "deltat",
+    "ping360": "ping360",
 }
 
 
@@ -43,6 +44,11 @@ def main(argv: Optional[Sequence[str]] = None) -> None:
 
         run_cli(app_args[1:], package_dir=package_dir)
         return
+    if command == "ping360":
+        from include.ping360_provider import run
+
+        run()
+        return
 
     print("Unknown sonar command: %s" % app_args[0], file=sys.stderr)
     _print_usage()
@@ -69,11 +75,12 @@ def _package_dir() -> Path:
 
 def _print_usage() -> None:
     print(
-        "Usage: sonar.py {receiver|deltat} [args]\n"
+        "Usage: sonar.py {receiver|deltat|ping360} [args]\n"
         "\n"
         "Commands:\n"
         "  receiver  Publish raw vendor UDP datagrams on /sensors/sonar/raw.\n"
-        "  deltat    Generate Linux_DeltaT.INI from config and exec the DeltaT binary.",
+        "  deltat    Generate Linux_DeltaT.INI from config and exec the DeltaT binary.\n"
+        "  ping360   Publish Ping360 wire packets, profiles, and diagnostics.",
         file=sys.stderr,
     )
 

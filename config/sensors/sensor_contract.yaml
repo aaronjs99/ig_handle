@@ -57,6 +57,21 @@ sensor_contract:
       endian: endian
       min_range_m: min_range_m
       sim_max_range_m: sim_max_range_m
+    ranging_ping360_raw:
+      sensor: "8"
+      topic: topics.ping360_raw
+      frame: frame
+    ranging_profile:
+      sensor: "8"
+      topic: topics.profile
+      frame: frame
+    ranging_image:
+      sensor: "8"
+      topic: topics.image
+      frame: frame
+    ranging_diagnostics:
+      sensor: "8"
+      topic: topics.diagnostics
     ranging_cloud:
       sensor: "8"
       topic: topics.scan
@@ -344,6 +359,15 @@ sensor_contract:
       udp_dest_ip_key: sonar_lan_ip
       driver_mode: udp_raw
       decoder_mode: none
+      # Preserve the passive Imagenex/unknown UDP path until a read-only
+      # Ping360 identity response confirms the new endpoint. Switching to
+      # ping360 is an explicit commissioning action, never inferred here.
+      provider: unverified
+      operation_mode: identity
+      allow_active_transmit: false
+      ping_python_version: 0.2.4
+      endpoint_identity_verified: false
+      sound_speed_mps: 1480.0
       sonar_kind: imaging
       frame: sonar_link
       profile: harbor
@@ -359,6 +383,10 @@ sensor_contract:
       map_cloud_min_points_per_slice: 3
       topics:
         raw: /sensors/sonar/raw
+        ping360_raw: /sensors/sonar/ping360/raw
+        profile: /sensors/sonar/imaging/profile
+        image: /sensors/sonar/imaging/image
+        diagnostics: /sensors/sonar/ping360/diagnostics
         scan: /sensors/sonar/scan
         ray_sim: /sim/sensors/sonar/multibeam_points
         map_cloud: /sensors/sonar/map_cloud
@@ -371,6 +399,23 @@ sensor_contract:
         ray_sim: false
         map_cloud: false
         latest_slice_map: false
+        ping360_raw: false
+        profile: false
+        image: false
+        diagnostics: false
+      interfaces:
+        imagenex_dt100:
+          wire_topic: /sensors/sonar/raw
+          wire_type: std_msgs/UInt8MultiArray
+          decoding: model_specific_geometric_cloud
+        blue_robotics_ping360:
+          wire_topic: /sensors/sonar/ping360/raw
+          wire_type: ig_handle/Ping360RawPacket
+          profile_topic: /sensors/sonar/imaging/profile
+          profile_type: ig_handle/SonarProfile
+          image_topic: /sensors/sonar/imaging/image
+          geometry_claim: intensity_only_until_calibrated
+          dependency: bluerobotics-ping==0.2.4
       launch:
         file: package://ig_handle/launch/sensors/start_sonar.launch
         args:
@@ -382,8 +427,20 @@ sensor_contract:
             sensor_id: true
           raw_topic:
             field: topics.raw
+          ping360_raw_topic:
+            field: topics.ping360_raw
           driver_mode:
             field: driver_mode
+          profile_topic:
+            field: topics.profile
+          diagnostics_topic:
+            field: topics.diagnostics
+          operation_mode:
+            field: operation_mode
+          allow_active_transmit:
+            field: allow_active_transmit
+          sound_speed_mps:
+            field: sound_speed_mps
 
     "9":
       label: Boson thermal camera

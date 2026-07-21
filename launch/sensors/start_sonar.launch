@@ -6,6 +6,12 @@
   <arg name="driver_mode"    default="dt100"/>
   <arg name="udp_port"       default="4040"/>
   <arg name="raw_topic"/>
+  <arg name="ping360_raw_topic" default="/sensors/sonar/ping360/raw"/>
+  <arg name="profile_topic" default="/sensors/sonar/imaging/profile"/>
+  <arg name="diagnostics_topic" default="/sensors/sonar/ping360/diagnostics"/>
+  <arg name="operation_mode" default="identity"/>
+  <arg name="allow_active_transmit" default="false"/>
+  <arg name="sound_speed_mps" default="1480.0"/>
   <arg name="sensor_contract_file" default="$(find ig_handle)/config/sensors/sensor_contract.yaml"/>
   <arg name="sensor_id"/>
   <arg name="bind_ip"        default="$(eval eval(open(find('ig_handle') + '/scripts/sensor_contract_launch_eval.py').read())(find('ig_handle'), 'network', arg('sensor_id'), 'bind_ip_key', '', arg('sensor_contract_file')))"/>
@@ -40,11 +46,27 @@
       </node>
     </group>
 
-  <!-- Common: keep sonar bytes raw. MARINER owns compatible raw -> PointCloud2. -->
-    <node pkg="ig_handle" type="sonar.py" name="sonar_raw_receiver" output="log" args="receiver">
+  <!-- Imagenex/unknown passive UDP path. It remains distinct from Ping Protocol. -->
+    <node if="$(eval str(arg('driver_mode')).lower() in ['dt100', 'udp_raw'])"
+          pkg="ig_handle" type="sonar.py" name="sonar_raw_receiver" output="log" args="receiver">
       <param name="port" value="$(arg udp_port)"/>
       <param name="topic" value="$(arg raw_topic)"/>
       <param name="bind_ip" value="$(arg bind_ip)"/>
+    </node>
+
+  <!-- Ping360 is active request/reply even in read-only identity mode. Scanning
+       is rejected unless both operation_mode=scan and allow_active_transmit=true. -->
+    <node if="$(eval str(arg('driver_mode')).lower() == 'ping360')"
+          pkg="ig_handle" type="sonar.py" name="ping360_provider" output="screen" args="ping360">
+      <param name="host" value="$(arg sonar_ip)"/>
+      <param name="port" value="$(arg udp_port)"/>
+      <param name="bind_ip" value="$(arg bind_ip)"/>
+      <param name="raw_topic" value="$(arg ping360_raw_topic)"/>
+      <param name="profile_topic" value="$(arg profile_topic)"/>
+      <param name="diagnostics_topic" value="$(arg diagnostics_topic)"/>
+      <param name="operation_mode" value="$(arg operation_mode)"/>
+      <param name="allow_active_transmit" value="$(arg allow_active_transmit)"/>
+      <param name="sound_speed_mps" value="$(arg sound_speed_mps)"/>
     </node>
   </group>
 </launch>

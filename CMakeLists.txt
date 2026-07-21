@@ -3,13 +3,28 @@ project(ig_handle)
 
 find_package(catkin REQUIRED COMPONENTS
   geometry_msgs
+  message_generation
   rospy
   sensor_msgs
   std_msgs
   tf2_ros
 )
 
-catkin_package()
+add_message_files(
+  FILES
+    Ping360RawPacket.msg
+    SonarDiagnostics.msg
+    SonarProfile.msg
+)
+
+generate_messages(
+  DEPENDENCIES
+    std_msgs
+)
+
+catkin_package(
+  CATKIN_DEPENDS message_runtime std_msgs
+)
 
 catkin_install_python(
   PROGRAMS
@@ -21,6 +36,7 @@ catkin_install_python(
     scripts/network_config.py
     scripts/sensor_bringup.py
     scripts/sensor_contract.py
+    scripts/validation/validate_ping360_protocol.py
     scripts/teensy/teensy_rosserial_launcher.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )

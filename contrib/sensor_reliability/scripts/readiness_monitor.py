@@ -106,7 +106,9 @@ class ReadinessMonitor:
         overall_ready = bool(statuses) and all(status["ready"] for status in statuses)
 
         self.ready_pub.publish(Bool(data=overall_ready))
-        self.summary_pub.publish(String(data=self._summary_text(statuses, overall_ready)))
+        self.summary_pub.publish(
+            String(data=self._summary_text(statuses, overall_ready))
+        )
         self.diagnostics_pub.publish(self._diagnostic_array(statuses, now))
 
     def _sensor_status(self, sensor, now):

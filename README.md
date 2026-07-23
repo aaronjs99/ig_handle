@@ -259,3 +259,12 @@ and `launch/sensors/start_imu.launch` pointed at that canonical device path.
 ## ROS 2
 
 A ROS 2 version of this package exists on the `ros2` branch.
+
+## File Structure
+
+| File | Relevance | Dependencies | Used by |
+| --- | --- | --- | --- |
+| .gitattributes | Defines repository text and binary path handling. | Git | Repository contributors |
+| .gitignore | Excludes generated IG Handle build and sensor artifacts. | Git | Repository contributors |
+| CMakeLists.txt | Declares the IG Handle catkin build and installed sensor scripts. | catkin, ROS Noetic | catkin build |
+| package.xml | Declares IG Handle's ROS package metadata and sensor dependencies. | ROS Noetic | catkin and rosdep |

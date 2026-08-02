@@ -1,9 +1,0 @@
-<launch>
-  <rosparam file="$(find sensor_reliability_tests)/config/sensors.yaml" command="load" />
-
-  <node
-    pkg="sensor_reliability_tests"
-    type="readiness_monitor.py"
-    name="readiness_monitor"
-    output="screen" />
-</launch>

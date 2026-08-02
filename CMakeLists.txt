@@ -36,7 +36,6 @@ catkin_install_python(
     scripts/network_config.py
     scripts/sensor_bringup.py
     scripts/sensor_contract.py
-    scripts/validation/validate_ping360_protocol.py
     scripts/teensy/teensy_rosserial_launcher.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )

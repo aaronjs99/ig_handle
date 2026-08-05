@@ -5,8 +5,9 @@ JGY-370 worm gearmotor, HiLetgo BTS7960 H-bridge, E38S6-600-24G incremental
 encoder, and one full-retraction mechanical limit switch. Measured length is
 about 0.846 m retracted and 1.380 m extended.
 
-This is not yet a commissioned runtime contract. The checked-in telescope
-hardware configuration is disabled, contains placeholder geometry, and still
+This is not yet a commissioned runtime contract. The checked-in
+[`hardware.yaml`](../config/telescope/hardware.yaml) configuration is disabled,
+contains placeholder geometry, and still
 expects redundant minimum and maximum limit contacts. ORACLE correspondingly
 disables automatic telescope-length commands. The one-switch physical design
 and the current firmware/configuration must be reconciled before motor drive is
@@ -37,8 +38,10 @@ counts, then is replaced by measured full-travel calibration.
 
 ## Current and packaging
 
-The present firmware reads BTS7960 current-sense inputs, but the hardware
-configuration still marks current feedback unavailable and no calibrated
+The present firmware, configured through
+[`firmware_config.h`](../config/teensy/firmware_config.h), reads BTS7960
+current-sense inputs, but the hardware configuration still marks current
+feedback unavailable and no calibrated
 motor-current contract exists. If those driver outputs cannot provide adequate
 bidirectional accuracy and range, an external Hall-effect sensor belongs in the
 motor supply path after the 12 V branch fuse and before the H-bridge. Either
@@ -56,7 +59,9 @@ fusing, regulators, LiDAR circuits, bend radii, and service loops, a small seale
 arm-controller enclosure is safer and more serviceable than inaccessible
 stacking.
 
-The current ROS surface publishes length, motor current, and a status string.
+The current ROS surface in
+[`runtime_surface.yaml`](../config/runtime_surface.yaml) publishes length, motor
+current, and a status string.
 Homed state, extension percentage, direction, PWM, individual switch states,
 faults, and operating mode remain desirable structured fields, not current
 published contract fields.

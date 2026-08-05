@@ -18,7 +18,7 @@ consumes canonical sensor topics; GRANDE composes and records the runtime.
 | Timing | Device stamps, timing inputs, and embedded timing surfaces. |
 | Sonar | Raw acquisition, Ping360 protocol provider, identity, and profile metadata. |
 | Telescope | Hardware configuration, homing, position feedback, and guarded motor interface. |
-| Heron hardware | Physical propulsion inspection, commissioning, and replacement records. |
+| Heron hardware | Physical propulsion facts, inspection guidance, and commissioning boundaries. |
 
 ## Documentation
 
@@ -28,8 +28,9 @@ consumes canonical sensor topics; GRANDE composes and records the runtime.
 Each narrative document has a matching PDF. Markdown is canonical.
 
 Physical addresses, frames, serials, ports, polarity, geometry, and current
-scales come from measured hardware records. A launch or session may select a
-configured device; it must not invent those facts.
+scales must come from reviewed hardware records. Values marked provisional,
+placeholder, or unverified are not commissioned facts. A launch or session may
+select a configured device; it must not invent those facts.
 
 # File Structure
 

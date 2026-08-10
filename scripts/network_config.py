@@ -9,7 +9,6 @@ from typing import Any, Dict, Tuple
 
 import yaml
 
-
 PACKAGE_ROOT = Path(__file__).resolve().parents[1]
 NETWORK_CONFIG = PACKAGE_ROOT / "config" / "network" / "sensor_network.yaml"
 
@@ -30,7 +29,6 @@ KEY_PATHS: Dict[str, Tuple[str, ...]] = {
     "mocap_natnet_multicast_address": ("mocap", "natnet_multicast_address"),
     "mocap_udp_bind_ip": ("mocap", "udp_bind_ip"),
     "mocap_datacollect_source_ip": ("mocap", "datacollect_source_ip"),
-    "heron_lan_ip": ("local_interfaces", "heron_lan_ip"),
     "sensor_lan_ip": ("local_interfaces", "sensor_lan_ip"),
     "sonar_lan_ip": ("local_interfaces", "sonar_lan_ip"),
 }

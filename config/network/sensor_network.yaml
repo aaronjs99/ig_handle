@@ -32,10 +32,9 @@ sensor_network:
       label: Heron Base Computer
       host: 192.168.131.1
   ros:
-    heron_local_ip: 192.168.131.10
+    heron_local_ip: 192.168.131.2
     # Simulation owns a dedicated ROS master so it cannot join the physical
     # Heron/sensor graph on the conventional ROS port.
-    # Update the host in both values together if IG Handle's address changes.
     local_master_uri: http://192.168.1.81:11312
     local_ros_ip: 192.168.1.81
   mocap:
@@ -45,6 +44,5 @@ sensor_network:
     udp_bind_ip: 0.0.0.0
     datacollect_source_ip: 192.168.8.6
   local_interfaces:
-    heron_lan_ip: 192.168.131.2
     sensor_lan_ip: 192.168.50.10
     sonar_lan_ip: 192.168.2.10

@@ -2,4 +2,4 @@
 
 | File | Relevance | Dependencies | Used by |
 | --- | --- | --- | --- |
-| mocap.py | Bridge NatNet or DataCollect motion-capture observations into ROS topics. | json, os, sys, rospy | ig_handle/CMakeLists.txt, ig_handle/launch/core/natnet_bridge.launch |
+| mocap.py | Selects NatNet or validated DataCollect UDP transport and publishes canonical pose, marker cloud, object, status, and optional TF outputs. | rospy, natnet package, udp/datacollect.py, network_config.py | CMake installation, launch/core/natnet_bridge.launch |

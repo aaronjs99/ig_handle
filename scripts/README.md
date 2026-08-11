@@ -2,8 +2,8 @@
 
 | File | Relevance | Dependencies | Used by |
 | --- | --- | --- | --- |
-| network_config.py | Reads configured IG Handle and Heron network endpoints. | argparse, pathlib, typing, yaml | ig_handle/CMakeLists.txt |
-| network_launch_eval.py | Exposes selected sensor_network.yaml values to roslaunch substitutions. | scripts/network_config.py, config/network/sensor_network.yaml | grande/grande/launch/bringup.launch, ig_handle/launch/core/natnet_bridge.launch |
-| sensor_bringup.py | Launch and supervise enabled sensors from the IG Handle sensor contract. | signal, subprocess, sys, time | ig_handle/CMakeLists.txt, ig_handle/launch/sensors.launch |
-| sensor_contract.py | Read the IG Handle sensor contract for launch-time wiring. | os, json, subprocess, pathlib | ig_handle/CMakeLists.txt |
-| sensor_contract_launch_eval.py | Resolves sensor-contract fields, endpoints, reachability policy, and provider selection for roslaunch. | scripts/sensor_contract.py, config/sensors/sensor_contract.yaml | grande/grande/launch/bringup.launch, ig_handle/launch/sensors/start_sonar.launch |
+| network_config.py | Loads and validates named ROS, mocap, sensor, and host-interface values from the canonical network contract. | PyYAML, config/network/sensor_network.yaml | CMake installation, network_launch_eval.py, sensor runtime modules |
+| network_launch_eval.py | Exposes selected network-contract values to roslaunch substitutions without duplicating addresses in launch XML. | network_config.py, config/network/sensor_network.yaml | GRANDE bringup, launch/core/natnet_bridge.launch |
+| sensor_bringup.py | Selects, checks, starts, supervises, and reports contract-enabled physical sensor providers. | rospy, rospkg, network_config.py, sensor_contract.py | CMake installation, launch/sensors.launch |
+| sensor_contract.py | Loads and validates deployed sensor records, bindings, roles, topics, provider selections, and launch arguments. | PyYAML, network_config.py, config/sensors/sensor_contract.yaml | CMake installation, sensor_bringup.py, launch-time contract evaluation |
+| sensor_contract_launch_eval.py | Resolves sensor fields, endpoints, reachability, and provider options for safe roslaunch substitution. | sensor_contract.py, config/sensors/sensor_contract.yaml | GRANDE bringup, launch/sensors/start_sonar.launch |

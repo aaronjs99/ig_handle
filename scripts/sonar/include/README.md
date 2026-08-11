@@ -2,9 +2,9 @@
 
 | File | Relevance | Dependencies | Used by |
 | --- | --- | --- | --- |
-| __init__.py | Sonar runtime implementation modules. | None | Python package imports |
-| deltat_runner.py | DeltaT binary launcher and runtime INI generation. | argparse, os, sys, dataclasses, profiles.py | ../sonar.py |
-| ping360_provider.py | Blue Robotics Ping360 UDP provider with a read-only identity mode. | hashlib, json, socket, struct | scripts/sonar/sonar.py, launch/sensors/start_sonar.launch |
-| ping_protocol.py | Pure Ping Protocol framing and Ping360 profile parsing. | math, struct, dataclasses, typing | ping360_provider.py |
-| profiles.py | Loads configured DeltaT sonar runtime profiles and network values. | collections, dataclasses, pathlib, typing, yaml, network_config.py | deltat_runner.py |
-| receiver.py | Receives Imagenex sonar datagrams over UDP and publishes raw bytes. | socket, dataclasses, typing, rospy, network_config.py | ../sonar.py |
+| __init__.py | Marks the sonar provider implementation as an importable Python package. | Python import system | ../sonar.py |
+| deltat_runner.py | Materializes one validated DeltaT runtime INI and supervises the pinned vendor executable. | profiles.py, Linux_DeltaT_v1023_x86_64 | ../sonar.py |
+| ping360_provider.py | Implements UDP Ping Protocol discovery, read-only identity reporting, and explicitly authorized Ping360 scan/profile publication. | rospy, ig_handle sonar messages, ping_protocol.py | ../sonar.py, launch/sensors/start_sonar.launch |
+| ping_protocol.py | Implements checksum-validated Ping Protocol framing plus Ping360 identity, device-data, and profile payload codecs. | Python binary-struct support | ping360_provider.py |
+| profiles.py | Loads and validates named DeltaT acquisition profiles together with canonical network endpoints. | PyYAML, config/sensors/sonar/profiles.yaml, network_config.py | deltat_runner.py |
+| receiver.py | Receives Imagenex or unknown sonar UDP datagrams on the configured interface and publishes the unmodified bytes. | rospy, std_msgs, network_config.py | ../sonar.py |

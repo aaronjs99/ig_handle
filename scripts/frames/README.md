@@ -2,5 +2,5 @@
 
 | File | Relevance | Dependencies | Used by |
 | --- | --- | --- | --- |
-| broadcast.py | Publish selected Heron sensor TF edges from the shared YAML config. | math, rospy, tf2_ros, geometry_msgs | grande/grande/launch/include/tf_static.launch, ig_handle/CMakeLists.txt |
-| export.py | Export canonical Heron sensor extrinsics for launch-time consumers. | argparse, json, math, os | ig_handle/CMakeLists.txt, heron_simulator/urdf/sensors.urdf.xacro |
+| broadcast.py | Publishes only the selected configured static sensor TF edges and rejects unknown transform names. | rospy, tf2_ros, geometry_msgs, config/sensors/sensor_frames.yaml | GRANDE static-TF launch, CMake installation |
+| export.py | Validates and exports canonical sensor extrinsics as JSON or launch-ready transform arguments. | PyYAML, config/sensors/sensor_frames.yaml | CMake installation, Heron Simulator sensor URDF generation |

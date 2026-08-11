@@ -2,4 +2,4 @@
 
 | File | Relevance | Dependencies | Used by |
 | --- | --- | --- | --- |
-| teensy_rosserial_launcher.py | Launch rosserial only when the optional configured Teensy is present. | os, subprocess, rospy | ig_handle/CMakeLists.txt, ig_handle/launch/core/start_rosserial.launch |
+| teensy_rosserial_launcher.py | Waits for the stable Teensy device, starts rosserial with canonical timing topics, and exits cleanly when optional hardware is absent. | rospy, rosserial_python, config/udev/99-ig-handle.rules | CMake installation, launch/core/start_rosserial.launch |

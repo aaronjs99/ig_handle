@@ -93,6 +93,18 @@ def _emit_shell(sensors: Mapping[str, object]) -> None:
         ),
         "HERON_SONAR_XYZ": _fmt(_vec(_transform(sensors, "sonar"), "translation")),
         "HERON_SONAR_RPY": _fmt(_vec(_transform(sensors, "sonar"), "rotation_rpy")),
+        "HERON_DT100_XYZ": _fmt(
+            _vec(_transform(sensors, "sonar_dt100"), "translation")
+        ),
+        "HERON_DT100_RPY": _fmt(
+            _vec(_transform(sensors, "sonar_dt100"), "rotation_rpy")
+        ),
+        "HERON_PING360_XYZ": _fmt(
+            _vec(_transform(sensors, "sonar_ping360"), "translation")
+        ),
+        "HERON_PING360_RPY": _fmt(
+            _vec(_transform(sensors, "sonar_ping360"), "rotation_rpy")
+        ),
         "HERON_CAMERA_MOUNT_XYZ": _fmt(
             _vec(_urdf_body(sensors, "camera_mount"), "translation")
         ),

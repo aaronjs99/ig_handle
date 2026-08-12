@@ -15,6 +15,7 @@ add_message_files(
     Ping360RawPacket.msg
     SonarDiagnostics.msg
     SonarProfile.msg
+    SonarRawPacket.msg
 )
 
 generate_messages(

@@ -2,7 +2,7 @@
 # Frame transforms, rig measurements, and model dimensions live in sensor_frames.yaml.
 
 sensor_models:
-  version: 2026-05-27_centerline_three_camera_test_seed
+  version: 2026-08-11_provider_specific_sonar_models
   models:
     xsens_mti30_ahrs:
       model: Xsens MTi-30 AHRS, encased MTi
@@ -35,8 +35,22 @@ sensor_models:
       power: PoE or 12-24 V GPIO
     imagenex_dt100:
       model: Imagenex DT100
+      specification_url: https://imagenex.com/products/dt100
+      measurement_family: simultaneous_multibeam_profile
+      field_of_view_deg: 120
+      maximum_profile_rate_hz: 20
       beams_default: 480
       beams_selectable:
       - 480
       - 240
       - 120
+      profile_point_packet: 83P
+      marker_role: primary_when_scan_plane_intersects_marker
+    blue_robotics_ping360:
+      model: Blue Robotics Ping360
+      specification_url: https://bluerobotics.com/store/sonars/imaging-sonars/ping360-sonar-r1-rp/
+      measurement_family: sequential_mechanical_imaging_profile
+      horizontal_beamwidth_deg: 2
+      vertical_beamwidth_deg: 25
+      angular_step_deg: 0.9
+      marker_role: planar_discovery_and_fallback

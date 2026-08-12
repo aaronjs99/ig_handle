@@ -10,6 +10,18 @@ defaults:
   profile: pool
   udp_port: 4040
   sound_velocity_m_per_s: 1500.0
+  # Wire-admission contract for MARINER, not a claim that Linux_DeltaT applies
+  # these processing settings. Physical use must independently configure and
+  # verify the beamforming computer; mismatches publish no cloud.
+  expected_83p:
+    beam_count: 480
+    samples_per_beam: 5000
+    sector_size_deg: 120.0
+    start_angle_deg: -60.0
+    angle_increment_deg: 0.25
+    acoustic_frequency_khz: 240
+    sample_rate_flag: 1
+    include_intensity: true
 
 profiles:
   pool:

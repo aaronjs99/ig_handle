@@ -1,6 +1,7 @@
 std_msgs/Header header
 string packet_id
 string provider
+string extrinsic_revision
 string source_address
 uint16 source_port
 uint32 sequence

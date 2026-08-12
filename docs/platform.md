@@ -45,17 +45,48 @@ are not interchangeable. The current sensor contract deliberately leaves
 sensor 8 provider-unverified and selects passive `udp_raw`; it does not claim
 that the attached head is a commissioned DeltaT or Ping360.
 
-The DeltaT wrapper launches the vendor executable and forwards its raw UDP
-transport; it does not currently publish the provider-neutral profile. The
+The DeltaT wrapper launches the vendor executable and forwards every UDP
+datagram in `SonarRawPacket`, preserving receipt time, source endpoint, packet
+kind, provider, model, extrinsic revision, and sequence; the low 32 sequence
+bits are also placed in the ROS header for downstream trace correlation.
+The physical DT100-labelled path is fail-closed: its contract keeps
+`hardware_commissioned: false`, so neither the vendor process nor its raw
+receiver is started. Promotion requires a verified numeric UDP source IP from
+the beamforming/output computer; an optional nonzero source port makes the
+admission check cover the complete endpoint. The sonar-head control address is
+not substituted for this output-source identity. Packets from every other
+source are dropped before they acquire DT100 provider provenance. Passive
+`udp_raw` capture remains available separately and stays labelled
+`unverified_udp`.
+MARINER accepts only the documented 83P
+profile-point format and rejects 83A, 83B, 837, malformed lengths, and invalid
+headers. Its selected profile additionally requires 480 beams over a
+120-degree sector, a -60-degree first beam, 0.25-degree spacing, 5000-sample
+high-resolution processing, intensity output, 240 kHz, and the selected
+sound-speed value. These are wire-admission settings, not proof that the vendor
+process was configured correctly; a mismatch publishes no cloud. It does not
+reinterpret other formats as a shared byte layout. The
 checked-in Ping360 provider implements UDP transport only; USB or serial
 transport is not implemented and must not be assumed. When selected, the UDP
 provider uses the Blue Robotics Ping protocol and publishes both raw messages
 and a provider-neutral profile carrying angle, range resolution, gain,
-frequency, source identity, and acquisition provenance.
+frequency, source identity, acquisition frame, and extrinsic revision.
 
 Physical endpoint, identity, frame, and profile live in IG Handle. MARINER may
 consume an accepted profile for mapping; ORACLE may request a sonar-relevant
 mission; neither owns device commands.
+
+DT100 and Ping360 have separate configured frames. The DT100 seed is a
+down-looking 120-degree cross-track fan on `dt100_link`; Ping360 is a
+horizontal mechanical scan on `ping360_link`. Their current revision tokens
+(`dt100-seed-2026-08-11-v1` and `ping360-seed-2026-08-11-v1`) identify separate
+configuration seeds, not measured calibration. Both transforms remain physically
+unverified, so marker observations are shadow-only until the active provider,
+axes, origin, and revision are measured. For a structured marker,
+DT100 is the primary pose sensor when its simultaneous fan intersects the
+constellation. Ping360 is a useful 360-degree discovery or planar fallback,
+but its sequential sweep and broad vertical aperture do not supply an
+instantaneous six-degree-of-freedom pose.
 
 Read-only identity is the lowest-risk first connection and still exchanges Ping
 protocol request and response packets. Active acoustic scanning requires both
@@ -70,7 +101,10 @@ acoustic propagation, multipath, target reflectivity, beam geometry, or latency.
 
 Field evidence retains device identity, profile, sound-speed assumption, pose
 and frame relationship, environment, raw packets or profiles, and synchronized
-navigation state. A sonar image is observation evidence, not a metric defect
+navigation state. ROS receipt time plus 83P latency fields can recover the
+packet-reported center-ping time, but no real capture has yet established the
+beamforming computer's clock basis, latency semantics during live output, or
+network-delay bound. A sonar image is observation evidence, not a metric defect
 measurement without reviewed geometry and calibration.
 
 ## Heron Propulsion

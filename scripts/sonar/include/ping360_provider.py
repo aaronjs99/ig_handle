@@ -54,6 +54,9 @@ class Ping360Provider:
             rospy.get_param("~allow_active_transmit", False)
         )
         self.frame_id = str(rospy.get_param("~frame_id", "sonar_link"))
+        self.extrinsic_revision = str(
+            rospy.get_param("~extrinsic_revision", "") or ""
+        ).strip()
         self.sound_speed_mps = float(rospy.get_param("~sound_speed_mps", 1480.0))
         self.request_period_sec = float(rospy.get_param("~request_period_sec", 2.0))
         self.socket_timeout_sec = float(rospy.get_param("~socket_timeout_sec", 0.25))
@@ -114,6 +117,7 @@ class Ping360Provider:
             "provider": "blue_robotics_ping360",
             "operation_mode": self.operation_mode,
             "frame_id": self.frame_id,
+            "extrinsic_revision": self.extrinsic_revision,
             "sound_speed_mps": self.sound_speed_mps,
             "scan": self.scan,
         }
@@ -121,6 +125,10 @@ class Ping360Provider:
     def _validate_configuration(self) -> None:
         if not self.host or not 1 <= self.port <= 65535:
             raise ValueError("Ping360 host and UDP port must be explicitly configured")
+        if not self.frame_id or not self.extrinsic_revision:
+            raise ValueError(
+                "Ping360 frame_id and extrinsic_revision must be explicitly configured"
+            )
         if self.operation_mode not in ("identity", "scan"):
             raise ValueError("operation_mode must be identity or scan")
         if self.operation_mode == "scan" and not self.allow_active_transmit:
@@ -142,10 +150,12 @@ class Ping360Provider:
 
     def spin(self) -> None:
         rospy.loginfo(
-            "Ping360 %s mode at %s:%d (active transmit=%s)",
+            "Ping360 %s mode at %s:%d frame=%s revision=%s (active transmit=%s)",
             self.operation_mode,
             self.host,
             self.port,
+            self.frame_id,
+            self.extrinsic_revision,
             self.allow_active_transmit,
         )
         self._request_identity()
@@ -248,6 +258,7 @@ class Ping360Provider:
         msg.provider = "blue_robotics_ping360"
         msg.model = "Ping360"
         msg.raw_packet_id = packet_id
+        msg.extrinsic_revision = self.extrinsic_revision
         msg.sequence = self.sequence
         msg.valid = True
         msg.validity_reason = "validated_ping_protocol_profile"
@@ -275,6 +286,7 @@ class Ping360Provider:
         msg.header.frame_id = self.frame_id
         msg.packet_id = packet_id
         msg.provider = "blue_robotics_ping360"
+        msg.extrinsic_revision = self.extrinsic_revision
         msg.source_address = source[0]
         msg.source_port = source[1]
         msg.sequence = self.sequence
@@ -291,6 +303,7 @@ class Ping360Provider:
         msg.header.frame_id = self.frame_id
         msg.packet_id = hashlib.sha256(data).hexdigest()
         msg.provider = "blue_robotics_ping360"
+        msg.extrinsic_revision = self.extrinsic_revision
         msg.source_address = source[0]
         msg.source_port = source[1]
         msg.sequence = self.sequence

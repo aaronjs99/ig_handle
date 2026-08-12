@@ -6,6 +6,12 @@
   <arg name="driver_mode"    default="dt100"/>
   <arg name="udp_port"       default="4040"/>
   <arg name="raw_topic"/>
+  <arg name="dt100_frame"/>
+  <arg name="dt100_extrinsic_revision"/>
+  <arg name="ping360_frame"/>
+  <arg name="ping360_extrinsic_revision"/>
+  <arg name="unverified_frame"/>
+  <arg name="unverified_extrinsic_revision"/>
   <arg name="ping360_raw_topic" default="/sensors/sonar/ping360/raw"/>
   <arg name="profile_topic" default="/sensors/sonar/imaging/profile"/>
   <arg name="diagnostics_topic" default="/sensors/sonar/ping360/diagnostics"/>
@@ -14,6 +20,12 @@
   <arg name="sound_speed_mps" default="1480.0"/>
   <arg name="sensor_contract_file" default="$(find ig_handle)/config/sensors/sensor_contract.yaml"/>
   <arg name="sensor_id"/>
+  <arg name="dt100_hardware_commissioned"
+       default="$(eval eval(open(find('ig_handle') + '/scripts/sensor_contract_launch_eval.py').read())(find('ig_handle'), 'value', arg('sensor_id'), 'interfaces.imagenex_dt100.hardware_commissioned', 'false', arg('sensor_contract_file')))"/>
+  <arg name="dt100_expected_udp_source_ip"
+       default="$(eval eval(open(find('ig_handle') + '/scripts/sensor_contract_launch_eval.py').read())(find('ig_handle'), 'value', arg('sensor_id'), 'interfaces.imagenex_dt100.expected_udp_source_ip', '', arg('sensor_contract_file')))"/>
+  <arg name="dt100_expected_udp_source_port"
+       default="$(eval eval(open(find('ig_handle') + '/scripts/sensor_contract_launch_eval.py').read())(find('ig_handle'), 'value', arg('sensor_id'), 'interfaces.imagenex_dt100.expected_udp_source_port', '0', arg('sensor_contract_file')))"/>
   <arg name="bind_ip"        default="$(eval eval(open(find('ig_handle') + '/scripts/sensor_contract_launch_eval.py').read())(find('ig_handle'), 'network', arg('sensor_id'), 'bind_ip_key', '', arg('sensor_contract_file')))"/>
   <arg name="sonar_ip"       default="$(eval eval(open(find('ig_handle') + '/scripts/sensor_contract_launch_eval.py').read())(find('ig_handle'), 'endpoint', arg('sensor_id'), '', '', arg('sensor_contract_file')))"/>
   <arg name="udp_dest_ip"    default="$(eval eval(open(find('ig_handle') + '/scripts/sensor_contract_launch_eval.py').read())(find('ig_handle'), 'network', arg('sensor_id'), 'udp_dest_ip_key', '', arg('sensor_contract_file')))"/>
@@ -32,26 +44,36 @@
        VM/DT100.exe path provides that UDP stream instead. For unknown/new
        sonar models, driver_mode=udp_raw starts only the raw receiver so bags
        preserve whatever UDP datagrams arrive on the configured port. -->
-    <node if="$(eval str(arg('driver_mode')).lower() == 'dt100' and str(arg('use_vm')).lower() == 'false')"
+    <node if="$(eval str(arg('driver_mode')).lower() == 'dt100' and str(arg('use_vm')).lower() == 'false' and str(arg('dt100_hardware_commissioned')).lower() == 'true' and bool(str(arg('dt100_expected_udp_source_ip')).strip()))"
           pkg="ig_handle" type="sonar.py" name="deltat_tx" output="log"
           args="deltat --profile-config $(arg sonar_profile_config) --profile $(arg sonar_profile) --sonar-ip $(arg sonar_ip) --udp-ip $(arg udp_dest_ip) --udp-port $(arg udp_port)">
       <env name="VERBOSE" value="$(arg verbose_deltat_ini)"/>
     </node>
 
   <!-- Windows VM path: keep this available for systems that still need DT100.exe. -->
-    <group if="$(eval str(arg('driver_mode')).lower() == 'dt100' and str(arg('use_vm')).lower() == 'true')">
+    <group if="$(eval str(arg('driver_mode')).lower() == 'dt100' and str(arg('use_vm')).lower() == 'true' and str(arg('dt100_hardware_commissioned')).lower() == 'true' and bool(str(arg('dt100_expected_udp_source_ip')).strip()))">
       <node pkg="dt100_driver" type="dt100_vm.bash" name="dt100_vm_node" output="log">
         <param name="bridge_adapter" value="$(arg bridge_adapter)"/>
         <param name="headless" value="$(arg headless)"/>
       </node>
     </group>
 
-  <!-- Imagenex/unknown passive UDP path. It remains distinct from Ping Protocol. -->
-    <node if="$(eval str(arg('driver_mode')).lower() in ['dt100', 'udp_raw'])"
+  <!-- Unknown passive UDP capture remains available as unverified evidence.
+       The DT100-labelled path stays absent until hardware commissioning is
+       explicit and then rejects every unexpected UDP source IP/port. -->
+    <node if="$(eval str(arg('driver_mode')).lower() == 'udp_raw' or (str(arg('driver_mode')).lower() == 'dt100' and str(arg('dt100_hardware_commissioned')).lower() == 'true' and bool(str(arg('dt100_expected_udp_source_ip')).strip())))"
           pkg="ig_handle" type="sonar.py" name="sonar_raw_receiver" output="log" args="receiver">
       <param name="port" value="$(arg udp_port)"/>
       <param name="topic" value="$(arg raw_topic)"/>
       <param name="bind_ip" value="$(arg bind_ip)"/>
+      <param name="provider" value="$(eval 'imagenex_dt100' if str(arg('driver_mode')).lower() == 'dt100' else 'unverified_udp')"/>
+      <param name="model" value="$(eval 'Imagenex DT100' if str(arg('driver_mode')).lower() == 'dt100' else 'unverified')"/>
+      <param name="hardware_commissioned" value="$(eval str(arg('driver_mode')).lower() == 'dt100' and str(arg('dt100_hardware_commissioned')).lower() == 'true')"/>
+      <param name="require_expected_source" value="$(eval str(arg('driver_mode')).lower() == 'dt100')"/>
+      <param name="expected_source_ip" value="$(eval arg('dt100_expected_udp_source_ip') if str(arg('driver_mode')).lower() == 'dt100' else '')"/>
+      <param name="expected_source_port" value="$(eval arg('dt100_expected_udp_source_port') if str(arg('driver_mode')).lower() == 'dt100' else '0')"/>
+      <param name="frame_id" value="$(eval arg('dt100_frame') if str(arg('driver_mode')).lower() == 'dt100' else arg('unverified_frame'))"/>
+      <param name="extrinsic_revision" value="$(eval arg('dt100_extrinsic_revision') if str(arg('driver_mode')).lower() == 'dt100' else arg('unverified_extrinsic_revision'))"/>
     </node>
 
   <!-- Ping360 is active request/reply even in read-only identity mode. Scanning
@@ -67,6 +89,8 @@
       <param name="operation_mode" value="$(arg operation_mode)"/>
       <param name="allow_active_transmit" value="$(arg allow_active_transmit)"/>
       <param name="sound_speed_mps" value="$(arg sound_speed_mps)"/>
+      <param name="frame_id" value="$(arg ping360_frame)"/>
+      <param name="extrinsic_revision" value="$(arg ping360_extrinsic_revision)"/>
     </node>
   </group>
 </launch>

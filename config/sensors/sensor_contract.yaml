@@ -51,39 +51,41 @@ sensor_contract:
     ranging_raw:
       sensor: "8"
       topic: topics.raw
-      frame: frame
+      frame: interfaces.imagenex_dt100.frame
       profile_config: profile_config
       profile: profile
-      endian: endian
       min_range_m: min_range_m
       sim_max_range_m: sim_max_range_m
+      extrinsic_revision: interfaces.imagenex_dt100.extrinsic_revision
     ranging_ping360_raw:
       sensor: "8"
       topic: topics.ping360_raw
-      frame: frame
+      frame: interfaces.blue_robotics_ping360.frame
+      extrinsic_revision: interfaces.blue_robotics_ping360.extrinsic_revision
     ranging_profile:
       sensor: "8"
       topic: topics.profile
-      frame: frame
+      frame: interfaces.blue_robotics_ping360.frame
+      extrinsic_revision: interfaces.blue_robotics_ping360.extrinsic_revision
     ranging_image:
       sensor: "8"
       topic: topics.image
-      frame: frame
+      frame: interfaces.blue_robotics_ping360.frame
     ranging_diagnostics:
       sensor: "8"
       topic: topics.diagnostics
     ranging_cloud:
       sensor: "8"
       topic: topics.scan
-      frame: frame
+      frame: interfaces.imagenex_dt100.frame
     ranging_sim_rays:
       sensor: "8"
       topic: topics.ray_sim
-      frame: frame
+      frame: interfaces.imagenex_dt100.frame
     ranging_ping360_sim_rays:
       sensor: "8"
       topic: topics.ping360_ray_sim
-      frame: frame
+      frame: interfaces.blue_robotics_ping360.frame
     ranging_map_cloud:
       sensor: "8"
       topic: topics.map_cloud
@@ -374,12 +376,14 @@ sensor_contract:
       sound_speed_mps: 1480.0
       sonar_kind: imaging
       frame: sonar_link
+      extrinsic_revision: unverified-sonar-frame-v1
       profile: harbor
       profile_config: package://ig_handle/config/sensors/sonar/profiles.yaml
       udp_port: 4040
-      endian: little
       min_range_m: 0.5
-      sim_max_range_m: 100.0
+      # Match the selected harbor 83P profile so simulated packets exercise the
+      # same strict range/resolution contract as MARINER.
+      sim_max_range_m: 30.0
       map_cloud_max_retained_points: 150000
       map_cloud_voxel_resolution_m: 0.10
       map_cloud_max_point_age_sec: 1800.0
@@ -412,11 +416,22 @@ sensor_contract:
       interfaces:
         imagenex_dt100:
           wire_topic: /sensors/sonar/raw
-          wire_type: std_msgs/UInt8MultiArray
+          wire_type: ig_handle/SonarRawPacket
+          frame: dt100_link
+          extrinsic_revision: dt100-seed-2026-08-11-v1
+          # Hardware stays absent from the DT100-labelled graph until an
+          # operator verifies the actual beamforming-computer UDP source.
+          hardware_commissioned: false
+          expected_udp_source_ip: ""
+          # Zero means IP-only admission; set a verified source port to require
+          # the complete endpoint. Destination port remains sensor 8 udp_port.
+          expected_udp_source_port: 0
           decoding: model_specific_geometric_cloud
         blue_robotics_ping360:
           wire_topic: /sensors/sonar/ping360/raw
           wire_type: ig_handle/Ping360RawPacket
+          frame: ping360_link
+          extrinsic_revision: ping360-seed-2026-08-11-v1
           profile_topic: /sensors/sonar/imaging/profile
           profile_type: ig_handle/SonarProfile
           image_topic: /sensors/sonar/imaging/image
@@ -433,6 +448,24 @@ sensor_contract:
             sensor_id: true
           raw_topic:
             field: topics.raw
+          dt100_frame:
+            field: interfaces.imagenex_dt100.frame
+          dt100_extrinsic_revision:
+            field: interfaces.imagenex_dt100.extrinsic_revision
+          dt100_hardware_commissioned:
+            field: interfaces.imagenex_dt100.hardware_commissioned
+          dt100_expected_udp_source_ip:
+            field: interfaces.imagenex_dt100.expected_udp_source_ip
+          dt100_expected_udp_source_port:
+            field: interfaces.imagenex_dt100.expected_udp_source_port
+          ping360_frame:
+            field: interfaces.blue_robotics_ping360.frame
+          ping360_extrinsic_revision:
+            field: interfaces.blue_robotics_ping360.extrinsic_revision
+          unverified_frame:
+            field: frame
+          unverified_extrinsic_revision:
+            field: extrinsic_revision
           ping360_raw_topic:
             field: topics.ping360_raw
           driver_mode:

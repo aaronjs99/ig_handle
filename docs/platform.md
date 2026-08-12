@@ -36,6 +36,11 @@ acquisition health into mission or actuator authority. GRANDE normally owns
 integrated recording; IG Handle can collect isolated raw evidence for hardware
 investigation.
 
+The Teensy timing design and its disabled-by-default electrical gates are
+specified in [`sensor_timing.md`](sensor_timing.md). Host camera, LiDAR, and IMU
+acquisition remains continuous; the firmware's trigger scheduler is a future
+commissioning surface rather than an enabled runtime claim.
+
 ## Imaging Sonar
 
 IG Handle separates physical sonar identity and acquisition from downstream
@@ -95,9 +100,15 @@ state. The provider rejects invalid message lengths, checksums, ranges,
 profiles, and identity. These runtime guards remain even without standalone
 validation utilities.
 
-The simulator can publish the same canonical profile with synthetic provenance.
-Replay can reproduce transport and mapping behavior. Neither establishes real
+The simulator can publish the same canonical profile with an explicit producer-
+set `synthetic=true` field; the physical provider always sets it false. Replay
+can reproduce transport and mapping behavior. Neither establishes real
 acoustic propagation, multipath, target reflectivity, beam geometry, or latency.
+Adding this producer-set field on 2026-08-11 intentionally changed the ROS 1
+`SonarProfile` MD5 to `c60a9cd87d90490ea37c2ae5164e2b76`. Older profile
+bags are wire-incompatible with the current message and require an explicit,
+reviewed migration bridge or conversion rule before replay; they must not be
+silently treated as current profiles.
 
 Field evidence retains device identity, profile, sound-speed assumption, pose
 and frame relationship, environment, raw packets or profiles, and synchronized

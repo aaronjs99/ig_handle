@@ -4,6 +4,7 @@ string provider
 string model
 string raw_packet_id
 string extrinsic_revision
+bool synthetic
 uint32 sequence
 bool valid
 string validity_reason

@@ -8,6 +8,7 @@ sensor_contract:
   platform_topics:
     pps_time: /sensors/pps/time
     camera_time: /sensors/camera/time
+    timing_status: /sensors/timing/status # Non-authoritative MCU diagnostic state.
   deployment_bindings:
     state_input:
       sensor: "1"

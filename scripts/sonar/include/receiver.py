@@ -35,12 +35,8 @@ class SonarRawReceiver:
         )
         self.provider = str(rospy.get_param("~provider", "imagenex_udp"))
         self.model = str(rospy.get_param("~model", "unknown"))
-        self.hardware_commissioned = _as_bool(
-            rospy.get_param("~hardware_commissioned", False)
-        )
-        self.require_expected_source = _as_bool(
-            rospy.get_param("~require_expected_source", False)
-        )
+        self.hardware_commissioned = _boolean_param("~hardware_commissioned", False)
+        self.require_expected_source = _boolean_param("~require_expected_source", False)
         self.expected_source_ip = str(
             rospy.get_param("~expected_source_ip", "") or ""
         ).strip()
@@ -172,10 +168,11 @@ class SonarRawReceiver:
             pass
 
 
-def _as_bool(value) -> bool:
-    if isinstance(value, bool):
-        return value
-    return str(value or "").strip().lower() in {"1", "true", "yes", "on"}
+def _boolean_param(name: str, default: bool) -> bool:
+    value = rospy.get_param(name, default)
+    if not isinstance(value, bool):
+        raise ValueError("{} must be a boolean".format(name))
+    return value
 
 
 def run():

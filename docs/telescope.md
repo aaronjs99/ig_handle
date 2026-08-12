@@ -7,11 +7,15 @@ about 0.846 m retracted and 1.380 m extended.
 
 This is not yet a commissioned runtime contract. The checked-in
 [`hardware.yaml`](../config/telescope/hardware.yaml) configuration is disabled,
-contains placeholder geometry, and still
-expects redundant minimum and maximum limit contacts. ORACLE correspondingly
-disables automatic telescope-length commands. The one-switch physical design
-and the current firmware/configuration must be reconciled before motor drive is
-enabled.
+contains placeholder geometry, and represents the reported one-switch design:
+both NC and NO contacts of the minimum SPDT switch are monitored, while the
+maximum-switch pins are unassigned. ORACLE correspondingly disables automatic
+telescope-length commands. Motor drive remains disabled until the switch,
+geometry, encoder, current sensing, and wiring are commissioned together.
+Once enabled in a future measured configuration, limit-contact disagreement,
+overcurrent, invalid calibration, homing timeout, and encoder stall latch motor
+shutdown until reboot or a future explicitly reviewed reset path. Ordinary
+command timeout and reaching an endpoint remain nonfatal stops.
 
 ## Homing and position
 
@@ -24,17 +28,15 @@ remains unavailable until the hardware contract, switch logic, geometry, and
 homing behavior are commissioned together.
 
 A one-switch implementation can omit a full-extension switch when packaging
-makes it physically impractical, but that requires a deliberate firmware and
-configuration change. Its extended end would rely on a calibrated maximum
+makes it physically impractical. Its extended end relies on a calibrated maximum
 encoder count, slow-down region, motor timeout, lack-of-motion detection, and a
 mechanical hard stop as the final passive boundary. Repeated loaded contact with
-the stop is not normal control behavior. The current checked-in contract instead
-expects maximum-limit inputs and must not be represented as already compatible
-with the one-switch design.
+the stop is not normal control behavior. Firmware supports an optional maximum
+SPDT switch, but the checked-in contract does not invent one.
 
 The encoder measures a constant-radius capstan rather than the changing-radius
-storage spool. Nominal travel follows capstan circumference and quadrature
-counts, then is replaced by measured full-travel calibration.
+storage spool. Runtime position uses a measured full-travel encoder calibration,
+not an unused motor-revolution proxy.
 
 ## Current and packaging
 
@@ -53,6 +55,11 @@ High-current motor wiring stays short and separated from encoder and limit
 signals. The home switch uses normally-closed logic where practical so a broken
 wire fails as a fault. Connectors must preserve current rating, locking,
 serviceability, contact protection, and strain relief.
+
+The BTS7960 inputs and enable lines require external hard pulldowns plus a
+hardware driver-disable/interlock. Reset, boot, a disconnected MCU, or
+high-impedance GPIO must leave both bridge directions off independently of
+firmware.
 
 If the main enclosure cannot provide volume for MCU, H-bridge, current sensor,
 fusing, regulators, LiDAR circuits, bend radii, and service loops, a small sealed

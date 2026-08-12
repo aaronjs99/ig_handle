@@ -27,6 +27,7 @@ from .ping_protocol import (
     parse_frame,
     parse_profile,
     parse_protocol_version,
+    profile_identity_rejection,
 )
 
 
@@ -37,6 +38,13 @@ class Counters:
     checksum_errors: int = 0
     malformed_packets: int = 0
     receive_timeouts: int = 0
+
+
+def _boolean_param(name: str, default: bool) -> bool:
+    value = rospy.get_param(name, default)
+    if not isinstance(value, bool):
+        raise ValueError("{} must be a boolean".format(name))
+    return value
 
 
 class Ping360Provider:
@@ -50,9 +58,7 @@ class Ping360Provider:
         self.operation_mode = str(
             rospy.get_param("~operation_mode", "identity")
         ).lower()
-        self.allow_active_transmit = bool(
-            rospy.get_param("~allow_active_transmit", False)
-        )
+        self.allow_active_transmit = _boolean_param("~allow_active_transmit", False)
         self.frame_id = str(rospy.get_param("~frame_id", "sonar_link"))
         self.extrinsic_revision = str(
             rospy.get_param("~extrinsic_revision", "") or ""
@@ -88,9 +94,12 @@ class Ping360Provider:
         self.counters = Counters()
         self.sequence = 0
         self.device_info: Optional[tuple] = None
+        self.identified_device_id: Optional[int] = None
         self.device_id = self.destination_device_id
         self.protocol_version: Optional[tuple] = None
         self.active_scan_started = False
+        self.active_scan_destination_device_id: Optional[int] = None
+        self.scan_identity_faulted = False
         self.last_request_time = rospy.Time(0)
         self.last_source: Tuple[str, int] = (self.host, self.port)
         rospy.on_shutdown(self.close)
@@ -181,17 +190,46 @@ class Ping360Provider:
         self.last_request_time = rospy.Time.now()
 
     def _start_scan_once(self) -> None:
-        if self.active_scan_started:
+        if self.active_scan_started or self.scan_identity_faulted:
             return
+        destination_device_id = self._command_destination_device_id()
         self.socket.send(
             build_auto_transmit(
                 **self.scan,
                 source_device_id=self.source_device_id,
-                destination_device_id=self.destination_device_id,
+                destination_device_id=destination_device_id,
             )
         )
+        self.active_scan_destination_device_id = destination_device_id
         self.active_scan_started = True
         self._publish_diagnostics("scanning")
+
+    def _stop_active_scan(self, state: str, *, latch_identity_fault: bool) -> bool:
+        """Stop the bound scan without consulting mutable identity state."""
+        if latch_identity_fault:
+            self.scan_identity_faulted = True
+        if not self.active_scan_started:
+            return True
+        destination_device_id = self.active_scan_destination_device_id
+        self.active_scan_started = False
+        self.active_scan_destination_device_id = None
+        if destination_device_id is None:
+            self._publish_diagnostics("{}_destination_missing".format(state))
+            return False
+        try:
+            self.socket.send(
+                build_frame(
+                    PING360_MOTOR_OFF,
+                    source_device_id=self.source_device_id,
+                    destination_device_id=destination_device_id,
+                )
+            )
+        except OSError as error:
+            rospy.logerr("Ping360 MOTOR_OFF failed during %s: %s", state, error)
+            self._publish_diagnostics("{}_motor_off_failed".format(state))
+            return False
+        self._publish_diagnostics(state)
+        return True
 
     def _receive_once(self) -> None:
         try:
@@ -234,19 +272,58 @@ class Ping360Provider:
     def _handle_frame(self, frame, packet_id: str, stamp) -> None:
         information = parse_device_information(frame)
         if information is not None:
+            source_id = int(frame.source_device_id)
+            if (
+                self.destination_device_id and source_id != self.destination_device_id
+            ) or (
+                self.identified_device_id is not None
+                and source_id != self.identified_device_id
+            ):
+                self._stop_active_scan(
+                    "identity_source_mismatch", latch_identity_fault=True
+                )
+                self.device_info = None
+                self.protocol_version = None
+                self.identified_device_id = None
+                self.device_id = self.destination_device_id
+                self._publish_diagnostics("identity_source_mismatch")
+                return
             self.device_info = information
-            self.device_id = frame.source_device_id
+            self.identified_device_id = source_id
+            self.device_id = source_id
             state = "identity_valid" if self._identity_valid() else "identity_mismatch"
             self._publish_diagnostics(state)
             return
         version = parse_protocol_version(frame)
         if version is not None:
-            self.protocol_version = version
+            source_matches = (
+                self.identified_device_id is not None
+                and frame.source_device_id == self.identified_device_id
+            )
+            if source_matches:
+                self.protocol_version = version
             self._publish_diagnostics(
-                "identity_valid" if self._identity_valid() else "awaiting_identity"
+                ("identity_valid" if self._identity_valid() else "awaiting_identity")
             )
             return
         if frame.message_id not in (PING360_DEVICE_DATA, PING360_AUTO_DEVICE_DATA):
+            return
+        identity_rejection = profile_identity_rejection(
+            self._identity_valid(),
+            frame.source_device_id,
+            self.identified_device_id,
+        )
+        if identity_rejection:
+            if self.active_scan_started:
+                self._stop_active_scan(identity_rejection, latch_identity_fault=True)
+            self._publish_diagnostics(identity_rejection)
+            rospy.logwarn_throttle(
+                2.0,
+                "Rejected Ping360 profile: %s (source_device_id=%d identified=%s)",
+                identity_rejection,
+                frame.source_device_id,
+                self.identified_device_id,
+            )
             return
         profile = parse_profile(frame)
         msg = SonarProfile()
@@ -259,6 +336,7 @@ class Ping360Provider:
         msg.model = "Ping360"
         msg.raw_packet_id = packet_id
         msg.extrinsic_revision = self.extrinsic_revision
+        msg.synthetic = False
         msg.sequence = self.sequence
         msg.valid = True
         msg.validity_reason = "validated_ping_protocol_profile"
@@ -312,7 +390,20 @@ class Ping360Provider:
         self.raw_pub.publish(msg)
 
     def _identity_valid(self) -> bool:
-        return self.device_info is not None and self.device_info[0] == 2
+        return bool(
+            self.device_info is not None
+            and self.device_info[0] == 2
+            and self.identified_device_id is not None
+            and (
+                not self.destination_device_id
+                or self.identified_device_id == self.destination_device_id
+            )
+        )
+
+    def _command_destination_device_id(self) -> int:
+        if not self._identity_valid():
+            raise RuntimeError("Ping360 command requested before identity binding")
+        return int(self.identified_device_id)
 
     def _publish_diagnostics(self, state: str) -> None:
         msg = SonarDiagnostics()
@@ -350,21 +441,14 @@ class Ping360Provider:
         self.diagnostics_pub.publish(msg)
 
     def close(self) -> None:
-        if self.operation_mode == "scan" and self.active_scan_started:
-            try:
-                self.socket.send(
-                    build_frame(
-                        PING360_MOTOR_OFF,
-                        source_device_id=self.source_device_id,
-                        destination_device_id=self.destination_device_id,
-                    )
-                )
-            except OSError:
-                pass
         try:
-            self.socket.close()
-        except (AttributeError, OSError):
-            pass
+            if self.operation_mode == "scan":
+                self._stop_active_scan("shutdown", latch_identity_fault=False)
+        finally:
+            try:
+                self.socket.close()
+            except (AttributeError, OSError):
+                pass
 
 
 def run() -> None:

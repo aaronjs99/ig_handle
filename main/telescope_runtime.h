@@ -7,6 +7,7 @@
 // enable flag are all true in firmware_config.h.
 
 #include <Arduino.h>
+#include <limits.h>
 #include <math.h>
 
 #include "telescope_control.h"
@@ -14,12 +15,13 @@
 namespace telescope {
 
 class Runtime {
- public:
+public:
   Runtime()
       : active_(false),
         homed_(false),
         home_requested_(false),
         command_received_(false),
+        fatal_fault_latched_(false),
         desired_length_m_(NAN),
         command_received_ms_(0),
         homing_started_ms_(0),
@@ -27,11 +29,17 @@ class Runtime {
         last_encoder_change_ms_(0),
         min_raw_changed_ms_(0),
         max_raw_changed_ms_(0),
+        reversal_blank_until_ms_(0),
         last_encoder_count_(0),
+        min_raw_valid_(false),
+        max_raw_valid_(false),
         min_raw_pressed_(false),
         max_raw_pressed_(false),
+        limits_qualified_(false),
         min_pressed_(false),
         max_pressed_(false),
+        reversal_blank_active_(false),
+        last_requested_direction_(0),
         motor_duty_(0.0f),
         status_("disabled") {}
 
@@ -42,6 +50,12 @@ class Runtime {
     }
 
     using namespace ig_handle_firmware_config::telescope;
+    // Apply software-safe levels before validation reads. External hard pulls
+    // and a hardware driver-disable remain mandatory during MCU reset/high-Z.
+    digitalWrite(kMotorRightPwmPin, LOW);
+    digitalWrite(kMotorLeftPwmPin, LOW);
+    digitalWrite(kMotorRightEnablePin, LOW);
+    digitalWrite(kMotorLeftEnablePin, LOW);
     pinMode(kMotorRightPwmPin, OUTPUT);
     pinMode(kMotorLeftPwmPin, OUTPUT);
     pinMode(kMotorRightEnablePin, OUTPUT);
@@ -50,48 +64,44 @@ class Runtime {
     pinMode(kMotorLeftCurrentSensePin, INPUT);
     pinMode(kEncoderPhaseAPin, INPUT_PULLUP);
     pinMode(kEncoderPhaseBPin, INPUT_PULLUP);
-    pinMode(kMinLimitNoPin, INPUT_PULLUP);
-    pinMode(kMinLimitNcPin, INPUT_PULLUP);
-    pinMode(kMaxLimitNoPin, INPUT_PULLUP);
-    pinMode(kMaxLimitNcPin, INPUT_PULLUP);
+    if (kMinLimitPresent) {
+      pinMode(kMinLimitNoPin, INPUT_PULLUP);
+      pinMode(kMinLimitNcPin, INPUT_PULLUP);
+    }
+    if (kMaxLimitPresent) {
+      pinMode(kMaxLimitNoPin, INPUT_PULLUP);
+      pinMode(kMaxLimitNcPin, INPUT_PULLUP);
+    }
     analogWriteFrequency(kMotorRightPwmPin, kPwmFrequencyHz);
     analogWriteFrequency(kMotorLeftPwmPin, kPwmFrequencyHz);
     stopMotor();
     active_ = true;
-    if (!readRawLimits(&min_raw_pressed_, &max_raw_pressed_)) {
-      active_ = false;
-      status_ = "limit_disagreement";
-      return false;
-    }
-    min_pressed_ = min_raw_pressed_;
-    max_pressed_ = max_raw_pressed_;
+    sampleRawLimits(&min_raw_valid_, &min_raw_pressed_, &max_raw_valid_, &max_raw_pressed_);
+    min_pressed_ = false;
+    max_pressed_ = false;
+    limits_qualified_ = false;
     last_update_ms_ = now_ms;
     last_encoder_change_ms_ = now_ms;
     min_raw_changed_ms_ = now_ms;
     max_raw_changed_ms_ = now_ms;
     encoder_state_ = encoderState();
     last_encoder_count_ = encoderCount();
-    if (min_pressed_) {
-      rebaseAtMinimum(now_ms);
-      homed_ = true;
-      status_ = "at_minimum";
-    } else {
-      status_ = "needs_home";
-    }
+    status_ = "limit_qualifying";
     return true;
   }
 
   void onEncoderEdge() {
-    if (!active_) {
+    if (!active_ || fatal_fault_latched_) {
       return;
     }
     const uint8_t next_state = encoderState();
     // Gray-code transition table for x4 quadrature decoding. Invalid two-bit
     // jumps contribute zero counts instead of inventing motion.
-    static const int8_t kTransition[16] = {
-        0, -1, 1, 0, 1, 0, 0, -1,
-        -1, 0, 0, 1, 0, 1, -1, 0};
-    encoder_count_ += kTransition[(encoder_state_ << 2) | next_state];
+    static const int8_t kTransition[16] = {0, -1, 1, 0, 1, 0, 0, -1, -1, 0, 0, 1, 0, 1, -1, 0};
+    const int8_t increment = kTransition[(encoder_state_ << 2) | next_state];
+    if ((increment > 0 && encoder_count_ < INT32_MAX) || (increment < 0 && encoder_count_ > INT32_MIN)) {
+      encoder_count_ += increment;
+    }
     encoder_state_ = next_state;
   }
 
@@ -100,22 +110,32 @@ class Runtime {
       status_ = "disabled_unconfigured";
       return;
     }
+    if (fatal_fault_latched_) {
+      stopMotor();
+      return;
+    }
     const Geometry geometry = geometryFromFirmware();
-    if (!isfinite(desired_length_m) ||
-        desired_length_m < geometry.min_length_m ||
+    if (!isfinite(desired_length_m) || desired_length_m < geometry.min_length_m ||
         desired_length_m > geometry.max_length_m) {
       command_received_ = false;
       stopMotor();
       status_ = "command_out_of_range";
       return;
     }
+    const bool new_target =
+        !command_received_ || !isfinite(desired_length_m_) || fabs(desired_length_m - desired_length_m_) > 1e-5f;
     desired_length_m_ = desired_length_m;
     command_received_ms_ = now_ms;
     command_received_ = true;
-    const bool request_home =
-        !homed_ && fabs(desired_length_m - geometry.min_length_m) <= 1e-5f;
+    const bool request_home = !homed_ && fabs(desired_length_m - geometry.min_length_m) <= 1e-5f;
     if (request_home && !home_requested_) {
       homing_started_ms_ = now_ms;
+    }
+    if (new_target || (request_home && !home_requested_)) {
+      // A genuinely new motion intent gets a fresh observation window. Normal
+      // rosserial refreshes of the same target do not mask an encoder stall.
+      last_encoder_count_ = encoderCount();
+      last_encoder_change_ms_ = now_ms;
     }
     home_requested_ = request_home;
     status_ = home_requested_ ? "homing" : "tracking";
@@ -125,17 +145,24 @@ class Runtime {
     if (!active_) {
       return;
     }
+    if (fatal_fault_latched_) {
+      stopMotor();
+      return;
+    }
     using namespace ig_handle_firmware_config::telescope;
     if (now_ms - last_update_ms_ < kControlUpdatePeriodMs) {
       return;
     }
-    const float elapsed_s =
-        static_cast<float>(now_ms - last_update_ms_) / 1000.0f;
+    const float elapsed_s = static_cast<float>(now_ms - last_update_ms_) / 1000.0f;
     last_update_ms_ = now_ms;
 
     if (!updateDebouncedLimits(now_ms)) {
+      latchFatalFault("limit_disagreement");
+      return;
+    }
+    if (!limits_qualified_) {
       stopMotor();
-      status_ = "limit_disagreement";
+      status_ = "limit_qualifying";
       return;
     }
 
@@ -144,9 +171,9 @@ class Runtime {
       homed_ = true;
       home_requested_ = false;
     }
-    if (!command_received_ ||
-        now_ms - command_received_ms_ > kCommandTimeoutMs) {
+    if (!command_received_ || now_ms - command_received_ms_ > kCommandTimeoutMs) {
       command_received_ = false;
+      home_requested_ = false;
       stopMotor();
       status_ = "command_timeout";
       return;
@@ -154,8 +181,7 @@ class Runtime {
 
     const float current_a = motorCurrentA();
     if (isfinite(current_a) && current_a > kMaxMotorCurrentA) {
-      stopMotor();
-      status_ = "motor_current_limit";
+      latchFatalFault("motor_current_limit");
       return;
     }
 
@@ -171,8 +197,7 @@ class Runtime {
         return;
       }
       if (now_ms - homing_started_ms_ > kHomingTimeoutMs) {
-        stopMotor();
-        status_ = "homing_timeout";
+        latchFatalFault("homing_timeout");
         return;
       }
       const int32_t homing_count = encoderCount();
@@ -180,27 +205,23 @@ class Runtime {
         last_encoder_count_ = homing_count;
         last_encoder_change_ms_ = now_ms;
       } else if (now_ms - last_encoder_change_ms_ > kStallTimeoutMs) {
-        stopMotor();
-        status_ = "encoder_stall";
+        latchFatalFault("encoder_stall");
         return;
       }
-      motor_duty_ = static_cast<float>(kHomingDirection) *
-                    static_cast<float>(kMotorDutySignForExtension) *
-                    kHomingDutyFraction;
-      driveMotor(motor_duty_);
-      status_ = "homing";
+      motor_duty_ =
+          static_cast<float>(kHomingDirection) * static_cast<float>(kMotorDutySignForExtension) * kHomingDutyFraction;
+      status_ = driveMotor(motor_duty_, now_ms) ? "homing" : "direction_reversal_blank";
       return;
     }
 
     const Geometry geometry = geometryFromFirmware();
     int32_t target_count = 0;
     if (!encoderForLength(geometry, desired_length_m_, &target_count)) {
-      stopMotor();
-      status_ = "invalid_calibration";
+      latchFatalFault("invalid_calibration");
       return;
     }
     const int32_t current_count = encoderCount();
-    const int32_t count_error = target_count - current_count;
+    const int64_t count_error = static_cast<int64_t>(target_count) - current_count;
     const bool extending = count_error > 0;
     if ((min_pressed_ && !extending) || (max_pressed_ && extending)) {
       stopMotor();
@@ -208,22 +229,20 @@ class Runtime {
       return;
     }
 
-    if (abs(count_error) <= 1) {
+    if (count_error >= -1 && count_error <= 1) {
       stopMotor();
       status_ = "at_target";
       return;
     }
 
-    const float normalized_error =
-        static_cast<float>(abs(count_error)) /
-        static_cast<float>(geometry.calibrated_count_span_to_max_length);
+    const float normalized_error = static_cast<float>(count_error < 0 ? -count_error : count_error) /
+                                   static_cast<float>(geometry.calibrated_count_span_to_max_length);
     float requested_duty = kPositionKp * normalized_error;
     if (requested_duty > kMaxDutyFraction) {
       requested_duty = kMaxDutyFraction;
     }
     const float signed_target_duty =
-        (extending ? 1.0f : -1.0f) *
-        static_cast<float>(kMotorDutySignForExtension) * requested_duty;
+        (extending ? 1.0f : -1.0f) * static_cast<float>(kMotorDutySignForExtension) * requested_duty;
     const float max_step = kMaxDutyAccelerationPerSec * elapsed_s;
     if (signed_target_duty > motor_duty_ + max_step) {
       motor_duty_ += max_step;
@@ -236,18 +255,16 @@ class Runtime {
     if (current_count != last_encoder_count_) {
       last_encoder_count_ = current_count;
       last_encoder_change_ms_ = now_ms;
-    } else if (fabs(motor_duty_) > 0.05f &&
-               now_ms - last_encoder_change_ms_ > kStallTimeoutMs) {
-      stopMotor();
-      status_ = "encoder_stall";
+    } else if (fabs(motor_duty_) > 0.05f && now_ms - last_encoder_change_ms_ > kStallTimeoutMs) {
+      latchFatalFault("encoder_stall");
       return;
     }
 
-    driveMotor(motor_duty_);
-    status_ = "tracking";
+    status_ = driveMotor(motor_duty_, now_ms) ? "tracking" : "direction_reversal_blank";
   }
 
   bool active() const { return active_; }
+  bool fatalFaultLatched() const { return fatal_fault_latched_; }
   const char* status() const { return status_; }
 
   float actualLengthM() const {
@@ -261,40 +278,34 @@ class Runtime {
 
   float motorCurrentA() const {
     using namespace ig_handle_firmware_config::telescope;
-    if (!active_ || !kCurrentSenseConfigured ||
-        kMotorCurrentAPerAdcCount <= 0.0f) {
+    if (!active_ || !kCurrentSenseConfigured || kMotorCurrentAPerAdcCount <= 0.0f) {
       return NAN;
     }
-    const int raw = max(analogRead(kMotorRightCurrentSensePin),
-                        analogRead(kMotorLeftCurrentSensePin));
-    const float adjusted =
-        static_cast<float>(raw) - kMotorCurrentZeroAdcCount;
+    const int raw = max(analogRead(kMotorRightCurrentSensePin), analogRead(kMotorLeftCurrentSensePin));
+    const float adjusted = static_cast<float>(raw) - kMotorCurrentZeroAdcCount;
     return adjusted > 0.0f ? adjusted * kMotorCurrentAPerAdcCount : 0.0f;
   }
 
- private:
+private:
   static volatile int32_t encoder_count_;
   static volatile uint8_t encoder_state_;
 
-  static Geometry geometryFromFirmware() {
-    return kDummyGeometry;
-  }
+  static Geometry geometryFromFirmware() { return kDummyGeometry; }
 
   static bool canOperate() {
     using namespace ig_handle_firmware_config::telescope;
     const Geometry geometry = geometryFromFirmware();
-    return kEnabled && kConfigured && kWiringVerified &&
-           kCurrentSenseConfigured && kMotorCurrentAPerAdcCount > 0.0f &&
-           kMaxMotorCurrentA > 0.0f &&
-           kHomingDutyFraction > 0.0f &&
-           kHomingDutyFraction <= kMaxDutyFraction &&
-           kMaxDutyFraction <= 1.0f &&
-           kControlUpdatePeriodMs > 0 && kCommandTimeoutMs > 0 &&
-           kHomingTimeoutMs > 0 &&
+    return kEnabled && kConfigured && kWiringVerified && kCurrentSenseConfigured && kMotorCurrentAPerAdcCount > 0.0f &&
+           kMaxMotorCurrentA > 0.0f && kHomingDutyFraction > 0.0f && kHomingDutyFraction <= kMaxDutyFraction &&
+           kMaxDutyFraction <= 1.0f && kControlUpdatePeriodMs > 0 && kCommandTimeoutMs > 0 && kHomingTimeoutMs > 0 &&
+           kStallTimeoutMs > 0 && kLimitDebounceMs > 0 && kDirectionReversalBlankMs > 0 && kMinLimitPresent &&
+           kMinLimitNoPin != ig_handle_firmware_config::kInvalidPin &&
+           (!kRequireRedundantLimitAgreement || kMinLimitNcPin != ig_handle_firmware_config::kInvalidPin) &&
+           (!kMaxLimitPresent ||
+            (kMaxLimitNoPin != ig_handle_firmware_config::kInvalidPin &&
+             (!kRequireRedundantLimitAgreement || kMaxLimitNcPin != ig_handle_firmware_config::kInvalidPin))) &&
            (kHomingDirection == 1 || kHomingDirection == -1) &&
-           (kMotorDutySignForExtension == 1 ||
-            kMotorDutySignForExtension == -1) &&
-           geometryReady(geometry);
+           (kMotorDutySignForExtension == 1 || kMotorDutySignForExtension == -1) && geometryReady(geometry);
   }
 
   static uint8_t encoderState() {
@@ -312,46 +323,76 @@ class Runtime {
     if (kEncoderCountIncreasesOnExtension) {
       return raw_count;
     }
-    return kEncoderZeroCountAtMinLength -
-           (raw_count - kEncoderZeroCountAtMinLength);
+    const int64_t reversed = 2LL * static_cast<int64_t>(kEncoderZeroCountAtMinLength) - raw_count;
+    if (reversed > INT32_MAX) {
+      return INT32_MAX;
+    }
+    if (reversed < INT32_MIN) {
+      return INT32_MIN;
+    }
+    return static_cast<int32_t>(reversed);
+  }
+
+  void latchFatalFault(const char* status) {
+    fatal_fault_latched_ = true;
+    command_received_ = false;
+    home_requested_ = false;
+    stopMotor();
+    status_ = status;
   }
 
   bool updateDebouncedLimits(uint32_t now_ms) {
+    bool min_raw_valid = false;
+    bool max_raw_valid = false;
     bool min_raw_pressed = false;
     bool max_raw_pressed = false;
-    if (!readRawLimits(&min_raw_pressed, &max_raw_pressed)) {
-      return false;
-    }
+    sampleRawLimits(&min_raw_valid, &min_raw_pressed, &max_raw_valid, &max_raw_pressed);
     using namespace ig_handle_firmware_config::telescope;
-    if (min_raw_pressed != min_raw_pressed_) {
+    if (min_raw_valid != min_raw_valid_ || min_raw_pressed != min_raw_pressed_) {
+      min_raw_valid_ = min_raw_valid;
       min_raw_pressed_ = min_raw_pressed;
       min_raw_changed_ms_ = now_ms;
     }
-    if (max_raw_pressed != max_raw_pressed_) {
+    if (max_raw_valid != max_raw_valid_ || max_raw_pressed != max_raw_pressed_) {
+      max_raw_valid_ = max_raw_valid;
       max_raw_pressed_ = max_raw_pressed;
       max_raw_changed_ms_ = now_ms;
     }
-    if (now_ms - min_raw_changed_ms_ >= kLimitDebounceMs) {
-      min_pressed_ = min_raw_pressed_;
-    }
-    if (now_ms - max_raw_changed_ms_ >= kLimitDebounceMs) {
-      max_pressed_ = max_raw_pressed_;
-    }
-    return true;
-  }
-
-  bool readRawLimits(bool* min_pressed, bool* max_pressed) const {
-    using namespace ig_handle_firmware_config::telescope;
-    if (!kRequireRedundantLimitAgreement) {
-      *min_pressed = digitalRead(kMinLimitNoPin) == LOW;
-      *max_pressed = digitalRead(kMaxLimitNoPin) == LOW;
-      return true;
-    }
-    if (!decodeLimit(kMinLimitNoPin, kMinLimitNcPin, min_pressed) ||
-        !decodeLimit(kMaxLimitNoPin, kMaxLimitNcPin, max_pressed)) {
+    const bool min_stable = now_ms - min_raw_changed_ms_ >= kLimitDebounceMs;
+    const bool max_stable = now_ms - max_raw_changed_ms_ >= kLimitDebounceMs;
+    limits_qualified_ = min_stable && max_stable && min_raw_valid_ && max_raw_valid_;
+    if (min_stable && !min_raw_valid_) {
       return false;
     }
-    return !(*min_pressed && *max_pressed);
+    if (max_stable && !max_raw_valid_) {
+      return false;
+    }
+    if (limits_qualified_) {
+      min_pressed_ = min_raw_pressed_;
+      max_pressed_ = max_raw_pressed_;
+    }
+    return !(limits_qualified_ && min_pressed_ && max_pressed_);
+  }
+
+  void sampleRawLimits(bool* min_valid, bool* min_pressed, bool* max_valid, bool* max_pressed) const {
+    using namespace ig_handle_firmware_config::telescope;
+    *min_valid = false;
+    *min_pressed = false;
+    *max_valid = !kMaxLimitPresent;
+    *max_pressed = false;
+    if (!kRequireRedundantLimitAgreement) {
+      *min_valid = kMinLimitPresent;
+      *min_pressed = digitalRead(kMinLimitNoPin) == LOW;
+      if (kMaxLimitPresent) {
+        *max_valid = true;
+        *max_pressed = digitalRead(kMaxLimitNoPin) == LOW;
+      }
+      return;
+    }
+    *min_valid = decodeLimit(kMinLimitNoPin, kMinLimitNcPin, min_pressed);
+    if (kMaxLimitPresent) {
+      *max_valid = decodeLimit(kMaxLimitNoPin, kMaxLimitNcPin, max_pressed);
+    }
   }
 
   static bool decodeLimit(uint8_t no_pin, uint8_t nc_pin, bool* pressed) {
@@ -369,20 +410,39 @@ class Runtime {
 
   void rebaseAtMinimum(uint32_t now_ms) {
     noInterrupts();
-    encoder_count_ =
-        ig_handle_firmware_config::telescope::kEncoderZeroCountAtMinLength;
+    encoder_count_ = ig_handle_firmware_config::telescope::kEncoderZeroCountAtMinLength;
     interrupts();
     last_encoder_count_ = encoderCount();
     last_encoder_change_ms_ = now_ms;
   }
 
-  void driveMotor(float duty) {
+  bool driveMotor(float duty, uint32_t now_ms) {
     using namespace ig_handle_firmware_config::telescope;
     const float bounded = constrain(fabs(duty), 0.0f, 1.0f);
     const int pwm = static_cast<int>(bounded * 255.0f + 0.5f);
     if (pwm == 0) {
       stopMotor();
-      return;
+      return true;
+    }
+    const int8_t direction = duty > 0.0f ? 1 : -1;
+    if (last_requested_direction_ != 0 && direction != last_requested_direction_) {
+      powerOffMotor();
+      motor_duty_ = 0.0f;
+      last_requested_direction_ = direction;
+      reversal_blank_until_ms_ = now_ms + kDirectionReversalBlankMs;
+      reversal_blank_active_ = true;
+      return false;
+    }
+    if (last_requested_direction_ == 0) {
+      last_requested_direction_ = direction;
+    }
+    powerOffMotor();
+    if (reversal_blank_active_) {
+      if (static_cast<int32_t>(now_ms - reversal_blank_until_ms_) < 0) {
+        motor_duty_ = 0.0f;
+        return false;
+      }
+      reversal_blank_active_ = false;
     }
     digitalWrite(kMotorRightEnablePin, HIGH);
     digitalWrite(kMotorLeftEnablePin, HIGH);
@@ -393,21 +453,27 @@ class Runtime {
       analogWrite(kMotorRightPwmPin, 0);
       analogWrite(kMotorLeftPwmPin, pwm);
     }
+    return true;
   }
 
-  void stopMotor() {
+  void powerOffMotor() {
     using namespace ig_handle_firmware_config::telescope;
     analogWrite(kMotorRightPwmPin, 0);
     analogWrite(kMotorLeftPwmPin, 0);
     digitalWrite(kMotorRightEnablePin, LOW);
     digitalWrite(kMotorLeftEnablePin, LOW);
+  }
+
+  void stopMotor() {
+    powerOffMotor();
     motor_duty_ = 0.0f;
   }
 
-  bool active_;
+  volatile bool active_;
   bool homed_;
   bool home_requested_;
   bool command_received_;
+  volatile bool fatal_fault_latched_;
   float desired_length_m_;
   uint32_t command_received_ms_;
   uint32_t homing_started_ms_;
@@ -415,11 +481,17 @@ class Runtime {
   uint32_t last_encoder_change_ms_;
   uint32_t min_raw_changed_ms_;
   uint32_t max_raw_changed_ms_;
+  uint32_t reversal_blank_until_ms_;
   int32_t last_encoder_count_;
+  bool min_raw_valid_;
+  bool max_raw_valid_;
   bool min_raw_pressed_;
   bool max_raw_pressed_;
+  bool limits_qualified_;
   bool min_pressed_;
   bool max_pressed_;
+  bool reversal_blank_active_;
+  int8_t last_requested_direction_;
   float motor_duty_;
   const char* status_;
 };

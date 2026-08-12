@@ -1,445 +1,342 @@
-#include "../config/teensy/firmware_config.h"
+#include <RTClib.h>
 #include <ros.h>
 #include <sensor_msgs/TimeReference.h>
 #include <std_msgs/Float32.h>
 #include <std_msgs/String.h>
-#include <RTClib.h>
-#include <TimeLib.h>
+
+#include "../config/teensy/firmware_config.h"
+#include "firmware_pin_contract.h"
+#include "sensor_sync_runtime.h"
 #include "telescope_control.h"
 #include "telescope_runtime.h"
 
 using namespace ig_handle_firmware_config;
 
-// Keep the existing serial alias readable while making its selection
-// configurable from config/teensy/firmware_config.h.
-#define GPSERIAL IG_HANDLE_GPSERIAL
+void referenceISR();
+void sensorTimerISR();
+void attachCameraInterrupt(uint8_t channel);
+void imuSyncISR();
+void telescopeEncoderISR();
 
-// ROS nodehandle
 ros::NodeHandle nh;
-
-// PPS signal source
 RTC_DS3231 rtc;
+sensor_sync::Runtime sensor_sync_runtime;
+::telescope::Runtime telescope_runtime;
+sensor_sync::RelativeEpoch relative_epoch;
 
-// messages and time topics for camera and imu
+IntervalTimer sensor_sync_timer;
+volatile uint32_t reference_sec = 0;
+volatile uint32_t reference_nsec = 0;
+volatile bool reference_publish_ready = false;
+
+struct ReferenceEdge {
+  uint32_t timestamp_us;
+};
+
+struct SensorEdge {
+  uint32_t timestamp_us;
+  bool active;
+};
+
+sensor_sync::EdgeMailbox<ReferenceEdge, 4> reference_edges;
+sensor_sync::EdgeMailbox<SensorEdge, 8> camera_edges[ig_handle_firmware_config::timing::kCameraCount];
+sensor_sync::EdgeMailbox<SensorEdge, 8> imu_edges;
+
 sensor_msgs::TimeReference pps_time_msg;
-sensor_msgs::TimeReference cam_time_msg;
+sensor_msgs::TimeReference camera_time_msg;
 sensor_msgs::TimeReference imu_time_msg;
+std_msgs::String timing_status_msg;
+char timing_status_buffer[160];
 ros::Publisher pps_time_pub(kPpsTimeTopic, &pps_time_msg);
-ros::Publisher cam_time_pub(kCameraTimeTopic, &cam_time_msg);
+ros::Publisher camera_time_pub(kCameraTimeTopic, &camera_time_msg);
 ros::Publisher imu_time_pub(kImuTimeTopic, &imu_time_msg);
+ros::Publisher timing_status_pub(kTimingStatusTopic, &timing_status_msg);
 
-// Telescope topics use metres for desired/actual length and amperes for
-// motor_current. The runtime itself keeps all motor pins inert until its
-// measured firmware configuration is explicitly enabled.
-telescope::Runtime telescope_runtime;
 std_msgs::Float32 telescope_actual_length_msg;
 std_msgs::Float32 telescope_motor_current_msg;
 std_msgs::String telescope_status_msg;
 char telescope_status_buffer[48];
-ros::Publisher telescope_actual_length_pub(
-    ig_handle_firmware_config::telescope::kStateLengthTopic,
+ros::Publisher telescope_actual_length_pub(ig_handle_firmware_config::telescope::kStateLengthTopic,
                                            &telescope_actual_length_msg);
-ros::Publisher telescope_motor_current_pub(
-    ig_handle_firmware_config::telescope::kStateMotorCurrentTopic,
+ros::Publisher telescope_motor_current_pub(ig_handle_firmware_config::telescope::kStateMotorCurrentTopic,
                                            &telescope_motor_current_msg);
-ros::Publisher telescope_status_pub(
-    ig_handle_firmware_config::telescope::kStateStatusTopic,
-    &telescope_status_msg);
-
-// time-sync indicators
-volatile time_t rtc_time{0};
-elapsedMillis nmea_delay;
-elapsedMicros micros_since_pps;
-unsigned long cam_open_t_sec, cam_mid_t_sec, cam_close_t_sec;
-unsigned long cam_open_t_nsec, cam_mid_t_nsec, cam_close_t_nsec;
-volatile uint32_t pps_stamp_sec = 0;
-volatile uint32_t pps_stamp_nsec = 0;
-volatile uint32_t cam_mid_stamp_sec = 0;
-volatile uint32_t cam_mid_stamp_nsec = 0;
-volatile uint32_t imu_stamp_sec = 0;
-volatile uint32_t imu_stamp_nsec = 0;
-volatile uint32_t pps_edge_count = 0;
-volatile bool pps_time_initialized = false;
-volatile bool pps_stamp_valid = false;
-volatile bool camera_open_valid = false;
-volatile bool pub_pps_time = false, send_nmea = false;
-volatile bool cam_captured = false, imu_sampled = false;
-
-ros::Time snapshotPpsStamp() {
-  noInterrupts();
-  const uint32_t sec = pps_stamp_sec;
-  const uint32_t nsec = pps_stamp_nsec;
-  interrupts();
-  ros::Time stamp;
-  stamp.sec = sec;
-  stamp.nsec = nsec;
-  return stamp;
-}
-
-bool takePpsStamp(ros::Time* stamp) {
-  noInterrupts();
-  const bool ready = pub_pps_time;
-  if (ready) {
-    stamp->sec = pps_stamp_sec;
-    stamp->nsec = pps_stamp_nsec;
-    pub_pps_time = false;
-  }
-  interrupts();
-  return ready;
-}
-
-bool takeCameraStamp(ros::Time* stamp) {
-  noInterrupts();
-  const bool ready = cam_captured;
-  if (ready) {
-    stamp->sec = cam_mid_stamp_sec;
-    stamp->nsec = cam_mid_stamp_nsec;
-    cam_captured = false;
-  }
-  interrupts();
-  return ready;
-}
-
-bool takeImuStamp(ros::Time* stamp) {
-  noInterrupts();
-  const bool ready = imu_sampled;
-  if (ready) {
-    stamp->sec = imu_stamp_sec;
-    stamp->nsec = imu_stamp_nsec;
-    imu_sampled = false;
-  }
-  interrupts();
-  return ready;
-}
-
-void initializeRtcTimeFromRos() {
-  noInterrupts();
-  const uint32_t edge_count_before = pps_edge_count;
-  const bool already_initialized = pps_time_initialized;
-  interrupts();
-  if (already_initialized) {
-    return;
-  }
-  const ros::Time ros_now = nh.now();
-  if (ros_now.sec == 0) {
-    return;
-  }
-  // Only arm after an interval without a PPS edge. If an edge arrives while
-  // ROS time is sampled, retry on the next loop so the counter still denotes
-  // the next physical PPS edge.
-  const time_t next_pps_sec = ros_now.sec + 1;
-  noInterrupts();
-  if (!pps_time_initialized && pps_edge_count == edge_count_before) {
-    rtc_time = next_pps_sec;
-    pps_time_initialized = true;
-  }
-  interrupts();
-}
+ros::Publisher telescope_status_pub(ig_handle_firmware_config::telescope::kStateStatusTopic, &telescope_status_msg);
 
 void telescopeDesiredLengthCallback(const std_msgs::Float32& message) {
   telescope_runtime.setDesiredLength(message.data, millis());
 }
 
 ros::Subscriber<std_msgs::Float32> telescope_desired_length_sub(
-    ig_handle_firmware_config::telescope::kCommandLengthTopic,
-    telescopeDesiredLengthCallback);
+    ig_handle_firmware_config::telescope::kCommandLengthTopic, telescopeDesiredLengthCallback);
 
-void telescopeEncoderISR(void) { telescope_runtime.onEncoderEdge(); }
+bool timestampFromReference(uint32_t now_us, uint32_t* sec, uint32_t* nsec) {
+  if (sec == 0 || nsec == 0) {
+    return false;
+  }
+  sensor_sync::RelativeTime stamp;
+  if (!relative_epoch.stamp(now_us, &stamp)) {
+    return false;
+  }
+  *sec = stamp.sec;
+  *nsec = stamp.nsec;
+  return true;
+}
 
-void publishTelescopeState(uint32_t now_ms) {
-  static uint32_t last_telescope_publish_ms = 0;
-  if (now_ms - last_telescope_publish_ms <
-      ig_handle_firmware_config::telescope::kTelemetryPublishPeriodMs) {
+void publishReferenceTime() {
+  noInterrupts();
+  const bool ready = reference_publish_ready;
+  const uint32_t sec = reference_sec;
+  const uint32_t nsec = reference_nsec;
+  if (ready) {
+    reference_publish_ready = false;
+  }
+  interrupts();
+  if (!ready) {
     return;
   }
-  last_telescope_publish_ms = now_ms;
+  ros::Time stamp;
+  stamp.sec = sec;
+  stamp.nsec = nsec;
+  pps_time_msg.header.seq++;
+  // No verified UTC/ROS phase mapping exists. header.stamp is only the ROS
+  // publication receipt; time_ref carries the relative MCU epoch.
+  pps_time_msg.header.stamp = nh.now();
+  pps_time_msg.time_ref = stamp;
+  pps_time_msg.source = "diagnostic_relative_monotonic_epoch_not_utc_unmapped_to_ros";
+  pps_time_pub.publish(&pps_time_msg);
+}
+
+void publishCaptureEvents() {
+  sensor_sync::CaptureEvent event;
+  static uint32_t camera_topic_sequence = 0;
+  for (uint8_t channel = 0; channel < sensor_sync::Runtime::cameraCount(); ++channel) {
+    if (!sensor_sync_runtime.takeCameraEvent(channel, &event)) {
+      continue;
+    }
+    camera_time_msg.header.seq = ++camera_topic_sequence;
+    camera_time_msg.header.stamp = nh.now();
+    camera_time_msg.time_ref.sec = event.sec;
+    camera_time_msg.time_ref.nsec = event.nsec;
+    camera_time_msg.source = ig_handle_firmware_config::timing::kCameraSources[channel];
+    camera_time_pub.publish(&camera_time_msg);
+  }
+  if (sensor_sync_runtime.takeImuEvent(&event)) {
+    imu_time_msg.header.seq = event.sequence;
+    imu_time_msg.header.stamp = nh.now();
+    imu_time_msg.time_ref.sec = event.sec;
+    imu_time_msg.time_ref.nsec = event.nsec;
+    imu_time_msg.source = ig_handle_firmware_config::timing::kImuSource;
+    imu_time_pub.publish(&imu_time_msg);
+  }
+}
+
+void publishTimingStatus(uint32_t now_ms) {
+  static uint32_t last_publish_ms = 0;
+  if (now_ms - last_publish_ms < ig_handle_firmware_config::timing::kStatusPublishPeriodMs) {
+    return;
+  }
+  last_publish_ms = now_ms;
+  uint32_t camera_drops = 0;
+  for (uint8_t channel = 0; channel < sensor_sync::Runtime::cameraCount(); ++channel) {
+    camera_drops += sensor_sync_runtime.cameraDropped(channel);
+  }
+  snprintf(timing_status_buffer, sizeof(timing_status_buffer),
+           "state=%s fault=%s reference_edges=%u triggers=%lu "
+           "camera_drops=%lu camera_invalid_edges=%lu imu_drops=%lu",
+           sensor_sync::stateName(sensor_sync_runtime.state()), sensor_sync::faultName(sensor_sync_runtime.fault()),
+           sensor_sync_runtime.stableReferenceEdges(), static_cast<unsigned long>(sensor_sync_runtime.triggerCount()),
+           static_cast<unsigned long>(camera_drops),
+           static_cast<unsigned long>(sensor_sync_runtime.cameraInvalidEdges()),
+           static_cast<unsigned long>(sensor_sync_runtime.imuDropped()));
+  timing_status_msg.data = timing_status_buffer;
+  timing_status_pub.publish(&timing_status_msg);
+}
+
+void publishTelescopeState(uint32_t now_ms) {
+  static uint32_t last_publish_ms = 0;
+  if (now_ms - last_publish_ms < ig_handle_firmware_config::telescope::kTelemetryPublishPeriodMs) {
+    return;
+  }
+  last_publish_ms = now_ms;
   telescope_actual_length_msg.data = telescope_runtime.actualLengthM();
   telescope_motor_current_msg.data = telescope_runtime.motorCurrentA();
-  snprintf(telescope_status_buffer, sizeof(telescope_status_buffer), "%s",
-           telescope_runtime.status());
+  snprintf(telescope_status_buffer, sizeof(telescope_status_buffer), "%s", telescope_runtime.status());
   telescope_status_msg.data = telescope_status_buffer;
   telescope_actual_length_pub.publish(&telescope_actual_length_msg);
   telescope_motor_current_pub.publish(&telescope_motor_current_msg);
   telescope_status_pub.publish(&telescope_status_msg);
 }
 
-/*
-   Initial setup for the arduino sketch
-   This function:
-    - Configures timers for LiDAR PPS and camera triggering
-    - Advertises and subscribes to ROS topics
-    - UART Serial setup for NMEA messages
-    - Holds until rosserial is connected
-*/
 void setup() {
-  /* Lidar */
-
-  // set GPSERIAL baud rate and transmission inversion for TTL RS-232
-  // transmission
-  GPSERIAL.begin(kGpsBaudRate, IG_HANDLE_GPSERIAL_FORMAT);
-
-  // set PPS synch pin
-  pinMode(kPpsOutPin, OUTPUT);
-
-  /* Camera and IMU */
-
-  // node initialization
   nh.initNode();
   nh.advertise(pps_time_pub);
-  nh.advertise(cam_time_pub);
+  nh.advertise(camera_time_pub);
   nh.advertise(imu_time_pub);
+  nh.advertise(timing_status_pub);
   nh.advertise(telescope_actual_length_pub);
   nh.advertise(telescope_motor_current_pub);
   nh.advertise(telescope_status_pub);
   nh.subscribe(telescope_desired_length_sub);
-  while (!nh.connected()) {
-    nh.spinOnce();
+
+  using namespace ig_handle_firmware_config::timing;
+  const bool timing_requested = kCameraTriggerEnabled || kImuTriggerEnabled || kLidarClockEnabled;
+
+  // Configure all verified outputs inactive before any runtime dependency can
+  // fault. External hard pull-down/driver-disable circuitry remains required.
+  const bool pin_contract_valid = firmware_pin_contract::valid();
+  const bool timing_initialized = pin_contract_valid && sensor_sync_runtime.begin();
+  if (!pin_contract_valid) {
+    sensor_sync_runtime.forceFault(sensor_sync::Fault::kInvalidConfiguration);
+    nh.logerror("whole-firmware Teensy pin contract is invalid");
+  }
+  bool rtc_available = true;
+  if (timing_requested) {
+    rtc_available = rtc.begin();
+  }
+  if (timing_requested && !rtc_available) {
+    nh.logerror("RTC unavailable; sensor synchronization remains disabled");
+    sensor_sync_runtime.forceFault(sensor_sync::Fault::kRuntimeUnavailable);
+  } else if (timing_requested) {
+    rtc.disable32K();
+    rtc.writeSqwPinMode(DS3231_SquareWave1Hz);
   }
 
-  // configure input and output pins
-  pinMode(kCameraOpenInPin, INPUT_PULLUP);
-  pinMode(kCameraCloseInPin, INPUT_PULLUP);
-  pinMode(kCameraTriggerOutPin, OUTPUT);
-  pinMode(kImuSyncInPin, INPUT);
-  pinMode(kImuTriggerOutPin, OUTPUT);
-
-  // enable interrupts
-  attachInterrupt(digitalPinToInterrupt(kCameraOpenInPin), camOpenISR, RISING);
-  attachInterrupt(digitalPinToInterrupt(kCameraCloseInPin), camCloseISR, FALLING);
-  attachInterrupt(digitalPinToInterrupt(kImuSyncInPin), imuISR, RISING);
-
-  // set write frequency
-  analogWriteFrequency(kCameraTriggerOutPin, kCameraTriggerFrequencyHz);
-  digitalWrite(kImuTriggerOutPin, LOW);
-
-  // enable triggers
-  analogWrite(kCameraTriggerOutPin, kCameraTriggerDuty);
-  digitalWrite(kImuTriggerOutPin, HIGH);
-
-  /* RTC */
-
-  // initialize
-  if (!rtc.begin()) {
-    nh.loginfo("Couldn't find RTC");
-    while (1) delay(10);
+  const bool timing_runtime_ready = timing_requested && rtc_available && timing_initialized;
+  if (timing_runtime_ready && kReferenceWiringVerified) {
+    pinMode(kReferenceInputPin, INPUT);
+    attachInterrupt(digitalPinToInterrupt(kReferenceInputPin), referenceISR, kReferenceActiveHigh ? RISING : FALLING);
   }
-  rtc.disable32K();
-
-  // set PPS input pin and write signal
-  pinMode(kPpsInPin, INPUT_PULLUP);
-  rtc.writeSqwPinMode(DS3231_SquareWave1Hz);
-
-  // enable interrupt
-  attachInterrupt(digitalPinToInterrupt(kPpsInPin), ppsISR, RISING);
-
-  // This only configures telescope pins when every measured safety gate is
-  // true. The committed dummy configuration returns false and stays inert.
-  if (telescope_runtime.begin(millis())) {
-    attachInterrupt(
-        digitalPinToInterrupt(ig_handle_firmware_config::telescope::kEncoderPhaseAPin),
-        telescopeEncoderISR, CHANGE);
-    attachInterrupt(
-        digitalPinToInterrupt(ig_handle_firmware_config::telescope::kEncoderPhaseBPin),
-        telescopeEncoderISR, CHANGE);
-  }
-}
-
-/*
-   Main loop
-   This function:
-    - Transmits NMEA messages over GPSERIAL
-    - Publishes the camera capture timestamp to /cam_time
-    - Publishes the IMU sample timestamp to /imu_time
-*/
-void loop() {
-  nh.spinOnce(); // Handle ROS communication at the start
-  initializeRtcTimeFromRos();
-
-  // publish PPS time as a reference for soft-synch
-  ros::Time pps_snapshot;
-  if (takePpsStamp(&pps_snapshot)) {
-    pps_time_msg.header.seq = pps_snapshot.sec;
-    pps_time_msg.header.stamp = pps_snapshot;
-    pps_time_msg.time_ref = pps_snapshot;
-    pps_time_pub.publish(&pps_time_msg);
-  }
-
-  // ensure PPS width satisfied
-  if (send_nmea && nmea_delay >= kPpsPulseWidthMs) {
-    // set PPS pin to low
-    digitalWriteFast(kPpsOutPin, LOW);
-
-    // ensure min 50 ms width between end of PPS and start of NMEA message
-    if (nmea_delay >= kPpsNmeaMinSeparationMs) {
-      if (!kNmeaPayloadEnabled) {
-        send_nmea = false;
-      } else {
-      // Snapshot the ISR-owned PPS value before using it in the foreground.
-      const time_t t_sec_gmt =
-          snapshotPpsStamp().sec - kTimeZoneOffsetHours * 3600;
-
-      // create GPRMC sentence
-      char time_now[7], date_now[7];
-      sprintf(time_now, "%02i%02i%02i", hour(t_sec_gmt), minute(t_sec_gmt),
-              second(t_sec_gmt));
-      sprintf(date_now, "%02i%02i%02i", day(t_sec_gmt), month(t_sec_gmt),
-              year(t_sec_gmt) % 100);
-      String gprmc_sentence = String(kNmeaPrefix) + String(time_now) + "," +
-                              String(kNmeaStatus) + "," +
-                              String(kNmeaLatitude) + "," +
-                              String(kNmeaLongitude) + "," +
-                              String(kNmeaSpeedKnots) + "," +
-                              String(kNmeaCourseDegrees) + "," +
-                              String(date_now) + "," +
-                              String(kNmeaMagneticVariation);
-      String chk = checksum(gprmc_sentence);
-      gprmc_sentence = "$" + gprmc_sentence + "*" + chk + "\n";
-
-      // print GPRMC sentence to serial as an NMEA message
-      GPSERIAL.print(gprmc_sentence);
-      // nh.loginfo(gprmc_sentence.c_str());  // DEBUG
-
-      // reset send
-      send_nmea = false;
-      }
+  if (timing_runtime_ready && sensor_sync_runtime.timerRequired()) {
+    sensor_sync_timer.priority(96);
+    if (!sensor_sync_timer.begin(sensorTimerISR, kSchedulerTickUs)) {
+      sensor_sync_runtime.forceFault(sensor_sync::Fault::kInvalidConfiguration);
     }
   }
 
-  ros::Time camera_snapshot;
-  if (takeCameraStamp(&camera_snapshot)) {
-    cam_time_msg.time_ref = camera_snapshot;
-    cam_time_msg.header.seq++;
-    cam_time_msg.header.stamp = camera_snapshot;
-    cam_time_pub.publish(&cam_time_msg);
+  for (uint8_t channel = 0; channel < sensor_sync::Runtime::cameraCount(); ++channel) {
+    if (timing_runtime_ready && sensor_sync_runtime.cameraFeedbackConfigured(channel)) {
+      attachCameraInterrupt(channel);
+    }
+  }
+  if (timing_runtime_ready && sensor_sync_runtime.imuFeedbackConfigured()) {
+    attachInterrupt(digitalPinToInterrupt(ig_handle_firmware_config::timing::kImuSyncPin), imuSyncISR,
+                    ig_handle_firmware_config::timing::kImuSyncActiveHigh ? RISING : FALLING);
   }
 
-  ros::Time imu_snapshot;
-  if (takeImuStamp(&imu_snapshot)) {
-    imu_time_msg.time_ref = imu_snapshot;
-    imu_time_msg.header.seq++;
-    imu_time_msg.header.stamp = imu_snapshot;
-    imu_time_pub.publish(&imu_time_msg);
+  if (pin_contract_valid && telescope_runtime.begin(millis())) {
+    attachInterrupt(digitalPinToInterrupt(ig_handle_firmware_config::telescope::kEncoderPhaseAPin), telescopeEncoderISR,
+                    CHANGE);
+    attachInterrupt(digitalPinToInterrupt(ig_handle_firmware_config::telescope::kEncoderPhaseBPin), telescopeEncoderISR,
+                    CHANGE);
   }
+}
 
+void loop() {
+  nh.spinOnce();
+  publishReferenceTime();
+  publishCaptureEvents();
+  publishTimingStatus(millis());
   telescope_runtime.update(millis());
   publishTelescopeState(millis());
-
   nh.spinOnce();
 }
 
-// Timestamp creation interrupts
-void ppsISR(void) {
-  ++pps_edge_count;
-  if (!pps_time_initialized) {
-    return;
-  }
-  const time_t pps_time_sec = rtc_time;
-  if (pps_time_sec == 0) {
-    return;
-  }
-
-  // reset elapsed microseconds
-  micros_since_pps = 0;
-
-  // set time of PPS according to RTC clock
-  pps_stamp_sec = pps_time_sec;
-  pps_stamp_nsec = 0;
-  pps_stamp_valid = true;
-
-  // toggle to HIGH
-  digitalToggleFast(kPpsOutPin);
-
-  // counters and resets
-  rtc_time = pps_time_sec + 1;  // increment time
-  pub_pps_time = true;  // enable pps time ref publication
-  send_nmea = true;     // enable nmea send
-  nmea_delay = 0;       // reset delay counter
+void referenceISR() {
+  const ReferenceEdge edge = {micros()};
+  reference_edges.pushFromIsr(edge);
 }
 
-void camOpenISR(void) {
-  if (!pps_stamp_valid) {
+void processReferenceEdges() {
+  ReferenceEdge edge;
+  if (reference_edges.takeOverflowFromOwner()) {
+    sensor_sync_runtime.forceFault(sensor_sync::Fault::kEventQueueOverflow);
+  }
+  while (reference_edges.popFromOwner(&edge)) {
+    sensor_sync_runtime.onReferenceEdge(edge.timestamp_us);
+    if (sensor_sync_runtime.state() != sensor_sync::State::kRunning) {
+      relative_epoch.reset();
+      reference_sec = 0;
+      reference_nsec = 0;
+      reference_publish_ready = false;
+      continue;
+    }
+    const sensor_sync::RelativeTime reference = relative_epoch.onQualifiedReference(edge.timestamp_us);
+    reference_sec = reference.sec;
+    reference_nsec = reference.nsec;
+    reference_publish_ready = true;
+  }
+}
+
+void processCameraEdges() {
+  for (uint8_t channel = 0; channel < ig_handle_firmware_config::timing::kCameraCount; ++channel) {
+    if (camera_edges[channel].takeOverflowFromOwner()) {
+      sensor_sync_runtime.forceFault(sensor_sync::Fault::kEventQueueOverflow);
+    }
+    SensorEdge edge;
+    while (camera_edges[channel].popFromOwner(&edge)) {
+      uint32_t sec = 0;
+      uint32_t nsec = 0;
+      if (!timestampFromReference(edge.timestamp_us, &sec, &nsec)) {
+        continue;
+      }
+      sensor_sync_runtime.onCameraExposureEdge(channel, edge.active, edge.timestamp_us, sec, nsec);
+    }
+  }
+}
+
+void processImuEdges() {
+  if (imu_edges.takeOverflowFromOwner()) {
+    sensor_sync_runtime.forceFault(sensor_sync::Fault::kEventQueueOverflow);
+  }
+  SensorEdge edge;
+  while (imu_edges.popFromOwner(&edge)) {
+    uint32_t sec = 0;
+    uint32_t nsec = 0;
+    if (!edge.active || !timestampFromReference(edge.timestamp_us, &sec, &nsec)) {
+      continue;
+    }
+    sensor_sync_runtime.onImuSyncEdge(edge.timestamp_us, sec, nsec);
+  }
+}
+
+void sensorTimerISR() {
+  // Drain sensor feedback against the most recent qualified reference before
+  // advancing that reference. This keeps just-before-edge samples in the old
+  // interval instead of unsigned-wrapping them into the next epoch.
+  processCameraEdges();
+  processImuEdges();
+  processReferenceEdges();
+  sensor_sync_runtime.onTimerTick(micros());
+  if (sensor_sync_runtime.state() != sensor_sync::State::kRunning) {
+    relative_epoch.reset();
+    reference_sec = 0;
+    reference_nsec = 0;
+    reference_publish_ready = false;
+  }
+}
+
+void handleCameraEdge(uint8_t channel) {
+  if (channel >= ig_handle_firmware_config::timing::kCameraCount) {
     return;
   }
-  cam_open_t_sec = pps_stamp_sec;
-  cam_open_t_nsec = micros_since_pps * 1000;
-  camera_open_valid = true;
-  // ros::Time cam_open_stamp(cam_open_t_sec, cam_open_t_nsec);  // DEBUG
-  // printROSTime("CAM OPN Time:", cam_open_stamp);              // DEBUG
+  const SensorEdge edge = {micros(), sensor_sync_runtime.cameraInputActive(channel)};
+  camera_edges[channel].pushFromIsr(edge);
 }
 
-void camCloseISR(void) {
-  if (!pps_stamp_valid || !camera_open_valid) {
-    return;
-  }
-  camera_open_valid = false;
-  cam_close_t_sec = pps_stamp_sec;
-  cam_close_t_nsec = micros_since_pps * 1000;
+void camera0ISR() { handleCameraEdge(0); }
+void camera1ISR() { handleCameraEdge(1); }
+void camera2ISR() { handleCameraEdge(2); }
+void camera3ISR() { handleCameraEdge(3); }
 
-  // Compute the midpoint in absolute nanoseconds so a capture crossing a
-  // PPS boundary is handled without a one-second timestamp error.
-  const uint64_t open_ns = static_cast<uint64_t>(cam_open_t_sec) * 1000000000ULL +
-                           static_cast<uint64_t>(cam_open_t_nsec);
-  const uint64_t close_ns = static_cast<uint64_t>(cam_close_t_sec) * 1000000000ULL +
-                            static_cast<uint64_t>(cam_close_t_nsec);
-  if (close_ns < open_ns) {
-    // Do not publish a wrapped timestamp when the ISR state is incoherent or
-    // the shutter-open event was missed.
-    cam_captured = false;
-    return;
-  }
-  const uint64_t mid_ns = open_ns + (close_ns - open_ns) / 2ULL;
-  cam_mid_t_sec = static_cast<unsigned long>(mid_ns / 1000000000ULL);
-  cam_mid_t_nsec = static_cast<unsigned long>(mid_ns % 1000000000ULL);
-
-  cam_mid_stamp_sec = cam_mid_t_sec;
-  cam_mid_stamp_nsec = cam_mid_t_nsec;
-  cam_captured = true;
-
-  // ros::Time cam_close_stamp(cam_close_t_sec, cam_close_t_nsec);  // DEBUG
-  // printROSTime("CAM MID Time:", cam_mid_stamp);                  // DEBUG
-  // printROSTime("CAM CLD Time:", cam_close_stamp);                // DEBUG
+void attachCameraInterrupt(uint8_t channel) {
+  using namespace ig_handle_firmware_config::timing;
+  void (*handlers[kCameraCount])() = {camera0ISR, camera1ISR, camera2ISR, camera3ISR};
+  attachInterrupt(digitalPinToInterrupt(kCameraExposurePins[channel]), handlers[channel], CHANGE);
 }
 
-void imuISR(void) {
-  if (!pps_stamp_valid) {
-    return;
-  }
-  imu_stamp_sec = pps_stamp_sec;
-  imu_stamp_nsec = micros_since_pps * 1000;
-  imu_sampled = true;
-  // printROSTime("IMU Time:", imu_stamp);  // DEBUG
+void imuSyncISR() {
+  const SensorEdge edge = {micros(), sensor_sync_runtime.imuInputActive()};
+  imu_edges.pushFromIsr(edge);
 }
 
-// Computes XOR checksum of GPRMC sentence
-String checksum(String msg) {
-  byte chksum = 0;
-  int l = msg.length();
-  for (int i = 0; i < l; i++) {
-    chksum ^= msg[i];
-  }
-
-  String result = String(chksum, HEX);
-  result.toUpperCase();
-  if (result.length() < 2) {
-    result = "0" + result;
-  }
-  return result;
-}
-
-// Print for debugging
-void printROSTime(const String& msg, const ros::Time& ros_time) {
-  // get seconds and nano seconds
-  const time_t& t_sec = ros_time.sec;
-  const time_t& t_nsec = ros_time.nsec;
-
-  // convert ros time to string
-  char t_sec_string[11], t_nsec_string[10];
-  sprintf(t_sec_string, "%lld", (long long)t_sec);
-  sprintf(t_nsec_string, "%lld", (long long)t_nsec);
-  String ros_time_string =
-      "sec: " + String(t_sec_string) + " nsec: " + String(t_nsec_string);
-
-  // print
-  nh.loginfo(msg.c_str());
-  nh.loginfo(ros_time_string.c_str());
-}
+void telescopeEncoderISR() { telescope_runtime.onEncoderEdge(); }

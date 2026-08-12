@@ -42,7 +42,7 @@ components:
   limits:
     catalog_id: B09VGL29HS
     type: spdt_roller_lever
-    quantity: 2
+    quantity: 1
     nominal_contact_rating_a: 5.0
     ip_rating: IP67
     input_mode: input_pullup
@@ -50,8 +50,8 @@ components:
     channels:
       min_no: 31
       min_nc: 32
-      max_no: 33
-      max_nc: 34
+      max_no: null
+      max_nc: null
 
 pins:
   # DUMMY: provisional Teensy pins; replace after the assembled wiring is verified.
@@ -73,7 +73,6 @@ mechanics:
   min_length_m: 0.0 # DUMMY: measure minimum arm length.
   max_length_m: 0.0 # DUMMY: measure maximum arm length.
   pulley_pitch_diameter_m: 0.0 # DUMMY: measure cable pulley pitch diameter.
-  linear_travel_per_motor_revolution_m: 0.0 # DUMMY: measure from the assembled mechanism.
   motor_to_pulley_ratio: 1.0 # DUMMY: verify gear/pulley ratio.
   sonar_mount_offset_from_arm_tip_m: 0.0 # DUMMY: measure sonar datum offset.
   encoder_zero_count_at_min_length: 0 # DUMMY until the minimum limit is homed.
@@ -102,6 +101,7 @@ mechanics:
       update_rate_hz: 100.0 # DUMMY: tune after the encoder is characterized.
       max_speed_fraction: 0.25 # DUMMY: conservative provisional limit.
       max_acceleration_fraction_per_s: 0.50 # DUMMY: tune after mechanics are measured.
+      direction_reversal_blank_ms: 20 # DUMMY: conservative electrical dead time; verify on the assembled driver.
       position_kp: 1.0 # DUMMY: tune after mechanics are measured.
       velocity_kp: 0.0 # DUMMY: tune after mechanics are measured.
       integral_limit: 0.0 # DUMMY: keep disabled until steady-state error is measured.
@@ -109,7 +109,7 @@ mechanics:
       command_timeout_s: 0.50 # DUMMY: tune after the command path is implemented.
       stall_timeout_s: 1.00 # DUMMY: tune after motor current feedback is verified.
       max_motor_duty_fraction: 0.25 # DUMMY: must match firmware max duty.
-      require_redundant_limit_agreement: true
+      require_redundant_limit_agreement: true # NC and NO must agree for the installed minimum SPDT switch.
       current_sense_configured: false # DUMMY: ADC-to-amp calibration is still required.
       motor_current_a_per_adc_count: 0.0 # DUMMY: calibrate against a trusted meter.
       motor_current_zero_adc_count: 0.0 # DUMMY: measure with the driver disabled.

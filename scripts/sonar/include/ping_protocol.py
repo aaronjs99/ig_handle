@@ -28,6 +28,18 @@ class PingProtocolError(ValueError):
     """A frame is truncated, malformed, or inconsistent."""
 
 
+def profile_identity_rejection(
+    identity_valid: bool, source_device_id: int, identified_device_id: Optional[int]
+) -> str:
+    """Reject profiles until their Ping source matches a verified identity."""
+
+    if not identity_valid or identified_device_id is None:
+        return "profile_identity_unverified"
+    if int(source_device_id) != int(identified_device_id):
+        return "profile_source_device_mismatch"
+    return ""
+
+
 @dataclass(frozen=True)
 class PingFrame:
     raw: bytes

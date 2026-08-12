@@ -23,6 +23,7 @@ consumes canonical sensor topics; GRANDE composes and records the runtime.
 ## Documentation
 
 - [Sensor platform](docs/platform.md) covers inventory, network, cameras, supervision, recording, and stable device identity.
+- [Sensor timing firmware](docs/sensor_timing.md) covers fail-closed Teensy reference qualification, trigger/feedback wiring contracts, and bench acceptance.
 - [Telescoping arm](docs/telescope.md) covers the motor, driver, encoder, home switch, current sensing, packaging, and remaining measurements.
 
 Each narrative document has a matching PDF. Markdown is canonical.

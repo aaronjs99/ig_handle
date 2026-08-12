@@ -4,6 +4,8 @@
   <arg name="pps_time_topic" default="/sensors/pps/time"/>
   <arg name="camera_time_topic" default="/sensors/camera/time"/>
   <arg name="imu_time_topic" default="/sensors/imu/time"/>
+  <arg name="timing_status_topic" default="/sensors/timing/status"/>
+  <arg name="poll_period_sec" default="0.5"/>
 
   <node name="teensy_rosserial_launcher" pkg="ig_handle" type="teensy_rosserial_launcher.py" output="screen">
     <param name="port" value="$(arg port)"/>
@@ -11,5 +13,7 @@
     <param name="pps_time_topic" value="$(arg pps_time_topic)"/>
     <param name="camera_time_topic" value="$(arg camera_time_topic)"/>
     <param name="imu_time_topic" value="$(arg imu_time_topic)"/>
+    <param name="timing_status_topic" value="$(arg timing_status_topic)"/>
+    <param name="poll_period_sec" value="$(arg poll_period_sec)"/>
   </node>
 </launch>

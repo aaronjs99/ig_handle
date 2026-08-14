@@ -1,4 +1,4 @@
-# Canonical Heron / IG Handle sensor frames and measured geometry.
+# Canonical Heron / IG Handle sensor frames and configured geometry.
 # Model specifications and network endpoints live in sibling config files.
 
 sensor_frames:
@@ -11,8 +11,9 @@ sensor_frames:
   notes:
   - All translations are in meters unless explicitly marked otherwise.
   - All rotations are expressed as parent-to-child transforms.
-  - Physical orientation is not currently verified; estimator copies may be
-    config-consistent while still being physically wrong.
+  - The operator accepts the configured IMU and LiDAR translations for the
+    current test campaign. They are operative runtime configuration, not an
+    automatic actuation lock.
   - dt100_link and ping360_link are separate because their scan planes differ;
     neither seed transform is physical-marker eligible until measured.
   - Prefer runtime TF edges base_link->lidar_h_link, lidar_h_link->lidar_v_link, base_link->imu_link,
@@ -40,17 +41,14 @@ sensor_frames:
     camera_f3_optical: F3_optical
     camera_f4_optical: F4_optical
   physical_verification:
-    translation_status: partially_measured
+    translation_status: operator_accepted_for_current_testing
     orientation_status: unverified
     orientation_verified: false
     # Empty means no physical verification has been recorded yet. ROS1
     # parameter XML-RPC cannot marshal YAML null values.
     last_verified: ""
-    evidence_uri: ""
-    evidence_sha256: ""
-    required_navigation_transforms: [imu, lidar_h, lidar_v]
-    note: Software consumers must treat these rotations as seed values until
-      lab/field physical axis checks confirm each sensor frame.
+    note: Runtime uses these configured transforms. Orientation metrology remains
+      documented as pending and does not automatically inhibit propulsion.
   transforms:
     imu:
       parent: base_link

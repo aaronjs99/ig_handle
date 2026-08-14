@@ -46,6 +46,9 @@ sensor_frames:
     # Empty means no physical verification has been recorded yet. ROS1
     # parameter XML-RPC cannot marshal YAML null values.
     last_verified: ""
+    evidence_uri: ""
+    evidence_sha256: ""
+    required_navigation_transforms: [imu, lidar_h, lidar_v]
     note: Software consumers must treat these rotations as seed values until
       lab/field physical axis checks confirm each sensor frame.
   transforms:

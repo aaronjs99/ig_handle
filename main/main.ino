@@ -4,7 +4,8 @@
 #include <std_msgs/Float32.h>
 #include <std_msgs/String.h>
 
-#include "../config/teensy/firmware_config.h"
+#include "firmware_config.h"
+#include "firmware_build_identity.h"
 #include "firmware_pin_contract.h"
 #include "sensor_sync_runtime.h"
 #include "telescope_control.h"
@@ -46,7 +47,7 @@ sensor_msgs::TimeReference pps_time_msg;
 sensor_msgs::TimeReference camera_time_msg;
 sensor_msgs::TimeReference imu_time_msg;
 std_msgs::String timing_status_msg;
-char timing_status_buffer[160];
+char timing_status_buffer[256];
 ros::Publisher pps_time_pub(kPpsTimeTopic, &pps_time_msg);
 ros::Publisher camera_time_pub(kCameraTimeTopic, &camera_time_msg);
 ros::Publisher imu_time_pub(kImuTimeTopic, &imu_time_msg);
@@ -141,9 +142,10 @@ void publishTimingStatus(uint32_t now_ms) {
     camera_drops += sensor_sync_runtime.cameraDropped(channel);
   }
   snprintf(timing_status_buffer, sizeof(timing_status_buffer),
-           "state=%s fault=%s reference_edges=%u triggers=%lu "
+           "firmware_build_id=%s state=%s fault=%s reference_edges=%u triggers=%lu "
            "camera_drops=%lu camera_invalid_edges=%lu imu_drops=%lu",
-           sensor_sync::stateName(sensor_sync_runtime.state()), sensor_sync::faultName(sensor_sync_runtime.fault()),
+           kFirmwareBuildId, sensor_sync::stateName(sensor_sync_runtime.state()),
+           sensor_sync::faultName(sensor_sync_runtime.fault()),
            sensor_sync_runtime.stableReferenceEdges(), static_cast<unsigned long>(sensor_sync_runtime.triggerCount()),
            static_cast<unsigned long>(camera_drops),
            static_cast<unsigned long>(sensor_sync_runtime.cameraInvalidEdges()),

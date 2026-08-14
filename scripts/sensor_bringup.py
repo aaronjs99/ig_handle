@@ -66,6 +66,7 @@ class SensorBringup:
         self.disabled_sensor_ids = str(rospy.get_param("~disabled_sensor_ids", ""))
         self.reachability_check = self._param_bool("~sensor_reachability_check", True)
         self.processes: Dict[str, subprocess.Popen] = {}
+        self.sensor_selection: Dict[str, Dict[str, bool]] = {}
         self.process_started: Dict[str, float] = {}
         self.topic_last_message: Dict[str, float] = {}
         self.topic_subscribers = {}
@@ -103,6 +104,10 @@ class SensorBringup:
                 sensor_id,
                 self.reachability_check,
             )
+            self.sensor_selection[sensor_id] = {
+                "requested": bool(enabled),
+                "reachable": bool(reachable),
+            }
             rospy.set_param(f"/ig_handle/sensors/{sensor_id}/requested", bool(enabled))
             rospy.set_param(
                 f"/ig_handle/sensors/{sensor_id}/reachable", bool(reachable)
@@ -143,7 +148,9 @@ class SensorBringup:
         failed = self._stop_and_reap_processes(proc for _, proc in processes)
         for sensor_id, proc in processes:
             if proc.pid in failed:
-                rospy.logerr("sensor_bringup could not reap id=%s during shutdown", sensor_id)
+                rospy.logerr(
+                    "sensor_bringup could not reap id=%s during shutdown", sensor_id
+                )
         self.processes.clear()
 
     def _launch_sensor(self, sensor_id: str, sensor: Dict[str, Any]) -> None:
@@ -224,8 +231,7 @@ class SensorBringup:
     ) -> set[int]:
         roots = {proc.pid for proc in processes}
         tracked_by_root = {
-            root_pid: {root_pid, *cls._descendant_pids(root_pid)}
-            for root_pid in roots
+            root_pid: {root_pid, *cls._descendant_pids(root_pid)} for root_pid in roots
         }
         for sig, timeout_sec in (
             (signal.SIGINT, 8.0),
@@ -268,9 +274,7 @@ class SensorBringup:
         startup_grace_sec = float(
             sensor.get("startup_grace_sec", self.health_timeout_sec)
         )
-        grace_sec = configured_delay + max(
-            self.health_timeout_sec, startup_grace_sec
-        )
+        grace_sec = configured_delay + max(self.health_timeout_sec, startup_grace_sec)
         if time.monotonic() - started <= grace_sec:
             return ""
         now = time.monotonic()
@@ -305,15 +309,41 @@ class SensorBringup:
         sensors = dict(self.contract.get("sensors", {}) or {})
         now = time.monotonic()
         status = {}
-        for sensor_id, proc in self.processes.items():
+        for sensor_id, selection in self.sensor_selection.items():
             sensor = sensors.get(sensor_id, {})
-            topics = self._required_topics(sensor)
+            requested = bool(selection.get("requested", False))
+            reachable = bool(selection.get("reachable", False))
+            proc = self.processes.get(sensor_id)
+            alive = proc is not None and proc.poll() is None
+            topics = self._required_topics(sensor) if requested and reachable else []
+            if not requested:
+                state = "not_requested"
+            elif not reachable:
+                state = "unreachable"
+            elif alive:
+                state = "running"
+            else:
+                state = "exited"
             status[sensor_id] = {
-                "alive": proc.poll() is None,
-                "age_sec": round(now - self.process_started.get(sensor_id, now), 3),
+                "requested": requested,
+                "reachable": reachable,
+                "alive": alive,
+                "state": state,
+                "age_sec": (
+                    round(now - self.process_started.get(sensor_id, now), 3)
+                    if proc is not None
+                    else None
+                ),
                 "topics": {
                     topic: (
-                        {"state": "fresh", "age_sec": round(now - observed, 3)}
+                        {
+                            "state": (
+                                "fresh"
+                                if now - observed <= self.health_timeout_sec
+                                else "stale"
+                            ),
+                            "age_sec": round(now - observed, 3),
+                        }
                         if (observed := self.topic_last_message.get(topic)) is not None
                         else {"state": "never_seen", "age_sec": None}
                     )

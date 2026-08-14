@@ -32,7 +32,7 @@ sensor_network:
       label: Heron Base Computer
       host: 192.168.131.1
   ros:
-    heron_local_ip: 192.168.131.2
+    heron_local_ip: 192.168.131.10
     # Simulation owns a dedicated ROS master so it cannot join the physical
     # Heron/sensor graph on the conventional ROS port.
     local_master_uri: http://192.168.1.81:11312

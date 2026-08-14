@@ -8,7 +8,7 @@
 
 #include <Arduino.h>
 
-#include "../config/teensy/firmware_config.h"
+#include "firmware_config.h"
 #include "sensor_sync.h"
 
 namespace sensor_sync {

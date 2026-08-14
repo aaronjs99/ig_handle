@@ -402,9 +402,12 @@ sensor_contract:
         map_cloud: /sensors/sonar/map_cloud
         latest_slice_map: /sensors/sonar/latest_slice_map
       required_topics:
-        # The new sonar is not assumed to be DT100-protocol compatible yet.
-        # Always record raw UDP; decoded clouds are opportunistic until a
-        # model-specific decoder is confirmed.
+        # Raw UDP liveness is required when this explicitly requested passive
+        # interface is enabled. This proves datagram continuity only; provider
+        # identity, packet semantics, and acoustic validity remain unverified.
+        raw: true
+        # The new sonar is not assumed to be DT100-protocol compatible yet;
+        # decoded products remain opportunistic until commissioning.
         scan: false
         ray_sim: false
         ping360_ray_sim: false

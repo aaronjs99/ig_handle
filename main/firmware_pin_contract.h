@@ -9,7 +9,7 @@
 
 #include <stdint.h>
 
-#include "../config/teensy/firmware_config.h"
+#include "firmware_config.h"
 
 namespace firmware_pin_contract {
 

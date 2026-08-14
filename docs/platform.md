@@ -20,9 +20,11 @@ The host uses separate local and boat-facing network roles. Stable device
 identity uses serials, USB attributes, udev aliases, and explicit network
 endpoints. A changing `/dev/ttyACM*` number or switch port is not itself a new
 identity. The runtime network contract places the sonar endpoint and host at
-`192.168.2.4` and `192.168.2.10`. The checked-in `01-netplan.yaml` template still
-places the sonar-facing interface on `192.168.0.0/24`; reconcile that template
-with the runtime contract before applying it or commissioning sonar.
+`192.168.2.4` and `192.168.2.10`; the checked-in `01-netplan.yaml` template now
+uses that same `192.168.2.0/24` subnet. Applying netplan remains an explicit
+operator action after verifying switch wiring, endpoint identity, and link state.
+The Heron-facing host address is `192.168.131.10`, matching the deployed
+networkd configuration; the base computer remains `192.168.131.1`.
 
 Camera serial files reserve one calibration record per physical camera. The
 current records are explicitly uncalibrated placeholders and must not be treated

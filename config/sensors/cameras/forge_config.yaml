@@ -27,7 +27,7 @@ line_mode: 'Output'
 # Four full-resolution streams can overload the link or driver during multi-sensor bringup.
 # The centered 640x512 ROI is an uncalibrated conservative runtime profile until real camera-info files are captured.
 acquisition_frame_rate_enable: true
-acquisition_frame_rate: 10.0
+acquisition_frame_rate: 5.0
 exposure_auto: Continuous
 auto_exposure_time_upper_limit: 10000.0
 auto_exposure_lighting_mode: Normal

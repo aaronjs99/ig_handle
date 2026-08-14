@@ -71,7 +71,7 @@ The encased MTi-30 synchronization contract accepts 0-0.8 V low and 2.5-20 V
 high on SyncIn/ClockSync; SyncOut is 0-0.4 V low and above 2.9 V high. Firmware
 cannot determine the selected MTi `SyncSettings`. The optional MCU output is
 only a time-event marker for the continuously sampled IMU; it must not select
-`StartSampling` or reduce navigation data to the camera's 10 Hz cadence. It
+`StartSampling` or reduce navigation data to the camera's current 5 Hz cadence. It
 therefore remains disabled until polarity, voltage, cable pin, the SyncIn event,
 the SyncOut feedback event, and a corresponding packet marker are independently
 verified in MT Manager.

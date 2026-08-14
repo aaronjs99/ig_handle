@@ -9,6 +9,11 @@
   <arg name="topic"                     default="image_raw"/>
   <arg name="camera_info_topic"         default="camera_info"/>
   <arg name="publish_debayered_color"   default="false"/>
+  <!-- The current driver polls optional GenICam properties in a separate tight
+       thread whenever /diagnostics has a subscriber. Forge cameras do not
+       expose every requested power field, and that polling races acquisition.
+       Keep it isolated unless the driver implementation is hardened. -->
+  <arg name="property_diagnostics_topic" default="/forge_property_diagnostics_disabled"/>
   <arg name="timeout"                   default="5.0"/>
   <arg name="startup_delay_sec"          default="0.0"/>
 
@@ -36,6 +41,7 @@
       
       <remap from="image_raw" to="$(arg topic)"/>
       <remap from="camera_info" to="$(arg camera_info_topic)"/>
+      <remap from="/diagnostics" to="$(arg property_diagnostics_topic)"/>
     </node>
 
     <!-- Optional color alias for viewers that cannot decode Bayer input. Keep it

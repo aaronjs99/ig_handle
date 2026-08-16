@@ -38,11 +38,13 @@ class DeltaTRunner:
         package_dir: Path,
         runtime_dir: Optional[Path] = None,
         binary_path: Optional[Path] = None,
+        executable_dir: Optional[Path] = None,
     ) -> None:
         self.package_dir = Path(package_dir)
         self.runtime_dir = runtime_dir or _default_runtime_dir()
-        self.binary_path = binary_path or (
-            self.package_dir / "scripts" / "sonar" / BINARY_NAME
+        self.binary_path = binary_path or _default_binary_path(
+            self.package_dir,
+            executable_dir=executable_dir,
         )
         self.runtime_binary = self.runtime_dir / BINARY_NAME
         self.runtime_ini = self.runtime_dir / RUNTIME_INI_NAME
@@ -170,6 +172,22 @@ def _default_runtime_dir() -> Path:
     if ros_home:
         return Path(ros_home) / RUNTIME_SUBDIR
     return Path.home() / ".ros" / RUNTIME_SUBDIR
+
+
+def _default_binary_path(
+    package_dir: Path, *, executable_dir: Optional[Path] = None
+) -> Path:
+    package_dir = Path(package_dir)
+    source_binary = package_dir / "scripts" / "sonar" / BINARY_NAME
+    if (package_dir / "CMakeLists.txt").is_file():
+        return source_binary
+
+    libexec_dir = (
+        Path(executable_dir)
+        if executable_dir is not None
+        else Path(sys.argv[0]).resolve().parent
+    )
+    return libexec_dir / BINARY_NAME
 
 
 def _env_true(name: str) -> bool:

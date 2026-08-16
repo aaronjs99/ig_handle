@@ -40,7 +40,7 @@ catkin_install_python(
 install(
   PROGRAMS
     scripts/sonar/Linux_DeltaT_v1023_x86_64
-  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/scripts/sonar
+  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
 install(

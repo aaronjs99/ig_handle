@@ -39,6 +39,6 @@ select a configured device; it must not invent those facts.
 | --- | --- | --- | --- |
 | .gitattributes | Defines repository text and binary path handling. | Git | Repository contributors |
 | .gitignore | Excludes generated IG Handle build and sensor artifacts. | Git | Repository contributors |
-| CMakeLists.txt | Builds only the package-owned sonar messages and installs sensor runtime scripts, contract helpers, and the pinned vendor executable in the standard package libexec directory. | catkin, ROS Noetic message generation | catkin build |
+| CMakeLists.txt | Builds package-owned sonar messages and installs sensor runtime scripts, contract helpers, launch/configuration resources, and the pinned vendor executable in the standard package libexec directory. | catkin, ROS Noetic message generation | catkin build and install |
 | LICENSE | Provides the repository-level MIT license terms. | None | Repository users and redistributors |
 | package.xml | Declares ROS package metadata and sensor dependencies. | ROS Noetic | catkin and rosdep |

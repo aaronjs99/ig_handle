@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """Send Xsens bootloader wake-up bytes for supervised hardware recovery only.
 
 This standalone utility writes directly to the attached USB device. It is not a

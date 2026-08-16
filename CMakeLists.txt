@@ -2,12 +2,8 @@ cmake_minimum_required(VERSION 3.0.2)
 project(ig_handle)
 
 find_package(catkin REQUIRED COMPONENTS
-  geometry_msgs
   message_generation
-  rospy
-  sensor_msgs
   std_msgs
-  tf2_ros
 )
 
 add_message_files(
@@ -48,7 +44,7 @@ install(
 )
 
 install(
-  PROGRAMS
+  FILES
     scripts/network_config.py
     scripts/sensor_contract.py
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/scripts

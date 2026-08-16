@@ -12,6 +12,8 @@
   <maintainer email="gearle@uwaterloo.ca">Gabe Earle</maintainer>
 
   <license>MIT</license>
+  <url type="repository">https://github.com/aaronjs99/ig_handle</url>
+  <url type="bugtracker">https://github.com/aaronjs99/ig_handle/issues</url>
   
   <buildtool_depend>catkin</buildtool_depend>
   

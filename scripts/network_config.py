@@ -7,9 +7,18 @@ import argparse
 from pathlib import Path
 from typing import Any, Dict, Tuple
 
+import rospkg
 import yaml
 
-PACKAGE_ROOT = Path(__file__).resolve().parents[1]
+
+def _package_root() -> Path:
+    source_root = Path(__file__).resolve().parents[1]
+    if (source_root / "package.xml").is_file():
+        return source_root
+    return Path(rospkg.RosPack().get_path("ig_handle")).resolve()
+
+
+PACKAGE_ROOT = _package_root()
 NETWORK_CONFIG = PACKAGE_ROOT / "config" / "network" / "sensor_network.yaml"
 
 KEY_PATHS: Dict[str, Tuple[str, ...]] = {

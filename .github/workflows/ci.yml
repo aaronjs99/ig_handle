@@ -1,0 +1,83 @@
+name: Source CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  source-contract:
+    runs-on: ubuntu-latest
+    container: ros:noetic-ros-base-focal
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 2
+      - name: Install source validators
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends git python3-yaml
+          rm -rf /var/lib/apt/lists/*
+      - name: Reject whitespace errors in the pushed change
+        shell: bash
+        run: |
+          if git rev-parse --verify HEAD^ >/dev/null 2>&1; then
+            git diff --check HEAD^ HEAD
+          else
+            empty_tree="$(git hash-object -t tree /dev/null)"
+            git diff --check "$empty_tree" HEAD
+          fi
+      - name: Validate tracked source and configuration files
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import ast
+          import json
+          import subprocess
+          import tokenize
+          import xml.etree.ElementTree as ET
+          from pathlib import Path
+
+          import yaml
+
+          tracked = subprocess.run(
+              ["git", "ls-files", "-z"],
+              check=True,
+              capture_output=True,
+          ).stdout.decode("utf-8").split("\0")
+          paths = [Path(value) for value in tracked if value]
+          caches = [
+              path.as_posix()
+              for path in paths
+              if "__pycache__" in path.parts or path.suffix in {".pyc", ".pyo"}
+          ]
+          if caches:
+              raise SystemExit("tracked Python cache artifacts: " + ", ".join(caches))
+
+          counts = {"json": 0, "python": 0, "shell": 0, "xml": 0, "yaml": 0}
+          xml_suffixes = {".launch", ".sdf", ".urdf", ".world", ".xacro", ".xml"}
+          for path in paths:
+              if not path.is_file():
+                  continue
+              if path.suffix == ".py":
+                  with tokenize.open(str(path)) as source_file:
+                      ast.parse(source_file.read(), filename=str(path))
+                  counts["python"] += 1
+              elif path.suffix in {".yaml", ".yml"}:
+                  list(yaml.safe_load_all(path.read_text(encoding="utf-8")))
+                  counts["yaml"] += 1
+              elif path.suffix == ".json":
+                  json.loads(path.read_text(encoding="utf-8"))
+                  counts["json"] += 1
+              elif path.suffix in xml_suffixes:
+                  ET.parse(str(path))
+                  counts["xml"] += 1
+              elif path.suffix == ".sh":
+                  subprocess.run(["bash", "-n", str(path)], check=True)
+                  counts["shell"] += 1
+
+          print("validated " + ", ".join(f"{key}={value}" for key, value in counts.items()))
+          PY

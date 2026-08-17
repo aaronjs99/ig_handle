@@ -24,12 +24,7 @@ jobs:
       - name: Reject whitespace errors in the pushed change
         shell: bash
         run: |
-          if git rev-parse --verify HEAD^ >/dev/null 2>&1; then
-            git diff --check HEAD^ HEAD
-          else
-            empty_tree="$(git hash-object -t tree /dev/null)"
-            git diff --check "$empty_tree" HEAD
-          fi
+          git diff-tree --check --root -r --no-commit-id HEAD
       - name: Validate tracked source and configuration files
         shell: bash
         run: |

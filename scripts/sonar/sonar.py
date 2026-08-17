@@ -27,9 +27,6 @@ def main(argv: Optional[Sequence[str]] = None) -> None:
     package_dir = _package_dir()
 
     command = COMMAND_ALIASES.get(app_args[0])
-    scripts_dir = package_dir / "scripts"
-    if str(scripts_dir) not in sys.path:
-        sys.path.insert(0, str(scripts_dir))
     sonar_script_dir = package_dir / "scripts" / "sonar"
     if str(sonar_script_dir) not in sys.path:
         sys.path.insert(0, str(sonar_script_dir))

@@ -11,7 +11,7 @@ from typing import Any, Dict, Iterable, List, Set
 
 import yaml
 
-from network_config import network_value
+from .network_config import network_value
 
 
 def launch_value(

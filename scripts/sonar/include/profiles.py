@@ -10,7 +10,7 @@ from typing import Optional
 
 import yaml
 
-from network_config import network_value
+from ig_handle_runtime.network_config import network_value
 
 
 @dataclass(frozen=True)

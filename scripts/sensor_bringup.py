@@ -15,8 +15,8 @@ import rospy
 import rospkg
 from std_msgs.msg import String
 
-from network_config import network_value
-from sensor_contract import (
+from ig_handle_runtime.network_config import network_value
+from ig_handle_runtime.sensor_contract import (
     load_contract,
     sensor_reachable,
     sensor_requested,

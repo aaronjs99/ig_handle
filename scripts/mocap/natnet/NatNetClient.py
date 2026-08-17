@@ -25,16 +25,11 @@ import threading  # type: ignore  # noqa F401
 import struct
 from threading import Thread
 import copy
-import os
 import time
 from . import DataDescriptions
 from . import MoCapData
 
-_SCRIPT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-if _SCRIPT_ROOT not in sys.path:
-    sys.path.insert(0, _SCRIPT_ROOT)
-
-from network_config import network_value
+from ig_handle_runtime.network_config import network_value
 
 
 def trace(*args):

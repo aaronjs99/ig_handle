@@ -14,7 +14,6 @@ from tf2_ros import TransformBroadcaster
 
 THIS_DIR = os.path.dirname(os.path.abspath(__file__))
 MODULE_DIRS = (
-    os.path.dirname(THIS_DIR),
     THIS_DIR,
     os.path.join(
         os.path.dirname(os.path.dirname(THIS_DIR)),
@@ -29,7 +28,7 @@ for module_dir in reversed(MODULE_DIRS):
         sys.path.insert(0, module_dir)
 
 from udp.datacollect import DatacollectUdpReceiver, as_bool
-from network_config import network_value
+from ig_handle_runtime.network_config import network_value
 
 
 def quat_xyzw(q):

@@ -39,6 +39,7 @@ select a configured device; it must not invent those facts.
 | --- | --- | --- | --- |
 | .gitattributes | Defines repository text and binary path handling. | Git | Repository contributors |
 | .gitignore | Excludes generated IG Handle build and sensor artifacts. | Git | Repository contributors |
-| CMakeLists.txt | Builds package-owned sonar messages and consistently installs executable sensor entrypoints, importable sibling contract helpers, launch/configuration resources, and the pinned vendor executable across devel and install spaces. | catkin, ROS Noetic message generation | catkin build and install spaces |
+| CMakeLists.txt | Builds package-owned sonar messages and installs executable sensor entrypoints, standard catkin Python contract modules, launch/configuration resources, and the pinned vendor executable across devel and install spaces. | catkin, ROS Noetic message generation, setup.py | catkin build and install spaces |
 | LICENSE | Provides the repository-level MIT license terms. | None | Repository users and redistributors |
 | package.xml | Declares ROS package metadata and sensor dependencies. | ROS Noetic | catkin and rosdep |
+| setup.py | Installs the reusable `ig_handle_runtime` network and sensor-contract package on the standard source/devel/install Python path. | catkin_pkg, scripts/ig_handle_runtime | CMakeLists.txt, IG Handle and GRANDE Python consumers |

@@ -24,6 +24,7 @@ jobs:
       - name: Reject whitespace errors in the pushed change
         shell: bash
         run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
           git diff-tree --check --root -r --no-commit-id HEAD
       - name: Validate tracked source and configuration files
         shell: bash

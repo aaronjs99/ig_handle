@@ -13,14 +13,14 @@ jobs:
     runs-on: ubuntu-latest
     container: ros:noetic-ros-base-focal
     steps:
-      - uses: actions/checkout@v5
-        with:
-          fetch-depth: 2
       - name: Install source validators
         run: |
           apt-get update
           apt-get install -y --no-install-recommends git python3-yaml
           rm -rf /var/lib/apt/lists/*
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 2
       - name: Reject whitespace errors in the pushed change
         shell: bash
         run: |

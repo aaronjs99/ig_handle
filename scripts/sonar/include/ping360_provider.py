@@ -13,6 +13,7 @@ from typing import Dict, Optional, Tuple
 import rospy
 
 from ig_handle.msg import Ping360RawPacket, SonarDiagnostics, SonarProfile
+from ig_handle_runtime.parameters import strict_bool
 from .ping_protocol import (
     DEVICE_INFORMATION,
     PING360_AUTO_DEVICE_DATA,
@@ -40,13 +41,6 @@ class Counters:
     receive_timeouts: int = 0
 
 
-def _boolean_param(name: str, default: bool) -> bool:
-    value = rospy.get_param(name, default)
-    if not isinstance(value, bool):
-        raise ValueError("{} must be a boolean".format(name))
-    return value
-
-
 class Ping360Provider:
     """Publish lossless wire packets plus provider-neutral profiles."""
 
@@ -58,7 +52,10 @@ class Ping360Provider:
         self.operation_mode = str(
             rospy.get_param("~operation_mode", "identity")
         ).lower()
-        self.allow_active_transmit = _boolean_param("~allow_active_transmit", False)
+        self.allow_active_transmit = strict_bool(
+            rospy.get_param("~allow_active_transmit", False),
+            name="~allow_active_transmit",
+        )
         self.frame_id = str(rospy.get_param("~frame_id", "sonar_link"))
         self.extrinsic_revision = str(
             rospy.get_param("~extrinsic_revision", "") or ""

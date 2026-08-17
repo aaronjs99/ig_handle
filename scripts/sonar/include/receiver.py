@@ -14,6 +14,7 @@ from typing import Optional, Tuple
 import rospy
 from ig_handle.msg import SonarRawPacket as SonarRawPacketMessage
 from ig_handle_runtime.network_config import network_value
+from ig_handle_runtime.parameters import strict_bool
 
 
 @dataclass(frozen=True)
@@ -35,8 +36,14 @@ class SonarRawReceiver:
         )
         self.provider = str(rospy.get_param("~provider", "imagenex_udp"))
         self.model = str(rospy.get_param("~model", "unknown"))
-        self.hardware_commissioned = _boolean_param("~hardware_commissioned", False)
-        self.require_expected_source = _boolean_param("~require_expected_source", False)
+        self.hardware_commissioned = strict_bool(
+            rospy.get_param("~hardware_commissioned", False),
+            name="~hardware_commissioned",
+        )
+        self.require_expected_source = strict_bool(
+            rospy.get_param("~require_expected_source", False),
+            name="~require_expected_source",
+        )
         self.expected_source_ip = str(
             rospy.get_param("~expected_source_ip", "") or ""
         ).strip()
@@ -166,13 +173,6 @@ class SonarRawReceiver:
             self.socket.close()
         except OSError:
             pass
-
-
-def _boolean_param(name: str, default: bool) -> bool:
-    value = rospy.get_param(name, default)
-    if not isinstance(value, bool):
-        raise ValueError("{} must be a boolean".format(name))
-    return value
 
 
 def run():

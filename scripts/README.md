@@ -2,7 +2,6 @@
 
 | File | Relevance | Dependencies | Used by |
 | --- | --- | --- | --- |
-| ig_handle_runtime/ | Owns the importable network and sensor-contract implementation shared across source, devel, and install spaces. | PyYAML, rospkg, config/network/sensor_network.yaml, config/sensors/sensor_contract.yaml | setup.py, all IG Handle and GRANDE Python consumers |
 | network_config.py | Provides the `rosrun` command-line entrypoint for printing one canonical network-contract value. | ig_handle_runtime.network_config | operators, diagnostics |
 | network_launch_eval.py | Exposes selected network-contract values to roslaunch substitutions without source-path injection or duplicated addresses. | ig_handle_runtime.network_config, config/network/sensor_network.yaml | GRANDE bringup, launch/core/natnet_bridge.launch |
 | sensor_bringup.py | Selects, checks, starts, supervises, and reports contract-enabled physical sensor providers through the installed runtime package. | rospy, rospkg, ig_handle_runtime | CMake installation, launch/sensors.launch |

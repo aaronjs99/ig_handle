@@ -5,7 +5,6 @@ from __future__ import annotations
 
 import signal
 import subprocess
-import sys
 import time
 import json
 import os
@@ -16,12 +15,8 @@ import rospy
 import rospkg
 from std_msgs.msg import String
 
-SCRIPT_DIR = Path(__file__).resolve().parent
-if str(SCRIPT_DIR) not in sys.path:
-    sys.path.insert(0, str(SCRIPT_DIR))
-
-from network_config import network_value  # noqa: E402
-from sensor_contract import (  # noqa: E402
+from network_config import network_value
+from sensor_contract import (
     load_contract,
     sensor_reachable,
     sensor_requested,

@@ -51,19 +51,6 @@ install(
 )
 
 install(
-  DIRECTORY scripts/sonar/include/
-  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/scripts/sonar/include
-)
-
-install(
-  DIRECTORY
-    scripts/mocap/natnet
-    scripts/mocap/udp
-  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/scripts/mocap
-  USE_SOURCE_PERMISSIONS
-)
-
-install(
   DIRECTORY config launch
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
 )

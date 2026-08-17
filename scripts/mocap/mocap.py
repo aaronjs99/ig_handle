@@ -2,8 +2,6 @@
 """Bridge NatNet or DataCollect motion-capture observations into ROS topics."""
 
 import json
-import os
-import sys
 
 import rospy
 from geometry_msgs.msg import PoseStamped, TransformStamped
@@ -12,24 +10,9 @@ import sensor_msgs.point_cloud2 as pc2
 from std_msgs.msg import Header, String
 from tf2_ros import TransformBroadcaster
 
-THIS_DIR = os.path.dirname(os.path.abspath(__file__))
-MODULE_DIRS = (
-    THIS_DIR,
-    os.path.join(
-        os.path.dirname(os.path.dirname(THIS_DIR)),
-        "share",
-        "ig_handle",
-        "scripts",
-        "mocap",
-    ),
-)
-for module_dir in reversed(MODULE_DIRS):
-    if module_dir not in sys.path:
-        sys.path.insert(0, module_dir)
-
 from ig_handle_runtime.network_config import network_value
 from ig_handle_runtime.parameters import strict_bool
-from udp.datacollect import DatacollectUdpReceiver
+from ig_handle_mocap_udp.datacollect import DatacollectUdpReceiver
 
 
 def quat_xyzw(q):
@@ -104,7 +87,7 @@ class MocapBridge:
 
         self.client = None
         if self.transport == "natnet":
-            from natnet.NatNetClient import NatNetClient
+            from ig_handle_mocap_natnet.NatNetClient import NatNetClient
 
             self.client = NatNetClient()
 

@@ -7,7 +7,6 @@ import sys
 from pathlib import Path
 from typing import Optional, Sequence
 
-
 COMMAND_ALIASES = {
     "receiver": "receiver",
     "raw": "receiver",
@@ -27,22 +26,18 @@ def main(argv: Optional[Sequence[str]] = None) -> None:
     package_dir = _package_dir()
 
     command = COMMAND_ALIASES.get(app_args[0])
-    sonar_script_dir = package_dir / "scripts" / "sonar"
-    if str(sonar_script_dir) not in sys.path:
-        sys.path.insert(0, str(sonar_script_dir))
-
     if command == "receiver":
-        from include.receiver import run
+        from ig_handle_sonar.receiver import run
 
         run()
         return
     if command == "deltat":
-        from include.deltat_runner import run_cli
+        from ig_handle_sonar.deltat_runner import run_cli
 
         run_cli(app_args[1:], package_dir=package_dir)
         return
     if command == "ping360":
-        from include.ping360_provider import run
+        from ig_handle_sonar.ping360_provider import run
 
         run()
         return

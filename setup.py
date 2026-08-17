@@ -17,9 +17,13 @@ from distutils.core import setup
 
 from catkin_pkg.python_setup import generate_distutils_setup
 
-
 setup_args = generate_distutils_setup(
-    packages=["ig_handle_runtime"],
+    packages=[
+        "ig_handle_mocap_natnet",
+        "ig_handle_mocap_udp",
+        "ig_handle_runtime",
+        "ig_handle_sonar",
+    ],
     package_dir={"": "scripts"},
 )
 setup(**setup_args)

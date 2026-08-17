@@ -27,8 +27,9 @@ for module_dir in reversed(MODULE_DIRS):
     if module_dir not in sys.path:
         sys.path.insert(0, module_dir)
 
-from udp.datacollect import DatacollectUdpReceiver, as_bool
 from ig_handle_runtime.network_config import network_value
+from ig_handle_runtime.parameters import strict_bool
+from udp.datacollect import DatacollectUdpReceiver
 
 
 def quat_xyzw(q):
@@ -45,8 +46,9 @@ class MocapBridge:
         self.client_ip = rospy.get_param(
             "~client_ip", network_value("mocap_natnet_client_ip")
         )
-        self.natnet_use_multicast = as_bool(
-            rospy.get_param("~natnet_use_multicast", False)
+        self.natnet_use_multicast = strict_bool(
+            rospy.get_param("~natnet_use_multicast", False),
+            name="~natnet_use_multicast",
         )
         self.natnet_multicast_address = rospy.get_param(
             "~natnet_multicast_address",
@@ -54,7 +56,10 @@ class MocapBridge:
         ).strip()
         self.frame_id = rospy.get_param("~frame_id", "mocap_world")
         self.pub_prefix = rospy.get_param("~topic_prefix", "/mocap")
-        self.publish_tf = rospy.get_param("~publish_tf", True)
+        self.publish_tf = strict_bool(
+            rospy.get_param("~publish_tf", True),
+            name="~publish_tf",
+        )
         self.child_frame_prefix = rospy.get_param("~child_frame_prefix", "rigid_body_")
         self.datacollect_schema = rospy.get_param(
             "~datacollect_schema", "datacollect.heron.v1"
@@ -62,8 +67,9 @@ class MocapBridge:
         self.datacollect_source_ip = rospy.get_param(
             "~datacollect_source_ip", ""
         ).strip()
-        self.datacollect_reject_unexpected_source = as_bool(
-            rospy.get_param("~datacollect_reject_unexpected_source", False)
+        self.datacollect_reject_unexpected_source = strict_bool(
+            rospy.get_param("~datacollect_reject_unexpected_source", False),
+            name="~datacollect_reject_unexpected_source",
         )
         self.udp_bind_ip = rospy.get_param(
             "~udp_bind_ip", network_value("mocap_udp_bind_ip")

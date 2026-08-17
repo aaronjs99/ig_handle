@@ -7,13 +7,7 @@ import socket
 
 import rospy
 
-
-def as_bool(value):
-    if isinstance(value, bool):
-        return value
-    if isinstance(value, str):
-        return value.strip().lower() in {"1", "true", "yes", "on"}
-    return bool(value)
+from ig_handle_runtime.parameters import strict_bool
 
 
 def _finite(values):
@@ -84,7 +78,10 @@ class DatacollectUdpReceiver:
         self.port = int(port)
         self.schema = schema
         self.expected_source_ip = expected_source_ip
-        self.reject_unexpected_source = bool(reject_unexpected_source)
+        self.reject_unexpected_source = strict_bool(
+            reject_unexpected_source,
+            name="reject_unexpected_source",
+        )
         self.stale_timeout_sec = float(stale_timeout_sec)
         self.publish_status = publish_status
         self.publish_pose = publish_pose
@@ -163,8 +160,6 @@ class DatacollectUdpReceiver:
         rigid_body = heron.get("rigid_body", {})
         if not isinstance(rigid_body, dict):
             rigid_body = {}
-        tracking_valid = as_bool(heron.get("tracking_valid", False))
-
         if unexpected_source:
             rospy.logwarn_throttle(
                 5.0,
@@ -178,9 +173,30 @@ class DatacollectUdpReceiver:
                     "unexpected_source",
                     stamp,
                     source_address=source_address,
-                    tracking_valid=tracking_valid,
+                    tracking_valid=False,
                 )
                 return
+
+        try:
+            tracking_valid = strict_bool(
+                heron.get("tracking_valid", False),
+                name="heron.tracking_valid",
+            )
+        except ValueError as exc:
+            rospy.logwarn_throttle(
+                5.0,
+                "Ignoring datacollect mocap packet with invalid tracking state from %s: %s",
+                source_address,
+                exc,
+            )
+            self.publish_status(
+                packet,
+                "invalid_tracking_valid",
+                stamp,
+                source_address=source_address,
+                tracking_valid=False,
+            )
+            return
 
         self.publish_status(
             packet,

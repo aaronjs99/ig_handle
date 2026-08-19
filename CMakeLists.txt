@@ -9,6 +9,7 @@ catkin_python_setup()
 
 add_message_files(
   FILES
+    JkBmsDetails.msg
     Ping360RawPacket.msg
     SonarDiagnostics.msg
     SonarProfile.msg
@@ -34,6 +35,8 @@ catkin_install_python(
     scripts/network_config.py
     scripts/sensor_bringup.py
     scripts/teensy/teensy_rosserial_launcher.py
+    scripts/power/heron_sense_ingress.py
+    scripts/power/jk_bms_node.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 

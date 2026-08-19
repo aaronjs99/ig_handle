@@ -3,4 +3,5 @@
 | File | Relevance | Dependencies | Used by |
 | --- | --- | --- | --- |
 | natnet_bridge.launch | Selects NatNet or DataCollect UDP mocap transport, resolves configured endpoints, and publishes canonical mocap topics with stale-data handling. | config/network/sensor_network.yaml, config/runtime_surface.yaml, scripts/mocap/mocap.py, MARINER config evaluator | GRANDE bringup and mocap-assisted state review |
+| start_power.launch | Establishes the IG Handle-owned `/sense_heron` ingress and optionally starts the commissioned, read-only JK BMS provider for `/sense_ighandle` and its detailed companion topic. | scripts/power/, config/sensors/jk_bms.yaml, config/runtime_surface.yaml | GRANDE bringup |
 | start_rosserial.launch | Starts the conditional fail-stop Teensy launcher with bounded device/identity deadlines and canonical PPS, camera-time, IMU-time, and diagnostic-status topics. | /dev/teensy, commissioned firmware build ID, scripts/teensy/teensy_rosserial_launcher.py | GRANDE bringup and embedded timing acquisition |

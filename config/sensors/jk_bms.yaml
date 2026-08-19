@@ -1,0 +1,36 @@
+schema_version: 1
+
+# Commission only after the physical label/app Device Info page identifies the
+# exact model and its advertised MAC address. The node is read-only: its only
+# GATT writes are telemetry and device-information requests.
+enabled: false
+provider: jk_bms
+transport: ble
+protocol: jk02_32s
+adapter: hci0
+device_address: A4:C1:38:05:FF:A4
+expected_device_name: "512261K32000513"
+expected_model: JK-BD4A17S4P
+expected_hardware_version: 19H
+expected_software_version: "19.27"
+expected_serial_number: "512261K32000513"
+expected_manufacturing_date: "260524"
+expected_cell_count: 8
+chemistry: ncm_nca
+design_capacity_ah: 30.0
+frame_id: ighandle_battery_link
+service_uuid: 0000ffe0-0000-1000-8000-00805f9b34fb
+characteristic_uuid: 0000ffe1-0000-1000-8000-00805f9b34fb
+connect_timeout_sec: 10.0
+sample_timeout_sec: 5.0
+initial_query_delay_sec: 2.0
+request_period_sec: 10.0
+reconnect_delay_sec: 2.0
+cell_voltage_min_v: 2.0
+cell_voltage_max_v: 4.5
+pack_voltage_min_v: 12.0
+pack_voltage_max_v: 36.0
+temperature_min_c: -30.0
+temperature_max_c: 100.0
+pack_cell_sum_tolerance_v: 1.0
+read_only: true

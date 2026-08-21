@@ -113,12 +113,15 @@ sensor_contract:
     "1":
       label: Xsens IMU
       family: imu
+      lifecycle_owner: external_service
+      expected_publisher: /sensors/imu/driver
       dashboard_kind: imu
       dashboard_mode: ROS telemetry
       startup_order: 10
       default_requested: true
       reachability: device
       device_path: /dev/sensors/imu
+      device_identity_path: /dev/serial/by-id/usb-Xsens_MTi-30_AHRS_0368319D-if01-port0
       frame: imu_link
       topics:
         data: /sensors/imu/data
@@ -138,6 +141,10 @@ sensor_contract:
             field: frame
           port:
             field: device_path
+          node_name:
+            literal: driver
+          node_namespace:
+            literal: /sensors/imu
 
     "2":
       label: Horizontal VLP-16 LiDAR

@@ -32,6 +32,7 @@ catkin_install_python(
     scripts/frames/export.py
     scripts/frames/broadcast.py
     scripts/imu/force_wakeup.py
+    scripts/external_sensor_provider.py
     scripts/network_config.py
     scripts/sensor_bringup.py
     scripts/teensy/teensy_rosserial_launcher.py
@@ -54,6 +55,6 @@ install(
 )
 
 install(
-  DIRECTORY config launch
+  DIRECTORY config launch systemd
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
 )

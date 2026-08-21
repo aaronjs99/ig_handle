@@ -38,6 +38,24 @@ acquisition health into mission or actuator authority. GRANDE normally owns
 integrated recording; IG Handle can collect isolated raw evidence for hardware
 investigation.
 
+## IMU Ownership and Recovery
+
+GRANDE's canonical physical IMU is the serial-qualified Xsens MTi-30 on IG
+Handle. Sensor contract ID 1 binds serial `0368319D` to `/dev/sensors/imu`,
+publishes only below `/sensors/imu`, and is owned by the persistent
+`ig-handle-xsens.service`. The service waits without opening another device
+when the exact serial or physical Heron ROS master is unavailable. It restarts
+the provider after USB loss, stale output, driver exit, or ROS-master
+replacement and refuses duplicate publishers. `sensor_bringup` observes this
+external owner for readiness but never opens or stops its serial port.
+
+The stock Heron `/imu/*` and `/cv5/ros_mscl_node` surfaces describe an optional
+onboard MicroStrain installation. They are not aliases for the IG Handle Xsens.
+No Xsens topic is bridged into `/imu/data_raw`, and Xsens recovery grants no
+navigation or actuation authority. A Heron without the optional onboard sensor
+may retain inactive stock diagnostics, but GRANDE readiness uses the canonical
+`/sensors/imu/data` contract.
+
 The Teensy timing design and its disabled-by-default electrical gates are
 specified in [`sensor_timing.md`](sensor_timing.md). Host camera, LiDAR, and IMU
 acquisition remains continuous; the firmware's trigger scheduler is a future

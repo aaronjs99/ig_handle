@@ -13,6 +13,7 @@ from typing import Any, Dict, Iterable, List
 
 import rospy
 import rospkg
+import rosgraph
 from std_msgs.msg import String
 
 from ig_handle_runtime.network_config import network_value
@@ -43,6 +44,17 @@ def _bool_text(value: bool) -> str:
     return "true" if bool(value) else "false"
 
 
+def _current_reachability(
+    lifecycle_owner: str,
+    requested: bool,
+    initial_reachable: bool,
+    probe,
+) -> bool:
+    if requested and lifecycle_owner == "external_service":
+        return bool(probe())
+    return bool(initial_reachable)
+
+
 def _sensor_order(sensors: Dict[str, Any]) -> Iterable[str]:
     return sorted(
         sensors.keys(),
@@ -66,6 +78,7 @@ class SensorBringup:
         self.topic_last_message: Dict[str, float] = {}
         self.topic_subscribers = {}
         self.last_restart: Dict[str, float] = {}
+        self.master = rosgraph.Master(rospy.get_name())
         self.health_timeout_sec = float(rospy.get_param("~topic_timeout_sec", 5.0))
         self.restart_cooldown_sec = float(
             rospy.get_param("~restart_cooldown_sec", 10.0)
@@ -102,12 +115,24 @@ class SensorBringup:
             self.sensor_selection[sensor_id] = {
                 "requested": bool(enabled),
                 "reachable": bool(reachable),
+                "lifecycle_owner": self._lifecycle_owner(sensor),
             }
             rospy.set_param(f"/ig_handle/sensors/{sensor_id}/requested", bool(enabled))
             rospy.set_param(
                 f"/ig_handle/sensors/{sensor_id}/reachable", bool(reachable)
             )
             rospy.set_param(f"/ig_handle/sensors/{sensor_id}/enabled", bool(reachable))
+            lifecycle_owner = self._lifecycle_owner(sensor)
+            if lifecycle_owner == "external_service":
+                if not str(sensor.get("expected_publisher", "") or "").strip():
+                    raise RuntimeError(
+                        "externally owned sensor {} requires expected_publisher".format(
+                            sensor_id
+                        )
+                    )
+                self.process_started[sensor_id] = time.monotonic()
+                self._subscribe_sensor_topics(sensor_id, sensor)
+                continue
             if not reachable:
                 rospy.loginfo(
                     "sensor_bringup skipping id=%s requested=%s reachable=%s",
@@ -116,6 +141,7 @@ class SensorBringup:
                     _bool_text(reachable),
                 )
                 continue
+            self.process_started[sensor_id] = time.monotonic()
             self._launch_sensor(sensor_id, sensor)
             self._subscribe_sensor_topics(sensor_id, sensor)
         self._publish_health()
@@ -149,6 +175,12 @@ class SensorBringup:
         self.processes.clear()
 
     def _launch_sensor(self, sensor_id: str, sensor: Dict[str, Any]) -> None:
+        if self._lifecycle_owner(sensor) != "sensor_bringup":
+            raise RuntimeError(
+                "sensor_bringup cannot launch externally owned sensor {}".format(
+                    sensor_id
+                )
+            )
         launch = dict(sensor.get("launch", {}) or {})
         launch_file = _resolve_package_uri(self.package_root, launch.get("file", ""))
         if not launch_file:
@@ -303,20 +335,88 @@ class SensorBringup:
     def _publish_health(self) -> None:
         sensors = dict(self.contract.get("sensors", {}) or {})
         now = time.monotonic()
+        publisher_graph = self._publisher_graph()
         status = {}
         for sensor_id, selection in self.sensor_selection.items():
             sensor = sensors.get(sensor_id, {})
             requested = bool(selection.get("requested", False))
-            reachable = bool(selection.get("reachable", False))
+            lifecycle_owner = str(selection.get("lifecycle_owner", ""))
+            reachable = _current_reachability(
+                lifecycle_owner,
+                requested,
+                bool(selection.get("reachable", False)),
+                lambda: sensor_reachable(
+                    self.contract,
+                    self.package_root,
+                    sensor_id,
+                    self.reachability_check,
+                ),
+            )
+            if requested and lifecycle_owner == "external_service":
+                selection["reachable"] = bool(reachable)
+                rospy.set_param(
+                    f"/ig_handle/sensors/{sensor_id}/reachable", bool(reachable)
+                )
+                rospy.set_param(
+                    f"/ig_handle/sensors/{sensor_id}/enabled", bool(reachable)
+                )
+            else:
+                reachable = bool(selection.get("reachable", False))
             proc = self.processes.get(sensor_id)
-            alive = proc is not None and proc.poll() is None
-            topics = self._required_topics(sensor) if requested and reachable else []
+            topics = (
+                self._required_topics(sensor)
+                if requested and (reachable or lifecycle_owner == "external_service")
+                else []
+            )
+            topic_status = {
+                topic: (
+                    {
+                        "state": (
+                            "fresh"
+                            if now - observed <= self.health_timeout_sec
+                            else "stale"
+                        ),
+                        "age_sec": round(max(0.0, now - observed), 3),
+                    }
+                    if (observed := self.topic_last_message.get(topic)) is not None
+                    else {"state": "never_seen", "age_sec": None}
+                )
+                for topic in topics
+            }
+            expected_publisher = str(sensor.get("expected_publisher", "") or "").strip()
+            observed_publishers = {
+                topic: sorted((publisher_graph or {}).get(topic, set()))
+                for topic in topics
+            }
+            topics_fresh = bool(topics) and all(
+                topic_status[topic]["state"] == "fresh" for topic in topics
+            )
+            publisher_valid = bool(
+                publisher_graph is not None
+                and expected_publisher
+                and all(
+                    set(observed_publishers[topic]) == {expected_publisher}
+                    for topic in topics
+                )
+            )
+            if lifecycle_owner == "external_service":
+                alive = bool(reachable and topics_fresh and publisher_valid)
+            else:
+                alive = proc is not None and proc.poll() is None
             if not requested:
                 state = "not_requested"
             elif not reachable:
                 state = "unreachable"
+            elif lifecycle_owner == "external_service" and not topics_fresh:
+                state = "external_topic_stale"
+            elif lifecycle_owner == "external_service" and not publisher_valid:
+                state = "external_publisher_invalid"
             elif alive:
-                state = "running"
+                state = (
+                    "external_running"
+                    if lifecycle_owner == "external_service"
+                    else "running"
+                )
             else:
                 state = "exited"
             status[sensor_id] = {
@@ -324,28 +424,34 @@ class SensorBringup:
                 "reachable": reachable,
                 "alive": alive,
                 "state": state,
+                "lifecycle_owner": lifecycle_owner,
+                "expected_publisher": expected_publisher or None,
+                "observed_publishers": observed_publishers,
                 "age_sec": (
                     round(now - self.process_started.get(sensor_id, now), 3)
-                    if proc is not None
+                    if reachable
                     else None
                 ),
-                "topics": {
-                    topic: (
-                        {
-                            "state": (
-                                "fresh"
-                                if now - observed <= self.health_timeout_sec
-                                else "stale"
-                            ),
-                            "age_sec": round(now - observed, 3),
-                        }
-                        if (observed := self.topic_last_message.get(topic)) is not None
-                        else {"state": "never_seen", "age_sec": None}
-                    )
-                    for topic in topics
-                },
+                "topics": topic_status,
             }
         self.health_pub.publish(String(data=json.dumps(status, sort_keys=True)))
+
+    @staticmethod
+    def _lifecycle_owner(sensor: Dict[str, Any]) -> str:
+        owner = str(sensor.get("lifecycle_owner", "sensor_bringup") or "").strip()
+        if owner not in {"sensor_bringup", "external_service"}:
+            raise RuntimeError("unsupported sensor lifecycle_owner: {}".format(owner))
+        return owner
+
+    def _publisher_graph(self):
+        try:
+            publishers, _subscribers, _services = self.master.getSystemState()
+        except Exception as exc:
+            rospy.logerr_throttle(
+                5.0, "sensor_bringup could not inspect publisher graph: %s", exc
+            )
+            return None
+        return {topic: set(nodes) for topic, nodes in publishers}
 
     def contract_path_arg(self) -> str:
         if self.contract_file:

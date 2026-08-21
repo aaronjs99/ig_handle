@@ -5,8 +5,11 @@
   <arg name="baudrate" default="115200"/>
   <arg name="scan_for_devices" default="false"/>
   <arg name="frame_id" default="imu_link"/>
+  <arg name="node_name" default="driver"/>
+  <arg name="node_namespace" default="/sensors/imu"/>
 
-  <node name="driver" pkg="xsens_mti_driver" type="xsens_mti_node" output="screen">
+  <node name="$(arg node_name)" ns="$(arg node_namespace)"
+        pkg="xsens_mti_driver" type="xsens_mti_node" output="screen">
     <param name="port" value="$(arg port)"/>
     <param name="baudrate" value="$(arg baudrate)"/>
     <param name="scan_for_devices" value="$(arg scan_for_devices)"/>
@@ -15,5 +18,10 @@
     <param name="pub_transform" value="false"/>
     <remap from="imu/data"             to="$(arg topic)"/>
     <remap from="imu/time"             to="$(arg time_topic)"/>
+    <remap from="imu/time_ref"         to="$(arg time_topic)"/>
+    <remap from="imu/mag"              to="/sensors/imu/mag"/>
+    <remap from="imu/acceleration"     to="/sensors/imu/acceleration"/>
+    <remap from="imu/angular_velocity" to="/sensors/imu/angular_velocity"/>
+    <remap from="filter/quaternion"    to="/sensors/imu/filter/quaternion"/>
   </node>
 </launch>

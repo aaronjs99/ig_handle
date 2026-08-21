@@ -1,0 +1,24 @@
+[Unit]
+Description=Persistent serial-qualified GRANDE Xsens IMU provider
+After=network-online.target
+Wants=network-online.target
+StartLimitIntervalSec=600
+StartLimitBurst=20
+
+[Service]
+Type=simple
+User=ig-handle
+Group=ig-handle
+SupplementaryGroups=dialout
+Environment=PYTHONDONTWRITEBYTECODE=1
+Environment=GRANDE_WORKSPACE_SETUP=/home/ig-handle/catkin_ws/heron_ws/devel/setup.bash
+EnvironmentFile=-/home/ig-handle/.config/grande/environment
+ExecStart=/bin/bash -lc 'set -Ee -o pipefail; source /opt/ros/noetic/setup.bash; if [ -r "$${GRANDE_WORKSPACE_SETUP}" ]; then source "$${GRANDE_WORKSPACE_SETUP}"; fi; exec rosrun ig_handle external_sensor_provider.py --sensor-id 1'
+Restart=on-failure
+RestartSec=5
+KillMode=control-group
+TimeoutStopSec=15
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

@@ -39,7 +39,7 @@ select a configured device; it must not invent those facts.
 | --- | --- | --- | --- |
 | .gitattributes | Defines repository text and binary path handling. | Git | Repository contributors |
 | .gitignore | Excludes generated IG Handle build and sensor artifacts. | Git | Repository contributors |
-| CMakeLists.txt | Builds package-owned power and sonar messages and installs executable sensor entrypoints, standard catkin Python runtime packages, launch/configuration resources, and the pinned vendor executable across devel and install spaces. | catkin, ROS Noetic message generation, setup.py | catkin build and install spaces |
+| CMakeLists.txt | Builds package-owned messages and installs sensor entrypoints, runtime modules, launch/configuration resources, persistent service definitions, and the pinned vendor executable across devel and install spaces. | catkin, ROS Noetic message generation, setup.py | catkin build and install spaces |
 | LICENSE | Provides the repository-level MIT license terms. | None | Repository users and redistributors |
 | package.xml | Declares ROS package metadata plus power, Bluetooth, and sensor dependencies. | ROS Noetic, BlueZ D-Bus, GLib | catkin and rosdep |
 | setup.py | Installs the reusable `ig_handle_runtime`, `ig_handle_sonar`, `ig_handle_power`, and mocap transport packages on the standard source/devel/install Python path. | catkin_pkg, scripts/ig_handle_runtime, scripts/ig_handle_sonar, scripts/ig_handle_power, scripts/ig_handle_mocap_natnet, scripts/ig_handle_mocap_udp | CMakeLists.txt, IG Handle and GRANDE Python consumers |

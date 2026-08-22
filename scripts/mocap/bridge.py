@@ -10,9 +10,9 @@ import sensor_msgs.point_cloud2 as pc2
 from std_msgs.msg import Header, String
 from tf2_ros import TransformBroadcaster
 
-from ig_handle_runtime.network_config import network_value
-from ig_handle_runtime.parameters import strict_bool
-from ig_handle_mocap_udp.datacollect import DatacollectUdpReceiver
+from sensors.network import network_value
+from sensors.parameters import strict_bool
+from mocap.udp.datacollect import DatacollectUdpReceiver
 
 
 def quat_xyzw(q):
@@ -87,7 +87,7 @@ class MocapBridge:
 
         self.client = None
         if self.transport == "natnet":
-            from ig_handle_mocap_natnet.NatNetClient import NatNetClient
+            from mocap.natnet.NatNetClient import NatNetClient
 
             self.client = NatNetClient()
 

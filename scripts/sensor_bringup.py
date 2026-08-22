@@ -16,8 +16,8 @@ import rospkg
 import rosgraph
 from std_msgs.msg import String
 
-from ig_handle_runtime.network_config import network_value
-from ig_handle_runtime.sensor_contract import (
+from sensors.network import network_value
+from sensors.contracts import (
     load_contract,
     sensor_reachable,
     sensor_requested,
@@ -474,6 +474,18 @@ class SensorBringup:
                 return str(
                     network_value(
                         str(endpoint_key or ""),
+                        package_root=self.package_root,
+                        default="",
+                    )
+                    or ""
+                )
+            if "network_field" in spec:
+                network_key = sensor_value(
+                    self.contract, sensor_id, str(spec["network_field"]), ""
+                )
+                return str(
+                    network_value(
+                        str(network_key or ""),
                         package_root=self.package_root,
                         default="",
                     )

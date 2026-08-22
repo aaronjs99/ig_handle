@@ -13,8 +13,8 @@ from typing import Optional, Tuple
 
 import rospy
 from ig_handle.msg import SonarRawPacket as SonarRawPacketMessage
-from ig_handle_runtime.network_config import network_value
-from ig_handle_runtime.parameters import strict_bool
+from sensors.network import network_value
+from sensors.parameters import strict_bool
 
 
 @dataclass(frozen=True)

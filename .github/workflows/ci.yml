@@ -1,4 +1,4 @@
-name: Source CI
+name: Product CI
 
 on:
   push:
@@ -9,29 +9,31 @@ permissions:
   contents: read
 
 jobs:
-  source-contract:
+  validate-build:
     runs-on: ubuntu-latest
     container: ros:noetic-ros-base-focal
     steps:
-      - name: Install source validators
+      - name: Install validation and build tools
         run: |
           apt-get update
-          apt-get install -y --no-install-recommends git python3-yaml
-          rm -rf /var/lib/apt/lists/*
+          apt-get install -y --no-install-recommends \
+            build-essential git python3-catkin-tools python3-pip python3-rosdep python3-yaml
+          python3 -m pip install --no-cache-dir black==24.8.0
       - uses: actions/checkout@v5
         with:
+          path: catkin_ws/src/ig_handle
           fetch-depth: 2
-      - name: Reject whitespace errors in the pushed change
+      - name: Validate source contracts
         shell: bash
+        working-directory: catkin_ws/src/ig_handle
         run: |
-          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          git config --global --add safe.directory "$PWD"
           git diff-tree --check --root -r --no-commit-id HEAD
-      - name: Validate tracked source and configuration files
-        shell: bash
-        run: |
+          export PYTHONPYCACHEPREFIX=/tmp/ig-handle-product-ci-pycache
           python3 - <<'PY'
           import ast
           import json
+          import py_compile
           import subprocess
           import tokenize
           import xml.etree.ElementTree as ET
@@ -40,20 +42,30 @@ jobs:
           import yaml
 
           tracked = subprocess.run(
-              ["git", "ls-files", "-z"],
-              check=True,
-              capture_output=True,
+              ["git", "ls-files", "-z"], check=True, capture_output=True
           ).stdout.decode("utf-8").split("\0")
           paths = [Path(value) for value in tracked if value]
           caches = [
               path.as_posix()
               for path in paths
-              if "__pycache__" in path.parts or path.suffix in {".pyc", ".pyo"}
+              if any(
+                  part in {"__pycache__", ".pytest_cache", ".ruff_cache"}
+                  for part in path.parts
+              )
+              or path.suffix in {".pyc", ".pyo"}
           ]
           if caches:
               raise SystemExit("tracked Python cache artifacts: " + ", ".join(caches))
-
-          counts = {"json": 0, "python": 0, "shell": 0, "xml": 0, "yaml": 0}
+          test_paths = [
+              path.as_posix()
+              for path in paths
+              if any(part in {"test", "tests"} for part in path.parts)
+              or path.name.startswith("test_")
+              or path.name.endswith("_test.py")
+              or path.name in {"conftest.py", "pytest.ini"}
+          ]
+          if test_paths:
+              raise SystemExit("tracked package-local tests: " + ", ".join(test_paths))
           xml_suffixes = {".launch", ".sdf", ".urdf", ".world", ".xacro", ".xml"}
           for path in paths:
               if not path.is_file():
@@ -61,19 +73,37 @@ jobs:
               if path.suffix == ".py":
                   with tokenize.open(str(path)) as source_file:
                       ast.parse(source_file.read(), filename=str(path))
-                  counts["python"] += 1
+                  py_compile.compile(str(path), doraise=True)
               elif path.suffix in {".yaml", ".yml"}:
                   list(yaml.safe_load_all(path.read_text(encoding="utf-8")))
-                  counts["yaml"] += 1
               elif path.suffix == ".json":
                   json.loads(path.read_text(encoding="utf-8"))
-                  counts["json"] += 1
               elif path.suffix in xml_suffixes:
                   ET.parse(str(path))
-                  counts["xml"] += 1
               elif path.suffix == ".sh":
                   subprocess.run(["bash", "-n", str(path)], check=True)
-                  counts["shell"] += 1
-
-          print("validated " + ", ".join(f"{key}={value}" for key, value in counts.items()))
           PY
+          python3 -m black --check setup.py scripts \
+            --extend-exclude 'scripts/mocap/natnet/NatNetClient.py'
+      - name: Install build dependencies
+        shell: bash
+        run: |
+          rosdep init 2>/dev/null || true
+          rosdep update --include-eol-distros --rosdistro noetic
+          rosdep install --from-paths catkin_ws/src/ig_handle \
+            --ignore-src -r -y --rosdistro noetic \
+            -t buildtool -t build -t build_export
+      - name: Build without tests
+        shell: bash
+        working-directory: catkin_ws
+        run: |
+          . /opt/ros/noetic/setup.sh
+          catkin config --extend /opt/ros/noetic --link-devel \
+            --cmake-args -DCMAKE_BUILD_TYPE=Release -DCATKIN_ENABLE_TESTING=OFF
+          set -o pipefail
+          catkin build ig_handle --no-deps --no-status --summarize \
+            2>&1 | tee /tmp/ig-handle-product-build.log
+          if grep -Ei 'warning:|CMake Warning|Warnings <<' /tmp/ig-handle-product-build.log; then
+            echo "IG Handle build emitted warnings." >&2
+            exit 1
+          fi

@@ -10,8 +10,8 @@ import rospy
 from sensor_msgs.msg import BatteryState
 
 from ig_handle.msg import JkBmsDetails
-from ig_handle_power.bluez_ble import BluezBleClient, BluezError
-from ig_handle_power.jk_bms_protocol import (
+from power.bluez_ble import BluezBleClient, BluezError
+from power.jk_bms_protocol import (
     DeviceInfo,
     FrameAssembler,
     JkBmsDecoder,

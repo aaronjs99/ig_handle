@@ -19,11 +19,12 @@ from catkin_pkg.python_setup import generate_distutils_setup
 
 setup_args = generate_distutils_setup(
     packages=[
-        "ig_handle_mocap_natnet",
-        "ig_handle_mocap_udp",
-        "ig_handle_power",
-        "ig_handle_runtime",
-        "ig_handle_sonar",
+        "mocap",
+        "mocap.natnet",
+        "mocap.udp",
+        "power",
+        "sensors",
+        "sonar",
     ],
     package_dir={"": "scripts"},
 )

@@ -7,7 +7,7 @@ import socket
 
 import rospy
 
-from ig_handle_runtime.parameters import strict_bool
+from sensors.parameters import strict_bool
 
 
 def _finite(values):

@@ -154,7 +154,7 @@ def run_cli(argv: Sequence[str], *, package_dir: Path) -> None:
 
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        prog="sonar.py deltat",
+        prog="provider.py deltat",
         description="Generate Linux_DeltaT.INI from sonar config and exec DeltaT.",
     )
     parser.add_argument("--profile-config", default="")

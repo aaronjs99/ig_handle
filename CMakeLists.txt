@@ -27,8 +27,8 @@ catkin_package(
 
 catkin_install_python(
   PROGRAMS
-    scripts/sonar/sonar.py
-    scripts/mocap/mocap.py
+    scripts/sonar/provider.py
+    scripts/mocap/bridge.py
     scripts/frames/export.py
     scripts/frames/broadcast.py
     scripts/imu/force_wakeup.py
@@ -45,13 +45,6 @@ install(
   PROGRAMS
     scripts/sonar/Linux_DeltaT_v1023_x86_64
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
-)
-
-install(
-  FILES
-    scripts/network_launch_eval.py
-    scripts/sensor_contract_launch_eval.py
-  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/scripts
 )
 
 install(

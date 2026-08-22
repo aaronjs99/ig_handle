@@ -1,4 +1,4 @@
-﻿# =============================================================================
+# =============================================================================
 # Copyright © 2025 NaturalPoint, Inc. All Rights Reserved.
 #
 # THIS SOFTWARE IS GOVERNED BY THE OPTITRACK PLUGINS EULA AVAILABLE AT
@@ -29,7 +29,7 @@ import time
 from . import DataDescriptions
 from . import MoCapData
 
-from ig_handle_runtime.network_config import network_value
+from sensors.network import network_value
 
 
 def trace(*args):

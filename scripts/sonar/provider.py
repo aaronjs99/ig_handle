@@ -27,17 +27,17 @@ def main(argv: Optional[Sequence[str]] = None) -> None:
 
     command = COMMAND_ALIASES.get(app_args[0])
     if command == "receiver":
-        from ig_handle_sonar.receiver import run
+        from sonar.receiver import run
 
         run()
         return
     if command == "deltat":
-        from ig_handle_sonar.deltat_runner import run_cli
+        from sonar.deltat_runner import run_cli
 
         run_cli(app_args[1:], package_dir=package_dir)
         return
     if command == "ping360":
-        from ig_handle_sonar.ping360_provider import run
+        from sonar.ping360_provider import run
 
         run()
         return
@@ -67,7 +67,7 @@ def _package_dir() -> Path:
 
 def _print_usage() -> None:
     print(
-        "Usage: sonar.py {receiver|deltat|ping360} [args]\n"
+        "Usage: provider.py {receiver|deltat|ping360} [args]\n"
         "\n"
         "Commands:\n"
         "  receiver  Publish raw vendor UDP datagrams on /sensors/sonar/raw.\n"

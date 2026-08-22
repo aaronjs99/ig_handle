@@ -1,6 +1,6 @@
 # Local ignores
 .vscode/
-scripts/ig_handle_mocap_natnet/natnet_sdk_*/
+scripts/mocap/natnet/natnet_sdk_*/
 
 # Python
 # Byte-compiled / optimized / DLL files

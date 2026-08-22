@@ -21,8 +21,8 @@ import rospy
 import rospkg
 from sensor_msgs.msg import Imu
 
-from ig_handle_runtime.network_config import network_value
-from ig_handle_runtime.sensor_contract import load_contract, sensor_value
+from sensors.network import network_value
+from sensors.contracts import load_contract, sensor_value
 
 
 TEMPORARY_FAILURE = 75

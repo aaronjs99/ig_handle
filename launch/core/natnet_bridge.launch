@@ -1,16 +1,13 @@
 <launch>
-  <arg name="config_eval"
-       default="$(eval open(find('mariner') + '/launch/include/config_launch_eval.py').read())"/>
-  <arg name="runtime_surface_file" default="$(find ig_handle)/config/runtime_surface.yaml"/>
   <!-- Network configuration. NatNet defaults preserve the existing direct
        server/client behavior; set natnet_use_multicast:=true when Motive is
        configured for multicast streaming. -->
   <arg name="transport" default="natnet"/>
-  <arg name="server_ip" default="$(eval eval(open(find('ig_handle') + '/scripts/network_launch_eval.py').read())(find('ig_handle'), 'mocap_natnet_server_ip'))"/>
-  <arg name="client_ip" default="$(eval eval(open(find('ig_handle') + '/scripts/network_launch_eval.py').read())(find('ig_handle'), 'mocap_natnet_client_ip'))"/>
+  <arg name="server_ip" default="192.168.1.199"/>
+  <arg name="client_ip" default="192.168.1.8"/>
   <arg name="natnet_use_multicast" default="false"/>
-  <arg name="natnet_multicast_address" default="$(eval eval(open(find('ig_handle') + '/scripts/network_launch_eval.py').read())(find('ig_handle'), 'mocap_natnet_multicast_address'))"/>
-  <arg name="udp_bind_ip" default="$(eval eval(open(find('ig_handle') + '/scripts/network_launch_eval.py').read())(find('ig_handle'), 'mocap_udp_bind_ip'))"/>
+  <arg name="natnet_multicast_address" default="239.255.42.99"/>
+  <arg name="udp_bind_ip" default="0.0.0.0"/>
   <arg name="udp_port" default="5005"/>
 
   <!-- ROS topic and frame mapping. -->
@@ -21,17 +18,17 @@
   <arg name="child_frame_prefix" default="rigid_body_"/>
   <arg name="stale_timeout_sec" default="1.0"/>
 
-  <arg name="heron_pose_topic" default="$(eval eval(arg('config_eval'))(arg('runtime_surface_file'), 'topics.mocap_pose'))"/>
-  <arg name="markers_topic" default="$(eval eval(arg('config_eval'))(arg('runtime_surface_file'), 'topics.mocap_markers'))"/>
-  <arg name="potential_objects_topic" default="$(eval eval(arg('config_eval'))(arg('runtime_surface_file'), 'topics.mocap_potential_objects'))"/>
-  <arg name="status_topic" default="$(eval eval(arg('config_eval'))(arg('runtime_surface_file'), 'topics.mocap_status'))"/>
+  <arg name="heron_pose_topic" default="/mocap/heron/pose"/>
+  <arg name="markers_topic" default="/mocap/heron/markers"/>
+  <arg name="potential_objects_topic" default="/mocap/potential_objects"/>
+  <arg name="status_topic" default="/mocap/datacollect_status"/>
 
   <!-- Datacollect UDP options. Used only with transport:=datacollect_udp. -->
   <arg name="datacollect_schema" default="datacollect.heron.v1"/>
   <arg name="datacollect_source_ip" default=""/>
   <arg name="datacollect_reject_unexpected_source" default="false"/>
 
-  <node pkg="ig_handle" type="mocap.py" name="mocap_bridge" output="screen">
+  <node pkg="ig_handle" type="bridge.py" name="mocap_bridge" output="screen">
     <param name="transport" value="$(arg transport)"/>
     <param name="server_ip" value="$(arg server_ip)"/>
     <param name="client_ip" value="$(arg client_ip)"/>

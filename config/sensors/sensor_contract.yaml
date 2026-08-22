@@ -451,14 +451,12 @@ sensor_contract:
       launch:
         file: package://ig_handle/launch/sensors/start_sonar.launch
         args:
-          sensor_contract_file:
-            contract_file: true
-          sensor_reachability_check:
-            reachability_check: true
           sensor_id:
             sensor_id: true
           raw_topic:
             field: topics.raw
+          udp_port:
+            field: udp_port
           dt100_frame:
             field: interfaces.imagenex_dt100.frame
           dt100_extrinsic_revision:
@@ -469,6 +467,18 @@ sensor_contract:
             field: interfaces.imagenex_dt100.expected_udp_source_ip
           dt100_expected_udp_source_port:
             field: interfaces.imagenex_dt100.expected_udp_source_port
+          bind_ip:
+            network_field: bind_ip_key
+          sonar_ip:
+            endpoint: true
+          udp_dest_ip:
+            network_field: udp_dest_ip_key
+          sonar_reachable:
+            literal: true
+          sonar_profile:
+            field: profile
+          sonar_profile_config:
+            field: profile_config
           ping360_frame:
             field: interfaces.blue_robotics_ping360.frame
           ping360_extrinsic_revision:

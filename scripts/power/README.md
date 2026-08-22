@@ -2,5 +2,8 @@
 
 | File | Relevance | Dependencies | Used by |
 | --- | --- | --- | --- |
-| heron_sense_ingress.py | Admits only the configured raw Heron MCU publisher and republishes finite electrical/RC telemetry on the IG Handle-owned `/sense_heron` boundary without changing the Heron. | rospy, heron_msgs/Sense | launch/core/start_power.launch, GRANDE runtime consumers |
-| jk_bms_node.py | Holds one commissioned, read-only JK BLE connection, admits the exact MAC/name/model/hardware/software/serial/date identity, and publishes standard `/sense_ighandle` battery state plus provenance-complete `/sense_ighandle/details`; publishes explicit unavailable state on identity, protocol, or freshness failure. | rospy, sensor_msgs/BatteryState, ig_handle/JkBmsDetails, ig_handle_power | launch/core/start_power.launch |
+| __init__.py | Declares the installed IG Handle power package. | Python | catkin Python packaging |
+| bluez_ble.py | Owns exact-address/name/service discovery, staged device-info then telemetry read queries, notification delivery, and reconnect behavior for the configured but not yet commissioned JK BMS candidate. | BlueZ D-Bus, GLib | scripts/power/jk_bms_node.py |
+| heron_sense_ingress.py | Republishes the admitted raw Heron MCU `Sense` stream on the canonical IG Handle topic after exact publisher and finite-value checks. | rospy, heron_msgs/Sense | GRANDE telemetry and actuator evidence paths |
+| jk_bms_node.py | Publishes read-only JK battery telemetry only from the configured device and protocol contract. | rospy, sensor_msgs/BatteryState, ig_handle/JkBmsDetails, bluez_ble.py, jk_bms_protocol.py | IG Handle power launch and GRANDE telemetry |
+| jk_bms_protocol.py | Strictly assembles and decodes the explicitly selected JK02 24S/32S read-only frame layout with checksum, identity, cell-count, named alarm/status, and physical-plausibility checks. | Python stdlib | scripts/power/jk_bms_node.py and GRANDE power contracts |

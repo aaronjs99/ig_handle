@@ -13,7 +13,7 @@ from typing import Dict, Optional, Tuple
 import rospy
 
 from ig_handle.msg import Ping360RawPacket, SonarDiagnostics, SonarProfile
-from ig_handle_runtime.parameters import strict_bool
+from sensors.parameters import strict_bool
 from .ping_protocol import (
     DEVICE_INFORMATION,
     PING360_AUTO_DEVICE_DATA,

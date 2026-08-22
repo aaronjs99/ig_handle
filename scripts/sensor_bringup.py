@@ -25,15 +25,6 @@ from sensors.contracts import (
 )
 
 
-def _csv_ids(value: str) -> List[str]:
-    ids: List[str] = []
-    for item in str(value or "").replace(";", ",").split(","):
-        item = item.strip()
-        if item and item not in ids:
-            ids.append(item)
-    return ids
-
-
 def _resolve_package_uri(package_root: str, value: Any) -> str:
     return str(value if value is not None else "").replace(
         "package://ig_handle", package_root

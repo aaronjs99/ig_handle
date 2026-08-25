@@ -70,9 +70,11 @@ software versions, serial number, and manufacturing date. Voltage, current, and
 charge behavior are measurements and never serve as identity. A host-wide lock
 prevents concurrent processes from owning the same BLE device, while periodic
 device-information queries re-establish that identity during continued
-telemetry acquisition. Standard state is published on `/sense_ighandle`; the
-paired `/sense_ighandle/details` record carries identity, raw pack and cell
-fields, status, alarms, counters, and provenance with the same timestamp.
+telemetry acquisition. The `/ighandle_jk_bms` node publishes standard state on
+`/sense_ighandle`; its paired `/sense_ighandle/details` record carries identity,
+raw pack and cell fields, status, alarms, counters, and provenance with the same
+timestamp. Fleet admission requires both synchronized messages to retain that
+exact caller identity; another publisher cannot establish compute-pack identity.
 
 `HERON-01` and `HERON-02` represent physical propulsion packs that the Heron MCU
 cannot identify electrically. They remain uncommissioned until the matching

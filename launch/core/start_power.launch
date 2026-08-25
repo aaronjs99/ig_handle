@@ -4,6 +4,7 @@
   <arg name="expected_heron_sense_publisher" default="/rosserial_server"/>
   <arg name="ighandle_bms_enabled" default="false"/>
   <arg name="ighandle_bms_config_file" default="$(find ig_handle)/config/sensors/jk_bms.yaml"/>
+  <arg name="battery_registry_file" default="$(find ig_handle)/config/sensors/battery_registry.yaml"/>
   <arg name="ighandle_sense_topic" default="/sense_ighandle"/>
   <arg name="ighandle_sense_details_topic" default="/sense_ighandle/details"/>
 
@@ -19,6 +20,7 @@
         name="ighandle_jk_bms" output="screen" required="true">
     <rosparam command="load" file="$(arg ighandle_bms_config_file)"/>
     <param name="enabled" type="bool" value="true"/>
+    <param name="battery_registry_file" value="$(arg battery_registry_file)"/>
     <param name="battery_topic" value="$(arg ighandle_sense_topic)"/>
     <param name="details_topic" value="$(arg ighandle_sense_details_topic)"/>
   </node>

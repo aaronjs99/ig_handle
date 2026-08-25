@@ -1,0 +1,15 @@
+schema_version: 1
+expected_battery_ids:
+  - HERON-01
+  - HERON-02
+  - IGHANDLE-01
+expected_roles:
+  HERON-01: propulsion
+  HERON-02: propulsion
+  IGHANDLE-01: compute
+expected_commissioned:
+  HERON-01: false
+  HERON-02: false
+  IGHANDLE-01: true
+expected_jk_battery_id: IGHANDLE-01
+unknown_jk_serial_number: UNKNOWN-SERIAL

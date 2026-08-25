@@ -10,6 +10,8 @@ import dbus
 from dbus.mainloop.glib import DBusGMainLoop
 from gi.repository import GLib
 
+from power.reconnect_guard import ReconnectRequest
+
 
 BLUEZ = "org.bluez"
 OBJECT_MANAGER = "org.freedesktop.DBus.ObjectManager"
@@ -79,6 +81,7 @@ class BluezBleClient:
         self.bus = dbus.SystemBus()
         self.manager = dbus.Interface(self.bus.get_object(BLUEZ, "/"), OBJECT_MANAGER)
         self._stop = threading.Event()
+        self._reconnect_request = ReconnectRequest()
         self._last_notification = 0.0
         self._notify_path = ""
         self._signal_match = None
@@ -94,6 +97,11 @@ class BluezBleClient:
             self._main_loop.quit()
         except Exception:
             pass
+
+    def request_reconnect(self, reason: str = "requested") -> None:
+        """Request a controlled disconnect/reconnect from a callback thread."""
+
+        self._reconnect_request.request(reason)
 
     def run(
         self,
@@ -121,6 +129,7 @@ class BluezBleClient:
                 adapter.StartDiscovery()
                 discovering = True
             while self.device_path not in self._objects():
+                self._raise_if_reconnect_requested()
                 if self._stop.is_set() or time.monotonic() >= deadline:
                     raise BluezError("configured BMS address was not discovered")
                 time.sleep(0.1)
@@ -136,6 +145,7 @@ class BluezBleClient:
         initial_queries: Tuple[bytes, ...],
         periodic_queries: Tuple[bytes, ...],
     ) -> None:
+        self._reconnect_request.reset()
         self._wait_for_device()
         device_object = self.bus.get_object(BLUEZ, self.device_path)
         device = dbus.Interface(device_object, DEVICE)
@@ -143,6 +153,7 @@ class BluezBleClient:
         device.Connect()
         deadline = time.monotonic() + self.connect_timeout_sec
         while not bool(properties.Get(DEVICE, "ServicesResolved")):
+            self._raise_if_reconnect_requested()
             if self._stop.is_set() or time.monotonic() >= deadline:
                 raise BluezError("BMS GATT services were not resolved")
             time.sleep(0.1)
@@ -168,10 +179,12 @@ class BluezBleClient:
         self._write_queries(writer, write_kind, initial_queries)
         if self._stop.wait(self.initial_query_delay_sec):
             return
+        self._raise_if_reconnect_requested()
         self._write_queries(writer, write_kind, periodic_queries)
         self.on_state(True, "connected")
         next_request = time.monotonic() + self.request_period_sec
         while not self._stop.wait(0.1):
+            self._raise_if_reconnect_requested()
             if not bool(properties.Get(DEVICE, "Connected")):
                 raise BluezError("BMS disconnected")
             now = time.monotonic()
@@ -180,6 +193,11 @@ class BluezBleClient:
             if now >= next_request:
                 self._write_queries(writer, write_kind, periodic_queries)
                 next_request = now + self.request_period_sec
+
+    def _raise_if_reconnect_requested(self) -> None:
+        requested, reason = self._reconnect_request.snapshot()
+        if requested:
+            raise BluezError("reconnect requested: {}".format(reason))
 
     @staticmethod
     def _write_queries(writer, write_kind: str, queries: Tuple[bytes, ...]) -> None:

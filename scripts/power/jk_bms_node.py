@@ -2,14 +2,18 @@
 """Publish read-only JK BMS telemetry as standard and detailed ROS messages."""
 
 import math
+import os
+import tempfile
 import threading
 import time
+from pathlib import Path
 from typing import Optional
 
 import rospy
 from sensor_msgs.msg import BatteryState
 
 from ig_handle.msg import JkBmsDetails
+from power.battery_registry import BatteryRegistry, BatteryRegistryError
 from power.bluez_ble import BluezBleClient, BluezError
 from power.jk_bms_protocol import (
     DeviceInfo,
@@ -19,6 +23,7 @@ from power.jk_bms_protocol import (
     Telemetry,
     build_query,
 )
+from power.reconnect_guard import ConsecutiveErrorThreshold
 
 
 def _required_text(name: str) -> str:
@@ -52,6 +57,42 @@ def _required_float(name: str) -> float:
     return value
 
 
+def _acquire_device_lock(device_address: str):
+    """Hold a host-wide lock so only one process can own a BLE BMS."""
+
+    runtime_root = Path(
+        os.environ.get("XDG_RUNTIME_DIR", tempfile.gettempdir())
+    ).expanduser()
+    runtime_root.mkdir(parents=True, exist_ok=True)
+    token = "".join(
+        character.lower() if character.isalnum() else "_"
+        for character in device_address
+    )
+    path = runtime_root / "ig_handle_jk_bms_{}.lock".format(token)
+    handle = path.open("a+b")
+    if os.name == "nt":
+        import msvcrt
+
+        handle.seek(0)
+        handle.write(b"0")
+        handle.flush()
+        handle.seek(0)
+        try:
+            msvcrt.locking(handle.fileno(), msvcrt.LK_NBLCK, 1)
+            return handle
+        except OSError:
+            handle.close()
+            raise
+    import fcntl
+
+    try:
+        fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+        return handle
+    except OSError:
+        handle.close()
+        raise
+
+
 class JkBmsNode:
     def __init__(self) -> None:
         if _required_int("schema_version") != 1:
@@ -76,14 +117,55 @@ class JkBmsNode:
             rospy.get_param("~expected_software_version", "")
         ).strip()
         self.device_address = _required_text("device_address").upper()
+        try:
+            self._device_lock = _acquire_device_lock(self.device_address)
+        except OSError as exc:
+            raise BluezError(
+                "another JK BMS process already owns {}".format(self.device_address)
+            ) from exc
         self.service_uuid = _required_text("service_uuid").lower()
         self.characteristic_uuid = _required_text("characteristic_uuid").lower()
         self.frame_id = _required_text("frame_id")
         self.chemistry = _required_text("chemistry")
+        self.registry = BatteryRegistry.load(
+            Path(_required_text("battery_registry_file"))
+        )
+        configured_record = self.registry.resolve_jk_bms(
+            {
+                "device_address": self.device_address,
+                "device_name": self.expected_device_name,
+                "model": self.expected_model,
+                "hardware_version": self.expected_hardware,
+                "software_version": self.expected_software,
+                "serial_number": self.expected_serial,
+                "manufacturing_date": self.expected_manufacturing_date,
+            }
+        )
+        if configured_record is None:
+            raise BatteryRegistryError(
+                "commissioned JK configuration is absent from the battery registry"
+            )
+        self.battery_id = configured_record.battery_id
+        self.battery_location = configured_record.platform
         self.design_capacity_ah = _required_float("design_capacity_ah")
         self.sample_timeout_sec = _required_float("sample_timeout_sec")
-        if self.design_capacity_ah <= 0.0 or self.sample_timeout_sec <= 0.0:
+        self.request_period_sec = _required_float("request_period_sec")
+        self.protocol_error_reconnect_threshold = _required_int(
+            "protocol_error_reconnect_threshold"
+        )
+        if (
+            self.design_capacity_ah <= 0.0
+            or self.sample_timeout_sec <= 0.0
+            or self.request_period_sec <= 0.0
+        ):
             raise ValueError("capacity and sample timeout must be positive")
+        if self.sample_timeout_sec <= self.request_period_sec + 1.0:
+            raise ValueError(
+                "sample_timeout_sec must exceed request_period_sec by more than 1 second"
+            )
+        self._protocol_errors = ConsecutiveErrorThreshold(
+            self.protocol_error_reconnect_threshold
+        )
         expected_cells = _required_int("expected_cell_count")
         self.decoder = JkBmsDecoder(
             self.protocol,
@@ -133,28 +215,40 @@ class JkBmsNode:
             connect_timeout_sec=_required_float("connect_timeout_sec"),
             sample_timeout_sec=self.sample_timeout_sec,
             initial_query_delay_sec=_required_float("initial_query_delay_sec"),
-            request_period_sec=_required_float("request_period_sec"),
+            request_period_sec=self.request_period_sec,
             reconnect_delay_sec=_required_float("reconnect_delay_sec"),
             on_notification=self._notification,
             on_state=self._connection_state,
         )
         self.worker = threading.Thread(
             target=self.client.run,
-            args=((build_query(0x97),), (build_query(0x96),)),
+            args=(
+                (build_query(0x97),),
+                (build_query(0x97), build_query(0x96)),
+            ),
             name="jk_bms_ble",
             daemon=True,
         )
         self.worker.start()
-        rospy.on_shutdown(self.client.stop)
+        rospy.on_shutdown(self._shutdown)
         self.watchdog = rospy.Timer(rospy.Duration(0.5), self._watchdog)
+
+    def _shutdown(self) -> None:
+        self.client.stop()
+        device_lock = getattr(self, "_device_lock", None)
+        if device_lock is not None:
+            device_lock.close()
+            self._device_lock = None
 
     def _connection_state(self, connected: bool, reason: str) -> None:
         if not connected:
+            self._protocol_errors.record_success()
             with self._lock:
                 self._device_info = None
             self._publish_unavailable(reason)
 
     def _notification(self, chunk: bytes) -> None:
+        decoded_telemetry = False
         try:
             for frame in self.assembler.feed(chunk):
                 self._rx_frames += 1
@@ -164,9 +258,28 @@ class JkBmsNode:
                 elif frame[4] == 0x02:
                     telemetry = self.decoder.decode_telemetry(frame)
                     self._publish_telemetry(telemetry)
+                    decoded_telemetry = True
+                else:
+                    raise ProtocolError(
+                        "unsupported JK response type 0x{:02X}".format(frame[4])
+                    )
+            # A device-info response does not prove that the telemetry path has
+            # recovered. Only an admitted telemetry sample clears the streak.
+            if decoded_telemetry:
+                self._protocol_errors.record_success()
         except (ProtocolError, ValueError) as exc:
             self._rx_errors += 1
             self._publish_unavailable("protocol_error:{}".format(str(exc)))
+            if self._protocol_errors.record_failure():
+                rospy.logerr(
+                    "JK BMS produced %d consecutive protocol errors; reconnecting",
+                    self.protocol_error_reconnect_threshold,
+                )
+                self.client.request_reconnect(
+                    "{} consecutive protocol errors".format(
+                        self.protocol_error_reconnect_threshold
+                    )
+                )
 
     def _admit_identity(self, info: DeviceInfo) -> None:
         # Every connection must establish its own identity. Clear the previous
@@ -188,6 +301,21 @@ class JkBmsNode:
             raise ProtocolError("JK hardware version does not match configuration")
         if self.expected_software and info.software_version != self.expected_software:
             raise ProtocolError("JK software version does not match configuration")
+        registered = self.registry.resolve_jk_bms(
+            {
+                "device_address": self.device_address,
+                "device_name": info.device_name,
+                "model": info.model,
+                "hardware_version": info.hardware_version,
+                "software_version": info.software_version,
+                "serial_number": info.serial_number,
+                "manufacturing_date": info.manufacturing_date,
+            }
+        )
+        if registered is None or registered.battery_id != self.battery_id:
+            raise ProtocolError(
+                "JK identity is not the commissioned registered battery"
+            )
         with self._lock:
             self._device_info = info
 
@@ -229,7 +357,7 @@ class JkBmsNode:
             battery.present = True
             battery.cell_voltage = list(telemetry.cell_voltages_v)
             battery.cell_temperature = []
-            battery.location = "ig_handle"
+            battery.location = self.battery_location
             battery.serial_number = info.serial_number
             details = self._details_message(now, info, telemetry)
             with self._lock:
@@ -257,6 +385,7 @@ class JkBmsNode:
         message.hardware_version = info.hardware_version
         message.software_version = info.software_version
         message.serial_number = info.serial_number
+        message.battery_id = self.battery_id
         message.device_name = info.device_name
         message.manufacturing_date = info.manufacturing_date
         message.cell_count = len(telemetry.cell_voltages_v)
@@ -347,9 +476,10 @@ class JkBmsNode:
             battery.design_capacity = self.design_capacity_ah
             battery.percentage = math.nan
             battery.present = False
-            battery.location = "ig_handle"
+            battery.location = self.battery_location
             message = self._base_details(stamp, False, reason)
             if info is not None:
+                battery.serial_number = info.serial_number
                 message.model = info.model
                 message.hardware_version = info.hardware_version
                 message.software_version = info.software_version
@@ -369,7 +499,14 @@ def main() -> None:
     rospy.init_node("ighandle_jk_bms")
     try:
         JkBmsNode()
-    except (BluezError, KeyError, ProtocolError, TypeError, ValueError) as exc:
+    except (
+        BatteryRegistryError,
+        BluezError,
+        KeyError,
+        ProtocolError,
+        TypeError,
+        ValueError,
+    ) as exc:
         rospy.logfatal("Invalid JK BMS configuration: %s", exc)
         raise SystemExit(2)
     rospy.spin()

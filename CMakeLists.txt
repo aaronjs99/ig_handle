@@ -38,6 +38,7 @@ catkin_install_python(
     scripts/teensy/teensy_rosserial_launcher.py
     scripts/power/heron_sense_ingress.py
     scripts/power/jk_bms_node.py
+    scripts/power/validate_battery_registry.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 

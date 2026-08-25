@@ -12,6 +12,7 @@ string model
 string hardware_version
 string software_version
 string serial_number
+string battery_id
 string device_name
 string manufacturing_date
 uint8 cell_count

@@ -61,6 +61,46 @@ specified in [`sensor_timing.md`](sensor_timing.md). Host camera, LiDAR, and IMU
 acquisition remains continuous; the firmware's trigger scheduler is a future
 commissioning surface rather than an enabled runtime claim.
 
+## Battery Identity and Telemetry
+
+The platform inventory distinguishes one fixed compute battery from two
+interchangeable propulsion batteries. `IGHANDLE-01` is commissioned against the
+complete live JK BMS identity: BLE address, device name, model, hardware and
+software versions, serial number, and manufacturing date. Voltage, current, and
+charge behavior are measurements and never serve as identity. A host-wide lock
+prevents concurrent processes from owning the same BLE device, while periodic
+device-information queries re-establish that identity during continued
+telemetry acquisition. Standard state is published on `/sense_ighandle`; the
+paired `/sense_ighandle/details` record carries identity, raw pack and cell
+fields, status, alarms, counters, and provenance with the same timestamp.
+
+`HERON-01` and `HERON-02` represent physical propulsion packs that the Heron MCU
+cannot identify electrically. They remain uncommissioned until the matching
+durable labels are physically present and inspected. After commissioning,
+GRANDE binds a labelled installation to physical `/sense_heron` observations
+through an append-only event ledger. A new logger session, publisher restart,
+sequence or timestamp rollback, or source-progress gap prevents an older
+selection from carrying forward without explicit reconfirmation. The resulting
+effective assignment is published on `/battery/heron_identity` and recorded
+beside the measurement streams. This separation allows both removable packs to
+build independent histories while keeping unassigned observations visible as
+`UNKNOWN`.
+
+The installation ledger attributes selection and removal to the local
+`username@hostname` caller by default. A supplied `selected_by` value is retained
+as operator-entered provenance, not as authenticated user identity.
+
+Persistent selection state, installation history, normalized samples, and
+figures default to `~/.local/share/grande/battery`. The standalone IG Handle
+service uses a local ROS master when the Heron is off; the combined service
+uses the physical Heron master and validated `/sense_heron` ingress. Both use
+the same data root and are mutually exclusive. Repository data remains retained
+historical evidence rather than live mutable state.
+Energy integration is available only from contiguous, identity-qualified compute
+pack power. Propulsion motor-controller currents are preserved for diagnosis but
+do not establish total pack current; propulsion energy therefore remains null
+with an explicit unavailability reason.
+
 ## Imaging Sonar
 
 IG Handle separates physical sonar identity and acquisition from downstream

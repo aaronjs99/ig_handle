@@ -22,10 +22,14 @@ frame_id: ighandle_battery_link
 service_uuid: 0000ffe0-0000-1000-8000-00805f9b34fb
 characteristic_uuid: 0000ffe1-0000-1000-8000-00805f9b34fb
 connect_timeout_sec: 10.0
-sample_timeout_sec: 5.0
+sample_timeout_sec: 6.0
 initial_query_delay_sec: 2.0
-request_period_sec: 10.0
+request_period_sec: 2.0
 reconnect_delay_sec: 2.0
+# Malformed complete responses must be consecutive before forcing a clean BLE
+# disconnect/reconnect. This is independent of the notification timeout because
+# corrupt notifications still prove only link activity, not valid telemetry.
+protocol_error_reconnect_threshold: 3
 cell_voltage_min_v: 2.0
 cell_voltage_max_v: 4.5
 pack_voltage_min_v: 12.0

@@ -1,0 +1,36 @@
+schema_version: 1
+
+batteries:
+  IGHANDLE-01:
+    role: compute
+    platform: ig_handle
+    asset_label: IGHANDLE-01
+    commissioned: true
+    identity:
+      method: jk_bms
+      hardware:
+        device_address: A4:C1:38:05:FF:A4
+        device_name: "512261K32000513"
+        model: JK-BD4A17S4P
+        hardware_version: 19H
+        software_version: "19.27"
+        serial_number: "512261K32000513"
+        manufacturing_date: "260524"
+
+  HERON-01:
+    role: propulsion
+    platform: heron
+    asset_label: HERON-01
+    commissioned: false  # Set true only after this exact durable label is applied.
+    identity:
+      method: operator_selection
+      hardware: {}
+
+  HERON-02:
+    role: propulsion
+    platform: heron
+    asset_label: HERON-02
+    commissioned: false  # Set true only after this exact durable label is applied.
+    identity:
+      method: operator_selection
+      hardware: {}

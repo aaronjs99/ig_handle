@@ -12,7 +12,7 @@ consumes canonical sensor topics; GRANDE composes and records the runtime.
 
 | Area | IG Handle owns |
 | --- | --- |
-| Sensors | Physical inventory, endpoint selection, drivers, raw capture, and health. |
+| Sensors and power | Physical inventory, battery identity, endpoint selection, drivers, raw capture, and health. |
 | Frames | Measured sensor extrinsics and configured static sensor edges. |
 | Network | Tracked sensor addresses and host/interface roles. |
 | Timing | Device stamps, timing inputs, and embedded timing surfaces. |

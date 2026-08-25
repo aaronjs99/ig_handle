@@ -3,6 +3,7 @@ topics:
   heron_sense: /sense_heron
   ighandle_sense: /sense_ighandle
   ighandle_sense_details: /sense_ighandle/details
+  heron_battery_identity: /battery/heron_identity
   mocap_pose: /mocap/heron/pose
   mocap_aligned_pose: /mocap/heron/pose/aligned
   mocap_relative_pose: /mocap/heron/pose/relative

@@ -20,24 +20,20 @@ public:
       : active_(false),
         homed_(false),
         home_requested_(false),
-        command_received_(false),
-        fatal_fault_latched_(false),
+         command_received_(false),
+         fatal_fault_latched_(false),
+         field_invalid_edge_latched_(false),
         desired_length_m_(NAN),
         command_received_ms_(0),
         homing_started_ms_(0),
         last_update_ms_(0),
         last_encoder_change_ms_(0),
         min_raw_changed_ms_(0),
-        max_raw_changed_ms_(0),
         reversal_blank_until_ms_(0),
         last_encoder_count_(0),
-        min_raw_valid_(false),
-        max_raw_valid_(false),
         min_raw_pressed_(false),
-        max_raw_pressed_(false),
-        limits_qualified_(false),
+        limit_qualified_(false),
         min_pressed_(false),
-        max_pressed_(false),
         reversal_blank_active_(false),
         last_requested_direction_(0),
         motor_duty_(0.0f),
@@ -54,36 +50,31 @@ public:
     // and a hardware driver-disable remain mandatory during MCU reset/high-Z.
     digitalWrite(kMotorRightPwmPin, LOW);
     digitalWrite(kMotorLeftPwmPin, LOW);
-    digitalWrite(kMotorRightEnablePin, LOW);
-    digitalWrite(kMotorLeftEnablePin, LOW);
+    digitalWrite(kMotorEnablePin, LOW);
     pinMode(kMotorRightPwmPin, OUTPUT);
     pinMode(kMotorLeftPwmPin, OUTPUT);
-    pinMode(kMotorRightEnablePin, OUTPUT);
-    pinMode(kMotorLeftEnablePin, OUTPUT);
-    pinMode(kMotorRightCurrentSensePin, INPUT);
-    pinMode(kMotorLeftCurrentSensePin, INPUT);
+    pinMode(kMotorEnablePin, OUTPUT);
+    // R62/R64 define the externally biased FIELD_VALID board node. D27 only
+    // observes it; a branch open between that node and the MCU is a loss of
+    // firmware evidence, while the board's U3/U6 OE gates remain independent.
+    pinMode(kFieldValidPin, INPUT);
     pinMode(kEncoderPhaseAPin, INPUT_PULLUP);
     pinMode(kEncoderPhaseBPin, INPUT_PULLUP);
     if (kMinLimitPresent) {
-      pinMode(kMinLimitNoPin, INPUT_PULLUP);
-      pinMode(kMinLimitNcPin, INPUT_PULLUP);
-    }
-    if (kMaxLimitPresent) {
-      pinMode(kMaxLimitNoPin, INPUT_PULLUP);
-      pinMode(kMaxLimitNcPin, INPUT_PULLUP);
+      pinMode(kMinLimitTripPin, INPUT);
     }
     analogWriteFrequency(kMotorRightPwmPin, kPwmFrequencyHz);
     analogWriteFrequency(kMotorLeftPwmPin, kPwmFrequencyHz);
     stopMotor();
     active_ = true;
-    sampleRawLimits(&min_raw_valid_, &min_raw_pressed_, &max_raw_valid_, &max_raw_pressed_);
-    min_pressed_ = false;
-    max_pressed_ = false;
-    limits_qualified_ = false;
+    min_raw_pressed_ = minimumLimitTripped();
+    min_pressed_ = min_raw_pressed_;
+    // A tripped/open NC loop is accepted immediately. A healthy return must
+    // remain stable for the debounce interval before motion can resume.
+    limit_qualified_ = min_pressed_;
     last_update_ms_ = now_ms;
     last_encoder_change_ms_ = now_ms;
     min_raw_changed_ms_ = now_ms;
-    max_raw_changed_ms_ = now_ms;
     encoder_state_ = encoderState();
     last_encoder_count_ = encoderCount();
     status_ = "limit_qualifying";
@@ -103,6 +94,16 @@ public:
       encoder_count_ += increment;
     }
     encoder_state_ = next_state;
+  }
+
+  void onFieldInvalidEdge() {
+    using namespace ig_handle_firmware_config::telescope;
+    // Keep the secondary firmware ISR bounded: remove the shared BTS enable
+    // and latch one bit. Hardware FIELD_VALID already gates U6 independently;
+    // the 10 ms owner loop clears requests and zeroes both PWM channels.
+    // Connector-side pulldowns remain an additional reset/core-off safeguard.
+    digitalWriteFast(kMotorEnablePin, LOW);
+    field_invalid_edge_latched_ = true;
   }
 
   void setDesiredLength(float desired_length_m, uint32_t now_ms) {
@@ -156,17 +157,21 @@ public:
     const float elapsed_s = static_cast<float>(now_ms - last_update_ms_) / 1000.0f;
     last_update_ms_ = now_ms;
 
-    if (!updateDebouncedLimits(now_ms)) {
-      latchFatalFault("limit_disagreement");
-      return;
-    }
-    if (!limits_qualified_) {
+    updateMinimumLimit(now_ms);
+    if (!limit_qualified_) {
       stopMotor();
       status_ = "limit_qualifying";
       return;
     }
+    if (takeFieldInvalidEdge() || !fieldPowerHealthy()) {
+      command_received_ = false;
+      home_requested_ = false;
+      stopMotor();
+      status_ = "field_power_invalid";
+      return;
+    }
 
-    if (min_pressed_) {
+    if (min_pressed_ && home_requested_) {
       rebaseAtMinimum(now_ms);
       homed_ = true;
       home_requested_ = false;
@@ -179,21 +184,10 @@ public:
       return;
     }
 
-    const float current_a = motorCurrentA();
-    if (isfinite(current_a) && current_a > kMaxMotorCurrentA) {
-      latchFatalFault("motor_current_limit");
-      return;
-    }
-
     if (!homed_) {
       if (!home_requested_) {
         stopMotor();
         status_ = "needs_home";
-        return;
-      }
-      if (max_pressed_) {
-        stopMotor();
-        status_ = "homing_blocked_at_maximum";
         return;
       }
       if (now_ms - homing_started_ms_ > kHomingTimeoutMs) {
@@ -223,9 +217,9 @@ public:
     const int32_t current_count = encoderCount();
     const int64_t count_error = static_cast<int64_t>(target_count) - current_count;
     const bool extending = count_error > 0;
-    if ((min_pressed_ && !extending) || (max_pressed_ && extending)) {
+    if (min_pressed_ && !extending) {
       stopMotor();
-      status_ = min_pressed_ ? "at_minimum" : "at_maximum";
+      status_ = "at_minimum";
       return;
     }
 
@@ -277,33 +271,26 @@ public:
   }
 
   float motorCurrentA() const {
-    using namespace ig_handle_firmware_config::telescope;
-    if (!active_ || !kCurrentSenseConfigured || kMotorCurrentAPerAdcCount <= 0.0f) {
-      return NAN;
-    }
-    const int raw = max(analogRead(kMotorRightCurrentSensePin), analogRead(kMotorLeftCurrentSensePin));
-    const float adjusted = static_cast<float>(raw) - kMotorCurrentZeroAdcCount;
-    return adjusted > 0.0f ? adjusted * kMotorCurrentAPerAdcCount : 0.0f;
+    // The current IBT-2 clone has no commissioned R_IS/L_IS transfer function.
+    // Preserve the existing topic with explicit unavailable data.
+    return NAN;
   }
 
 private:
   static volatile int32_t encoder_count_;
   static volatile uint8_t encoder_state_;
 
-  static Geometry geometryFromFirmware() { return kDummyGeometry; }
+  static Geometry geometryFromFirmware() { return kUncommissionedGeometry; }
 
   static bool canOperate() {
     using namespace ig_handle_firmware_config::telescope;
     const Geometry geometry = geometryFromFirmware();
-    return kEnabled && kConfigured && kWiringVerified && kCurrentSenseConfigured && kMotorCurrentAPerAdcCount > 0.0f &&
-           kMaxMotorCurrentA > 0.0f && kHomingDutyFraction > 0.0f && kHomingDutyFraction <= kMaxDutyFraction &&
+    return kEnabled && kConfigured && kWiringVerified && kHardEstopVerified && kFieldValidSupervisorVerified &&
+           kFieldValidActiveHigh && kHomingDutyFraction > 0.0f &&
+           kHomingDutyFraction <= kMaxDutyFraction &&
            kMaxDutyFraction <= 1.0f && kControlUpdatePeriodMs > 0 && kCommandTimeoutMs > 0 && kHomingTimeoutMs > 0 &&
            kStallTimeoutMs > 0 && kLimitDebounceMs > 0 && kDirectionReversalBlankMs > 0 && kMinLimitPresent &&
-           kMinLimitNoPin != ig_handle_firmware_config::kInvalidPin &&
-           (!kRequireRedundantLimitAgreement || kMinLimitNcPin != ig_handle_firmware_config::kInvalidPin) &&
-           (!kMaxLimitPresent ||
-            (kMaxLimitNoPin != ig_handle_firmware_config::kInvalidPin &&
-             (!kRequireRedundantLimitAgreement || kMaxLimitNcPin != ig_handle_firmware_config::kInvalidPin))) &&
+           kMinLimitTripPin != ig_handle_firmware_config::kInvalidPin &&
            (kHomingDirection == 1 || kHomingDirection == -1) &&
            (kMotorDutySignForExtension == 1 || kMotorDutySignForExtension == -1) && geometryReady(geometry);
   }
@@ -341,71 +328,49 @@ private:
     status_ = status;
   }
 
-  bool updateDebouncedLimits(uint32_t now_ms) {
-    bool min_raw_valid = false;
-    bool max_raw_valid = false;
-    bool min_raw_pressed = false;
-    bool max_raw_pressed = false;
-    sampleRawLimits(&min_raw_valid, &min_raw_pressed, &max_raw_valid, &max_raw_pressed);
+  void updateMinimumLimit(uint32_t now_ms) {
     using namespace ig_handle_firmware_config::telescope;
-    if (min_raw_valid != min_raw_valid_ || min_raw_pressed != min_raw_pressed_) {
-      min_raw_valid_ = min_raw_valid;
-      min_raw_pressed_ = min_raw_pressed;
+    const bool raw_pressed = minimumLimitTripped();
+    if (raw_pressed) {
+      // No debounce on the safety direction: switch actuation, unplugging, or
+      // a broken NC wire removes retract permission on the next 10 ms control
+      // pass. Only the return to a healthy closed loop is debounced.
+      min_raw_pressed_ = true;
+      min_pressed_ = true;
+      limit_qualified_ = true;
       min_raw_changed_ms_ = now_ms;
-    }
-    if (max_raw_valid != max_raw_valid_ || max_raw_pressed != max_raw_pressed_) {
-      max_raw_valid_ = max_raw_valid;
-      max_raw_pressed_ = max_raw_pressed;
-      max_raw_changed_ms_ = now_ms;
-    }
-    const bool min_stable = now_ms - min_raw_changed_ms_ >= kLimitDebounceMs;
-    const bool max_stable = now_ms - max_raw_changed_ms_ >= kLimitDebounceMs;
-    limits_qualified_ = min_stable && max_stable && min_raw_valid_ && max_raw_valid_;
-    if (min_stable && !min_raw_valid_) {
-      return false;
-    }
-    if (max_stable && !max_raw_valid_) {
-      return false;
-    }
-    if (limits_qualified_) {
-      min_pressed_ = min_raw_pressed_;
-      max_pressed_ = max_raw_pressed_;
-    }
-    return !(limits_qualified_ && min_pressed_ && max_pressed_);
-  }
-
-  void sampleRawLimits(bool* min_valid, bool* min_pressed, bool* max_valid, bool* max_pressed) const {
-    using namespace ig_handle_firmware_config::telescope;
-    *min_valid = false;
-    *min_pressed = false;
-    *max_valid = !kMaxLimitPresent;
-    *max_pressed = false;
-    if (!kRequireRedundantLimitAgreement) {
-      *min_valid = kMinLimitPresent;
-      *min_pressed = digitalRead(kMinLimitNoPin) == LOW;
-      if (kMaxLimitPresent) {
-        *max_valid = true;
-        *max_pressed = digitalRead(kMaxLimitNoPin) == LOW;
-      }
       return;
     }
-    *min_valid = decodeLimit(kMinLimitNoPin, kMinLimitNcPin, min_pressed);
-    if (kMaxLimitPresent) {
-      *max_valid = decodeLimit(kMaxLimitNoPin, kMaxLimitNcPin, max_pressed);
+    if (min_raw_pressed_) {
+      min_raw_pressed_ = false;
+      min_raw_changed_ms_ = now_ms;
+    }
+    limit_qualified_ = now_ms - min_raw_changed_ms_ >= kLimitDebounceMs;
+    if (limit_qualified_) {
+      min_pressed_ = false;
     }
   }
 
-  static bool decodeLimit(uint8_t no_pin, uint8_t nc_pin, bool* pressed) {
-    if (pressed == 0) {
+  static bool minimumLimitTripped() {
+    using namespace ig_handle_firmware_config::telescope;
+    const bool high = digitalRead(kMinLimitTripPin) == HIGH;
+    return high == kMinLimitTrippedActiveHigh;
+  }
+
+  static bool fieldPowerHealthy() {
+    using namespace ig_handle_firmware_config::telescope;
+    if (!kFieldValidSupervisorVerified || !kFieldValidActiveHigh) {
       return false;
     }
-    const bool no_active = digitalRead(no_pin) == LOW;
-    const bool nc_active = digitalRead(nc_pin) == LOW;
-    if (no_active == nc_active) {
-      return false;
-    }
-    *pressed = no_active;
-    return true;
+    return digitalRead(kFieldValidPin) == HIGH;
+  }
+
+  bool takeFieldInvalidEdge() {
+    noInterrupts();
+    const bool latched = field_invalid_edge_latched_;
+    field_invalid_edge_latched_ = false;
+    interrupts();
+    return latched;
   }
 
   void rebaseAtMinimum(uint32_t now_ms) {
@@ -425,6 +390,11 @@ private:
       return true;
     }
     const int8_t direction = duty > 0.0f ? 1 : -1;
+    const int8_t mechanism_direction = direction * kMotorDutySignForExtension;
+    if (min_pressed_ && mechanism_direction < 0) {
+      stopMotor();
+      return true;
+    }
     if (last_requested_direction_ != 0 && direction != last_requested_direction_) {
       powerOffMotor();
       motor_duty_ = 0.0f;
@@ -444,14 +414,27 @@ private:
       }
       reversal_blank_active_ = false;
     }
-    digitalWrite(kMotorRightEnablePin, HIGH);
-    digitalWrite(kMotorLeftEnablePin, HIGH);
     if (duty > 0.0f) {
       analogWrite(kMotorRightPwmPin, pwm);
       analogWrite(kMotorLeftPwmPin, 0);
     } else {
       analogWrite(kMotorRightPwmPin, 0);
       analogWrite(kMotorLeftPwmPin, pwm);
+    }
+    // Close the only race between the polled validity check and enabling the
+    // bridge. If FIELD_VALID falls before or during this short critical
+    // section, the pending ISR runs as interrupts resume and forces enable low.
+    noInterrupts();
+    const bool field_valid = !field_invalid_edge_latched_ && fieldPowerHealthy();
+    if (field_valid) {
+      digitalWriteFast(kMotorEnablePin, HIGH);
+    }
+    interrupts();
+    if (!field_valid) {
+      analogWrite(kMotorRightPwmPin, 0);
+      analogWrite(kMotorLeftPwmPin, 0);
+      motor_duty_ = 0.0f;
+      return false;
     }
     return true;
   }
@@ -460,8 +443,7 @@ private:
     using namespace ig_handle_firmware_config::telescope;
     analogWrite(kMotorRightPwmPin, 0);
     analogWrite(kMotorLeftPwmPin, 0);
-    digitalWrite(kMotorRightEnablePin, LOW);
-    digitalWrite(kMotorLeftEnablePin, LOW);
+    digitalWrite(kMotorEnablePin, LOW);
   }
 
   void stopMotor() {
@@ -474,22 +456,18 @@ private:
   bool home_requested_;
   bool command_received_;
   volatile bool fatal_fault_latched_;
+  volatile bool field_invalid_edge_latched_;
   float desired_length_m_;
   uint32_t command_received_ms_;
   uint32_t homing_started_ms_;
   uint32_t last_update_ms_;
   uint32_t last_encoder_change_ms_;
   uint32_t min_raw_changed_ms_;
-  uint32_t max_raw_changed_ms_;
   uint32_t reversal_blank_until_ms_;
   int32_t last_encoder_count_;
-  bool min_raw_valid_;
-  bool max_raw_valid_;
   bool min_raw_pressed_;
-  bool max_raw_pressed_;
-  bool limits_qualified_;
+  bool limit_qualified_;
   bool min_pressed_;
-  bool max_pressed_;
   bool reversal_blank_active_;
   int8_t last_requested_direction_;
   float motor_duty_;

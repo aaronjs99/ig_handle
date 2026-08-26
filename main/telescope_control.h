@@ -3,8 +3,8 @@
 // Side-effect-free telescope geometry and command conversion.
 //
 // This header deliberately contains no GPIO, ROS, or motor-driver code. The
-// assembled mechanism is not measured yet, so the dummy geometry must reject
-// all conversions until a future hardware module supplies real calibration.
+// assembled mechanism is not measured yet, so the uncommissioned geometry
+// must reject all conversions until measured calibration is supplied.
 
 #include <limits.h>
 #include <stdint.h>
@@ -22,13 +22,13 @@ struct Geometry {
   int32_t calibrated_count_span_to_max_length;
 };
 
-// DUMMY: replace from hardware.yaml after the mechanism is measured.
-static const Geometry kDummyGeometry = {ig_handle_firmware_config::telescope::kEnabled,
-                                        ig_handle_firmware_config::telescope::kConfigured,
-                                        ig_handle_firmware_config::telescope::kMinLengthM,
-                                        ig_handle_firmware_config::telescope::kMaxLengthM,
-                                        ig_handle_firmware_config::telescope::kEncoderZeroCountAtMinLength,
-                                        ig_handle_firmware_config::telescope::kEncoderCountSpanToMaxLength};
+// Compile-time mirror of the disabled measurement-required hardware contract.
+static const Geometry kUncommissionedGeometry = {ig_handle_firmware_config::telescope::kEnabled,
+                                                 ig_handle_firmware_config::telescope::kConfigured,
+                                                 ig_handle_firmware_config::telescope::kMinLengthM,
+                                                 ig_handle_firmware_config::telescope::kMaxLengthM,
+                                                 ig_handle_firmware_config::telescope::kEncoderZeroCountAtMinLength,
+                                                 ig_handle_firmware_config::telescope::kEncoderCountSpanToMaxLength};
 
 inline bool geometryReady(const Geometry& geometry) {
   return geometry.enabled && geometry.configured && geometry.max_length_m > geometry.min_length_m &&

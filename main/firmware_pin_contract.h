@@ -4,8 +4,8 @@
 //
 // Timing and telescope runtimes deliberately remain separate owners.  This
 // validator is the one place that rejects cross-owner aliases, RTC I2C
-// collisions, and unsupported PWM/ADC assignments before either owner touches
-// enabled hardware.
+// collisions, and unsupported PWM assignments before either owner touches
+// enabled hardware. Digital inputs are still validated for range and aliases.
 
 #include <stdint.h>
 
@@ -82,76 +82,50 @@ inline bool pwmPinValid(uint8_t pin) {
   }
 }
 
-inline bool adcPinValid(uint8_t pin) { return (pin >= 14 && pin <= 27) || (pin >= 38 && pin <= 41); }
-
 inline bool timingPinsValid(PinSet* pins) {
   using namespace ig_handle_firmware_config::timing;
-  const bool any_timing = kCameraTriggerEnabled || kCameraFeedbackEnabled || kImuTriggerEnabled ||
-                          kImuFeedbackEnabled || kLidarClockEnabled;
-  if (!any_timing) {
-    return true;
-  }
+  // Validate every physically routed V6 pin even while all actuation gates are
+  // false. Disabled features must not hide a board-level pin collision.
   if (!pins->add(kReferenceInputPin)) {
     return false;
   }
-  if (kCameraTriggerEnabled) {
-    if (kCameraUseHardwareFanout) {
-      if (!pins->add(kCameraFanoutTriggerPin)) {
-        return false;
-      }
-    } else {
-      for (uint8_t index = 0; index < kCameraCount; ++index) {
-        if (!pins->add(kCameraTriggerPins[index])) {
-          return false;
-        }
-      }
+  if (kCameraUseHardwareFanout) {
+    if (!pins->add(kCameraFanoutTriggerPin)) {
+      return false;
     }
-  }
-  if (kCameraFeedbackEnabled) {
+  } else {
     for (uint8_t index = 0; index < kCameraCount; ++index) {
-      if (!pins->add(kCameraExposurePins[index])) {
+      if (!pins->add(kCameraTriggerPins[index])) {
         return false;
       }
     }
   }
-  if (kImuTriggerEnabled && !pins->add(kImuTriggerPin)) {
-    return false;
-  }
-  if (kImuFeedbackEnabled && !pins->add(kImuSyncPin)) {
-    return false;
-  }
-  if (kLidarClockEnabled) {
-    for (uint8_t index = 0; index < kLidarCount; ++index) {
-      if (!pins->add(kLidarPpsPins[index])) {
-        return false;
-      }
+  for (uint8_t index = 0; index < kCameraCount; ++index) {
+    if (!pins->add(kCameraExposurePins[index])) {
+      return false;
     }
+  }
+  if (!pins->add(kImuTriggerPin)) {
+    return false;
+  }
+  if (!pins->add(kImuSyncPin)) {
+    return false;
+  }
+  if (!pins->add(kLidarNmeaTxPin)) {
+    return false;
   }
   return true;
 }
 
 inline bool telescopePinsValid(PinSet* pins) {
   using namespace ig_handle_firmware_config::telescope;
-  if (!kEnabled) {
-    return true;
-  }
-  if (!pwmPinValid(kMotorRightPwmPin) || !pwmPinValid(kMotorLeftPwmPin) || !adcPinValid(kMotorRightCurrentSensePin) ||
-      !adcPinValid(kMotorLeftCurrentSensePin)) {
+  if (!pwmPinValid(kMotorRightPwmPin) || !pwmPinValid(kMotorLeftPwmPin)) {
     return false;
   }
-  const uint8_t required[] = {kMotorRightPwmPin,   kMotorLeftPwmPin,           kMotorRightEnablePin,
-                              kMotorLeftEnablePin, kMotorRightCurrentSensePin, kMotorLeftCurrentSensePin,
-                              kEncoderPhaseAPin,   kEncoderPhaseBPin,          kMinLimitNoPin};
+  const uint8_t required[] = {kMotorRightPwmPin, kMotorLeftPwmPin, kMotorEnablePin, kFieldValidPin,
+                              kEncoderPhaseAPin,  kEncoderPhaseBPin, kMinLimitTripPin};
   for (uint8_t index = 0; index < sizeof(required) / sizeof(required[0]); ++index) {
     if (!pins->add(required[index])) {
-      return false;
-    }
-  }
-  if (kRequireRedundantLimitAgreement && !pins->add(kMinLimitNcPin)) {
-    return false;
-  }
-  if (kMaxLimitPresent) {
-    if (!pins->add(kMaxLimitNoPin) || (kRequireRedundantLimitAgreement && !pins->add(kMaxLimitNcPin))) {
       return false;
     }
   }

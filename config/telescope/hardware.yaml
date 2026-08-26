@@ -7,8 +7,9 @@
 schema_version: 1
 enabled: false
 board: teensy_4_1
-configuration_status: provisional_dummy_values
+configuration_status: uncommissioned_measurements_required
 wiring_verified: false
+hard_estop_installed_and_tested: false
 motion_enable_requires_measured_config: true
 
 components:
@@ -18,7 +19,7 @@ components:
     nominal_voltage_v: 12.0
     nominal_output_rpm: 66.0
     nominal_torque_kg_cm: 3.0
-    direction_sign: 1 # DUMMY: verify motor polarity after wiring.
+    direction_sign: 1 # Verify motor polarity before enabling motion.
 
   driver:
     catalog_id: B00WSN98DC
@@ -27,7 +28,11 @@ components:
     motor_supply_max_v: 27.0
     control_interface: rpwm_lpwm_enable
     pwm_frequency_hz: 20000
-    current_sense_outputs_available: true
+    current_sense_outputs_available: true # Unverified module pins, not a V6 current sensor.
+    current_sense_connected_to_v6: false
+    current_sensor_present: false
+    logic_power_net: EXT5_FIELD
+    usb_backup_can_power_logic: false
 
   encoder:
     catalog_id: B07MX1SYXB
@@ -45,72 +50,112 @@ components:
     quantity: 1
     nominal_contact_rating_a: 5.0
     ip_rating: IP67
-    input_mode: input_pullup
-    active_level: low
+    wiring: normally_closed_loop_to_ground
+    receiver: sn74lv14apwr_inverting_schmitt
+    mcu_active_level: low
     channels:
-      min_no: 31
-      min_nc: 32
-      max_no: null
-      max_nc: null
+      min_trip: 34
 
 pins:
-  # DUMMY: provisional Teensy pins; replace after the assembled wiring is verified.
+  # Fixed V6 Teensy assignments. Wiring verification gates operation without
+  # changing this pin contract.
   motor_driver:
-    rpwm: 22 # DUMMY
-    lpwm: 23 # DUMMY
-    r_enable: 24 # DUMMY
-    l_enable: 25 # DUMMY
-    r_is_current_sense: 38 # DUMMY
-    l_is_current_sense: 39 # DUMMY
+    rpwm: 22
+    lpwm: 23
+    shared_enable: 38 # Fans to R_EN and L_EN on V6.
   encoder:
-    phase_a: 26 # DUMMY
-    phase_b: 27 # DUMMY
+    phase_a: 30
+    phase_b: 31
+  field_valid_supervisor:
+    digital: 27
+    source_net: EXT5_FIELD
+    signal_net: FIELD_VALID
+    topology: voltage_supervisor_open_drain
+    supervisor: TPS3897ADRYT
+    sense_high_resistance_ohm: 84500
+    sense_low_resistance_ohm: 10000
+    sense_resistor_tolerance_percent: 0.1
+    vcc_bypass_capacitance_f: 0.0000001
+    output_pullup_to_3v3_ohm: 10000
+    active_high: true
+    supervisor_verified: false
+    nominal_rising_threshold_v: 4.725
+    nominal_falling_threshold_v: 4.678
+    rising_threshold_range_with_tolerance_and_isense_v: [4.668, 4.782]
+    valid_qualification_nominal_us: 40
+    invalid_detection_typical_us: 16
+    invalid_detection_datasheet_max_specified: false
+    assembled_worst_case_characterization_required: true
+    invalid_or_field_unpowered_level: low
+    firmware_input_bias: none_external_r62_r64
+    hypothetical_core_off_sense_clamp_feed_max_ua: 59
+    hardware_output_gates:
+      sensor_driver:
+        driver: U3_SN74AHCT244
+        gate_mosfet: Q2_BSS138K
+        gate_net: U3_OE_N
+        gate_pullup_to_ext5_field_ohm: 10000
+        field_valid_gate_active: low
+        invalid_or_core_off_state: disabled
+      motor_mti_driver:
+        driver: U6_SN74AHCT126
+        gate_net: FIELD_VALID
+        field_valid_pulldown_ohm: 100000
+        field_valid_gate_active: high
+        invalid_or_core_off_state: disabled
+      data_path_delay_added: false
 
 mechanics:
   # Required measurements. Keep configured false until these are measured.
   configured: false
-  transmission_type: constant_pitch_pulley # DUMMY: verify pulley/spool arrangement.
-  min_length_m: 0.0 # DUMMY: measure minimum arm length.
-  max_length_m: 0.0 # DUMMY: measure maximum arm length.
-  pulley_pitch_diameter_m: 0.0 # DUMMY: measure cable pulley pitch diameter.
-  motor_to_pulley_ratio: 1.0 # DUMMY: verify gear/pulley ratio.
-  sonar_mount_offset_from_arm_tip_m: 0.0 # DUMMY: measure sonar datum offset.
-  encoder_zero_count_at_min_length: 0 # DUMMY until the minimum limit is homed.
-  calibrated_count_span_to_max_length: 0 # DUMMY until both endpoints are measured.
-  encoder_count_increases_on_extension: true # DUMMY: verify while moving outward.
-  motor_duty_sign_for_extension: 1 # DUMMY: verify motor polarity while moving outward.
+  transmission_type: constant_pitch_pulley # Verify the pulley/spool arrangement.
+  min_length_m: 0.0 # Measurement required before configured=true.
+  max_length_m: 0.0 # Measurement required before configured=true.
+  pulley_pitch_diameter_m: 0.0 # Measure the cable pulley pitch diameter.
+  motor_to_pulley_ratio: 1.0 # Verify the gear/pulley ratio.
+  sonar_mount_offset_from_arm_tip_m: 0.0 # Measure the sonar datum offset.
+  encoder_zero_count_at_min_length: 0 # Establish during explicit homing.
+  calibrated_count_span_to_max_length: 0 # Calibrate over measured full travel.
+  encoder_count_increases_on_extension: true # Verify while moving outward.
+  motor_duty_sign_for_extension: 1 # Verify motor polarity while moving outward.
   calibration_source: endpoint_homing_and_measurement
   limit_reference_policy:
     min_limit_action: rebase_encoder_zero
-    max_limit_action: clamp_to_max_length
+    min_limit_rebase_requires_explicit_home_request: true
     minimum_length_datum_m: 0.0
     debounce_ms: 25
-    require_direction_consistency: false # Minimum contact is always a valid zero reference.
   spool:
-    enabled: false # DUMMY: set true only if cable winds directly on the spool.
-    bare_radius_m: 0.0 # DUMMY: measure spool radius if enabled.
-    cable_diameter_m: 0.0 # DUMMY: measure cable diameter if enabled.
-    layer_count_at_max: 0 # DUMMY: determine from the full travel.
+    enabled: false # Set true only if cable winds directly on the spool.
+    bare_radius_m: 0.0 # Measure spool radius if enabled.
+    cable_diameter_m: 0.0 # Measure cable diameter if enabled.
+    layer_count_at_max: 0 # Determine from the full travel if enabled.
 
   control:
     homing:
-      direction_to_min: -1 # DUMMY: verify after motor polarity is known.
-      speed_fraction: 0.10 # DUMMY: conservative provisional limit.
-      timeout_s: 30.0 # DUMMY: tune after travel and speed are measured.
+      direction_to_min: -1 # Verify after motor polarity is known.
+      speed_fraction: 0.10 # Initial commissioning ceiling; verify under load.
+      timeout_s: 30.0 # Tune after travel and speed are measured.
     position:
-      update_rate_hz: 100.0 # DUMMY: tune after the encoder is characterized.
-      max_speed_fraction: 0.25 # DUMMY: conservative provisional limit.
-      max_acceleration_fraction_per_s: 0.50 # DUMMY: tune after mechanics are measured.
-      direction_reversal_blank_ms: 20 # DUMMY: conservative electrical dead time; verify on the assembled driver.
-      position_kp: 1.0 # DUMMY: tune after mechanics are measured.
-      velocity_kp: 0.0 # DUMMY: tune after mechanics are measured.
-      integral_limit: 0.0 # DUMMY: keep disabled until steady-state error is measured.
+      update_rate_hz: 100.0 # Fixed by the current 10 ms firmware control pass.
+      max_speed_fraction: 0.25 # Initial commissioning ceiling; verify under load.
+      max_acceleration_fraction_per_s: 0.50 # Tune after mechanics are measured.
+      direction_reversal_blank_ms: 20 # Verify electrical dead time on the assembled driver.
+      position_kp: 1.0 # Tune after mechanics are measured.
+      velocity_kp: 0.0 # Keep disabled until a measured velocity loop is reviewed.
+      integral_limit: 0.0 # Keep disabled until steady-state error is measured.
     safety:
-      command_timeout_s: 0.50 # DUMMY: tune after the command path is implemented.
-      stall_timeout_s: 1.00 # DUMMY: tune after motor current feedback is verified.
-      max_motor_duty_fraction: 0.25 # DUMMY: must match firmware max duty.
-      require_redundant_limit_agreement: true # NC and NO must agree for the installed minimum SPDT switch.
-      current_sense_configured: false # DUMMY: ADC-to-amp calibration is still required.
-      motor_current_a_per_adc_count: 0.0 # DUMMY: calibrate against a trusted meter.
-      motor_current_zero_adc_count: 0.0 # DUMMY: measure with the driver disabled.
-      max_motor_current_a: 0.0 # DUMMY: set below the verified driver/motor limit.
+      command_timeout_s: 0.50 # Verify against the commissioned command path.
+      stall_timeout_s: 1.00 # Tune after motion and encoder response are measured.
+      max_motor_duty_fraction: 0.25 # Must match the firmware ceiling.
+      minimum_limit_is_fail_open_nc_loop: true
+      minimum_limit_trip_on_next_control_pass: true
+      control_update_period_ms: 10
+      minimum_limit_healthy_release_debounce_ms: 25
+      require_external_5v_valid: true
+      field_invalid_falling_edge_disables_enable: true
+      field_invalid_polled_backup_period_ms: 10
+      hardware_field_valid_output_gating_primary: true
+      firmware_field_invalid_handling_secondary: true
+      independent_hard_estop_covers_unbounded_supervisor_delay: true
+      restored_field_requires_new_command: true
+      hard_estop_required_in_12v_motor_path: true

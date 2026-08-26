@@ -25,8 +25,6 @@ public:
   Runtime()
       : scheduler_(schedulerConfig()),
         io_configuration_valid_(false),
-        lidar_pulse_active_(false),
-        lidar_pulse_release_us_(0),
         imu_feedback_pending_(false),
         imu_feedback_deadline_us_(0),
         imu_event_ready_(false),
@@ -63,21 +61,19 @@ public:
   }
 
   void onReferenceEdge(uint32_t now_us) {
-    scheduler_.onReferenceEdge(now_us);
-    using namespace ig_handle_firmware_config::timing;
-    if (scheduler_.state() == State::kRunning && kLidarClockEnabled && kLidarClockWiringVerified) {
-      setLidarPps(true);
-      lidar_pulse_active_ = true;
-      lidar_pulse_release_us_ = now_us + kLidarPpsPulseWidthUs;
+    if (timerRequired() && !fieldPowerHealthy()) {
+      forceFault(Fault::kFieldPowerInvalid);
+      return;
     }
+    scheduler_.onReferenceEdge(now_us);
   }
 
   void onTimerTick(uint32_t now_us) {
     using namespace ig_handle_firmware_config::timing;
 
-    if (lidar_pulse_active_ && reached(now_us, lidar_pulse_release_us_)) {
-      setLidarPps(false);
-      lidar_pulse_active_ = false;
+    if (timerRequired() && !fieldPowerHealthy()) {
+      forceFault(Fault::kFieldPowerInvalid);
+      return;
     }
 
     const Actions actions = scheduler_.update(now_us);
@@ -108,15 +104,13 @@ public:
 
     if (scheduler_.state() == State::kFault) {
       setScheduledTrigger(false);
-      setLidarPps(false);
-      lidar_pulse_active_ = false;
       clearCaptureState();
     }
   }
 
   bool timerRequired() const {
     using namespace ig_handle_firmware_config::timing;
-    return (kCameraTriggerEnabled || kImuTriggerEnabled || kLidarClockEnabled) && io_configuration_valid_;
+    return (kCameraTriggerEnabled || kImuTriggerEnabled || kLidarTimingEnabled) && io_configuration_valid_;
   }
 
   bool cameraFeedbackConfigured(uint8_t channel) const {
@@ -136,6 +130,10 @@ public:
   }
 
   void onCameraExposureEdge(uint8_t channel, bool active, uint32_t now_us, uint32_t sec, uint32_t nsec) {
+    if (!fieldPowerHealthy()) {
+      forceFault(Fault::kFieldPowerInvalid);
+      return;
+    }
     if (!cameraFeedbackConfigured(channel) || scheduler_.state() != State::kRunning || sec == 0) {
       return;
     }
@@ -213,6 +211,10 @@ public:
   }
 
   void onImuSyncEdge(uint32_t now_us, uint32_t sec, uint32_t nsec) {
+    if (!fieldPowerHealthy()) {
+      forceFault(Fault::kFieldPowerInvalid);
+      return;
+    }
     if (!imuFeedbackConfigured() || scheduler_.state() != State::kRunning || sec == 0) {
       return;
     }
@@ -254,8 +256,6 @@ public:
   void forceFault(Fault fault) {
     scheduler_.forceFault(fault);
     setScheduledTrigger(false);
-    setLidarPps(false);
-    lidar_pulse_active_ = false;
     clearCaptureState();
   }
   uint32_t triggerCount() const { return scheduler_.triggerCount(); }
@@ -269,7 +269,7 @@ public:
 private:
   static Config schedulerConfig() {
     using namespace ig_handle_firmware_config::timing;
-    const bool enabled = kCameraTriggerEnabled || kImuTriggerEnabled || kLidarClockEnabled;
+    const bool enabled = kCameraTriggerEnabled || kImuTriggerEnabled || kLidarTimingEnabled;
     const bool trigger_enabled = kCameraTriggerEnabled || kImuTriggerEnabled;
     const Config config = {
         enabled,
@@ -302,7 +302,7 @@ private:
     }
     uint8_t count = 0;
     const bool any_timing = kCameraTriggerEnabled || kCameraFeedbackEnabled || kImuTriggerEnabled ||
-                            kImuFeedbackEnabled || kLidarClockEnabled;
+                            kImuFeedbackEnabled || kLidarTimingEnabled || kLidarNmeaEnabled;
     count += any_timing && kReferenceInputPin == target ? 1 : 0;
     if (kCameraTriggerEnabled) {
       if (kCameraUseHardwareFanout) {
@@ -320,11 +320,7 @@ private:
     }
     count += kImuTriggerEnabled && kImuTriggerPin == target ? 1 : 0;
     count += kImuFeedbackEnabled && kImuSyncPin == target ? 1 : 0;
-    if (kLidarClockEnabled) {
-      for (uint8_t i = 0; i < kLidarCount; ++i) {
-        count += kLidarPpsPins[i] == target ? 1 : 0;
-      }
-    }
+    count += kLidarNmeaEnabled && kLidarNmeaTxPin == target ? 1 : 0;
     return count;
   }
 
@@ -348,7 +344,12 @@ private:
     using namespace ig_handle_firmware_config;
     using namespace ig_handle_firmware_config::timing;
 
-    const bool any_timed_output = kCameraTriggerEnabled || kImuTriggerEnabled || kLidarClockEnabled;
+    const bool any_timed_output = kCameraTriggerEnabled || kImuTriggerEnabled || kLidarTimingEnabled;
+    if (any_timed_output &&
+        (!ig_handle_firmware_config::telescope::kFieldValidSupervisorVerified ||
+         !ig_handle_firmware_config::telescope::kFieldValidActiveHigh)) {
+      return false;
+    }
     if (any_timed_output &&
         (!kReferenceWiringVerified || !kReferencePullupTo3V3Verified || !pinAssigned(kReferenceInputPin))) {
       return false;
@@ -364,7 +365,7 @@ private:
          !feedbackWindowValid(true, kImuFeedbackTimeoutUs, kSensorTriggerPulseWidthUs, kSensorTriggerPeriodUs))) {
       return false;
     }
-    if (kLidarClockEnabled && !kLidarClockWiringVerified) {
+    if (kLidarTimingEnabled && !kLidarTimingWiringVerified) {
       return false;
     }
     uint8_t pins[16] = {0};
@@ -398,12 +399,8 @@ private:
     if (kImuFeedbackEnabled && !addUniquePin(kImuSyncPin, pins, &pin_count)) {
       return false;
     }
-    if (kLidarClockEnabled) {
-      for (uint8_t i = 0; i < kLidarCount; ++i) {
-        if (!addUniquePin(kLidarPpsPins[i], pins, &pin_count)) {
-          return false;
-        }
-      }
+    if (kLidarNmeaEnabled && !addUniquePin(kLidarNmeaTxPin, pins, &pin_count)) {
+      return false;
     }
     return true;
   }
@@ -435,17 +432,13 @@ private:
     if (kImuTriggerEnabled && safeAssignedOutput(kImuTriggerPin)) {
       configureOutputInactive(kImuTriggerPin, kImuTriggerActiveHigh);
     }
-    if (kLidarClockEnabled) {
-      for (uint8_t i = 0; i < kLidarCount; ++i) {
-        if (safeAssignedOutput(kLidarPpsPins[i])) {
-          configureOutputInactive(kLidarPpsPins[i], kLidarPpsActiveHigh[i]);
-        }
-      }
-    }
   }
 
   static void configureInputs() {
     using namespace ig_handle_firmware_config::timing;
+    // R62/R64 define the externally biased FIELD_VALID board node. Observe it
+    // without an MCU pull so the firmware cannot mask or redefine that node.
+    pinMode(ig_handle_firmware_config::telescope::kFieldValidPin, INPUT);
     if (kCameraFeedbackEnabled) {
       for (uint8_t i = 0; i < kCameraCount; ++i) {
         pinMode(kCameraExposurePins[i], INPUT);
@@ -472,14 +465,9 @@ private:
     }
   }
 
-  static void setLidarPps(bool active) {
-    using namespace ig_handle_firmware_config::timing;
-    if (!kLidarClockEnabled || !kLidarClockWiringVerified) {
-      return;
-    }
-    for (uint8_t i = 0; i < kLidarCount; ++i) {
-      writeOutput(kLidarPpsPins[i], kLidarPpsActiveHigh[i], active);
-    }
+  static bool fieldPowerHealthy() {
+    using namespace ig_handle_firmware_config::telescope;
+    return kFieldValidSupervisorVerified && kFieldValidActiveHigh && digitalRead(kFieldValidPin) == HIGH;
   }
 
   void clearCaptureState() {
@@ -494,8 +482,6 @@ private:
 
   Scheduler scheduler_;
   bool io_configuration_valid_;
-  volatile bool lidar_pulse_active_;
-  volatile uint32_t lidar_pulse_release_us_;
   ExposureFeedbackTracker<ig_handle_firmware_config::timing::kCameraCount> camera_feedback_;
   volatile bool imu_feedback_pending_;
   volatile uint32_t imu_feedback_deadline_us_;

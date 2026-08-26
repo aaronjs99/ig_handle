@@ -55,7 +55,7 @@ ros_lib_sha256="$(
     printf '%s  %s\n' "$(sha256sum "${relative_path}" | awk '{print $1}')" "${relative_path#./}"
   done < <(find . -type f -print0 | sort -z) | sha256sum | awk '{print $1}'
 )"
-[[ "${ros_lib_sha256}" == "bd37a4063ac213b2a8734a575f59c4c3b54e0818dc45ca2de5349dd63f7d50ff" ]] || {
+[[ "${ros_lib_sha256}" == "2abba466f570bc40040ecdf21bc4aaa3482a2dd4876ab09fbd046e2e6698bee0" ]] || {
   echo "ros_lib content hash mismatch: ${ros_lib_sha256}" >&2; exit 2;
 }
 

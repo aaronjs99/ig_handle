@@ -25,6 +25,7 @@ enum class Fault : uint8_t {
   kFeedbackTimeout,
   kEventQueueOverflow,
   kRuntimeUnavailable,
+  kFieldPowerInvalid,
 };
 
 struct Config {
@@ -312,10 +313,11 @@ public:
       return actions;
     }
 
-    // LiDAR-only operation still qualifies and watches the reference, but a
-    // VLP-16 PPS edge is emitted by the hardware adapter on each qualified
-    // reference edge. It must not create a fictitious camera/IMU trigger
-    // stream or accrue scheduler deadline faults.
+    // LiDAR-only operation qualifies and watches the shaped PPS edge captured
+    // from the DS3231-triggered one-shot. Hardware fans that edge directly to
+    // both VLP-16s; firmware does not synthesize or gate it. LiDAR-only mode
+    // must not create a fictitious camera/IMU trigger stream or accrue
+    // scheduler deadline faults.
     if (!config_.trigger_enabled) {
       return actions;
     }
@@ -434,6 +436,8 @@ inline const char* faultName(Fault fault) {
       return "event_queue_overflow";
     case Fault::kRuntimeUnavailable:
       return "runtime_unavailable";
+    case Fault::kFieldPowerInvalid:
+      return "field_power_invalid";
   }
   return "unknown";
 }

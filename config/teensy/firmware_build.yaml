@@ -1,8 +1,8 @@
 schema_version: 1
 target: teensy_4_1
-generated_at_utc: '2026-08-26T17:46:53Z'
-firmware_build_id: source-sha256:5bddf7a8791b9fd8d295f587bade6d0d15c90219c5adc5f79f95782f4d88ce28
-source_sha256: 5bddf7a8791b9fd8d295f587bade6d0d15c90219c5adc5f79f95782f4d88ce28
+generated_at_utc: '2026-08-28T20:48:06Z'
+firmware_build_id: source-sha256:d9d8f74db9b1bf34e00e1f514d0418af9f6dda4a14253afc9661c034ca480808
+source_sha256: d9d8f74db9b1bf34e00e1f514d0418af9f6dda4a14253afc9661c034ca480808
 fqbn: teensy:avr:teensy41:usb=serial,speed=600,opt=o2std,keys=en-us
 toolchain:
   arduino_cli: 1.3.0
@@ -15,10 +15,10 @@ toolchain:
 artifacts:
   elf:
     relative_path: build/teensy41/main.ino.elf
-    sha256: a573de989a6e97b06d1fa3e1552649af59b9295c8c14d0e174039c908e22ce3a
+    sha256: 452910afdd8b6ed25940afcc41f75f5ab197f47a73995a445872e87f88943ea2
   hex:
     relative_path: build/teensy41/main.ino.hex
-    sha256: 5eaf0308366096d70a39d99149a34a15259f8fdb3ea473411ea3ba6400c47a57
+    sha256: 0f8ccf47d60f106ca56d6396068c15b82d3479366fc8ed737f165884baf78ab2
 build_evidence:
   compiled: true
   portable_source_id_verified: true

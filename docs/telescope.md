@@ -9,7 +9,7 @@ This is not yet a commissioned runtime contract. The checked-in
 [`hardware.yaml`](../config/telescope/hardware.yaml) configuration is disabled,
 contains zero-valued measurement-required geometry, and represents the V6
 one-switch design:
-the normally-closed minimum loop is monitored on D34, and no maximum switch is
+the normally-closed minimum loop is monitored on D22, and no maximum switch is
 invented. ORACLE correspondingly disables automatic telescope-length commands.
 Motor drive remains disabled until the switch, geometry, encoder, active-high
 external-field supervisor, motor polarity, and wiring are commissioned together. Once enabled in
@@ -63,7 +63,7 @@ accepted one-contact ambiguity and must be covered by commissioning and the
 mechanical hard stop. Connectors must preserve current rating, locking, serviceability,
 contact protection, and strain relief.
 
-The BTS7960 receives RPWM on D22, LPWM on D23, and one buffered D38 enable that
+The BTS7960 receives RPWM on D5, LPWM on D4, and one buffered D23 enable that
 fans to `R_EN` and `L_EN`. Connector-side pulldowns keep all three commands low.
 U12 TPS3897ADRYT supervises fused `EXT5_FIELD`, downstream of the
 TPS259470-protected J1 input. J1 must remain inside a 4.95-5.05 V instantaneous
@@ -81,7 +81,7 @@ the tolerance-plus-`I_SENSE` rising range is approximately 4.668-4.782 V. C17
 40 us nominal valid qualification; this is a formula/nominal value, not a guaranteed
 maximum. Its
 open-drain output, R62 10 kOhm core-3.3-V pull-up, and R64 100 kOhm pulldown create
-active-high `FIELD_VALID` on D27. LOW means invalid/off and remains fail-low with
+active-high `FIELD_VALID` on D31. LOW means invalid/off and remains fail-low with
 the core off. Invalid propagation is about 16 us typical, but the datasheet gives
 no maximum; characterize the assembled worst case and retain the independent
 hard E-stop. All four U6
@@ -93,13 +93,13 @@ and homing requests, and zeroes both PWM channels. Restoring the field rail does
 not resume the old request; a fresh valid command is required. USB backup is not
 permitted to power BTS logic or encoder.
 
-If the timing core or MCU is off, firmware cannot inspect D27; R64, the U6 OE
+If the timing core or MCU is off, firmware cannot inspect D31; R64, the U6 OE
 connections, and connector-side pulldowns independently hold the driver and
 RPWM, LPWM, and enable paths inactive. R62 10 kOhm and R64 100 kOhm define the
-`FIELD_VALID` board node; D27 is a plain MCU input and does not add another bias.
-An open branch between that node and D27 is therefore indeterminate/lost firmware
+`FIELD_VALID` board node; D31 is a plain MCU input and does not add another bias.
+An open branch between that node and D31 is therefore indeterminate/lost firmware
 evidence, not a guaranteed invalid reading. The U3/U6 hardware OE gates remain
-independently connected to the board node. A D27 short to 3.3 V or a failed-open
+independently connected to the board node. A D31 short to 3.3 V or a failed-open
 supervisor output with R62 intact can still masquerade as valid, so route
 continuity, open-branch, short-high, and stuck-output fault tests are commissioning
 gates, and the hard E-stop remains independent. If the core is off while

@@ -321,7 +321,7 @@ void setup() {
       rtc.writeSqwPinMode(DS3231_OFF);
     } else {
       rtc_time_valid = !rtc.lostPower();
-      // The DS3231 SQW falling edge triggers the hardware one-shot. D12
+      // The DS3231 SQW falling edge triggers the hardware one-shot. D38
       // observes the shaped active-high PPS rising edge; firmware does not
       // synthesize PPS. The datasheet's approximate phase relationship is not
       // bench evidence: scope this module's SQW against register rollover and
@@ -339,7 +339,7 @@ void setup() {
   const bool timing_runtime_ready = timing_requested && rtc_available && timing_initialized;
   if (timing_runtime_ready && kReferenceWiringVerified) {
     pinMode(kReferenceInputPin, INPUT);
-    // kReferenceActiveHigh is true for the shaped PPS_MASTER edge on D12.
+    // kReferenceActiveHigh is true for the shaped PPS_MASTER edge on D38.
     attachInterrupt(digitalPinToInterrupt(kReferenceInputPin), referenceISR, kReferenceActiveHigh ? RISING : FALLING);
   }
   if (timing_runtime_ready && sensor_sync_runtime.timerRequired()) {

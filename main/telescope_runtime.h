@@ -54,7 +54,7 @@ public:
     pinMode(kMotorRightPwmPin, OUTPUT);
     pinMode(kMotorLeftPwmPin, OUTPUT);
     pinMode(kMotorEnablePin, OUTPUT);
-    // R62/R64 define the externally biased FIELD_VALID board node. D27 only
+    // R62/R64 define the externally biased FIELD_VALID board node. D31 only
     // observes it; a branch open between that node and the MCU is a loss of
     // firmware evidence, while the board's U3/U6 OE gates remain independent.
     pinMode(kFieldValidPin, INPUT);

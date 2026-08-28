@@ -54,20 +54,20 @@ components:
     receiver: sn74lv14apwr_inverting_schmitt
     mcu_active_level: low
     channels:
-      min_trip: 34
+      min_trip: 22
 
 pins:
   # Fixed V6 Teensy assignments. Wiring verification gates operation without
   # changing this pin contract.
   motor_driver:
-    rpwm: 22
-    lpwm: 23
-    shared_enable: 38 # Fans to R_EN and L_EN on V6.
+    rpwm: 5
+    lpwm: 4
+    shared_enable: 23 # Fans to R_EN and L_EN on V6.
   encoder:
-    phase_a: 30
-    phase_b: 31
+    phase_a: 12
+    phase_b: 11
   field_valid_supervisor:
-    digital: 27
+    digital: 31
     source_net: EXT5_FIELD
     signal_net: FIELD_VALID
     topology: voltage_supervisor_open_drain

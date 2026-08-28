@@ -30,13 +30,13 @@ static_assert(kCameraCount == 4, "camera count changes require matching ISR hand
 static_assert(kLidarCount == 2, "LiDAR count changes require matching hardware fanout and harness documentation");
 
 // The falling edge of the DS3231 open-drain SQW output triggers the one-shot.
-// V6 captures the resulting active-high PPS_MASTER rising edge on D12, the same
+// V6 captures the resulting active-high PPS_MASTER rising edge on D38, the same
 // edge physically fanned out to both VLP-16s. Firmware never synthesizes PPS.
 // The datasheet places SQW's high transition about 500 ms after seconds data
 // transfer, so the following falling edge supports association with the next
 // divider boundary. Exact assembled phase still requires scoping SQW against
 // RTC register rollover and PPS_MASTER. The RTC is a local epoch, not GNSS UTC.
-static constexpr uint8_t kReferenceInputPin = 12;
+static constexpr uint8_t kReferenceInputPin = 38;
 static constexpr bool kReferenceWiringVerified = false;
 static constexpr bool kReferencePullupTo3V3Verified = false;
 static constexpr bool kReferenceActiveHigh = true;
@@ -63,10 +63,10 @@ static constexpr bool kCameraWiringVerified = false;
 static constexpr bool kCameraFrameStartConfigured = false;
 static constexpr bool kCameraExposureActiveConfigured = false;
 static constexpr bool kCameraUseHardwareFanout = true;
-static constexpr uint8_t kCameraFanoutTriggerPin = 11;
+static constexpr uint8_t kCameraFanoutTriggerPin = 34;
 static constexpr bool kCameraFanoutTriggerActiveHigh = true;
 static constexpr uint8_t kCameraTriggerPins[kCameraCount] = {kInvalidPin, kInvalidPin, kInvalidPin, kInvalidPin};
-static constexpr uint8_t kCameraExposurePins[kCameraCount] = {14, 15, 16, 17};
+static constexpr uint8_t kCameraExposurePins[kCameraCount] = {17, 16, 15, 14};
 static constexpr bool kCameraTriggerActiveHigh[kCameraCount] = {true, true, true, true};
 // The exact SN74LV14APWR feedback receiver inverts active-high OPTOOUT.
 static constexpr bool kCameraExposureActiveHigh[kCameraCount] = {false, false, false, false};
@@ -159,8 +159,8 @@ static constexpr bool kImuFeedbackEnabled = false;
 static constexpr bool kImuWiringVerified = false;
 static constexpr bool kImuSyncInEventConfigured = false;
 static constexpr bool kImuSyncOutEventConfigured = false;
-static constexpr uint8_t kImuTriggerPin = 5;
-static constexpr uint8_t kImuSyncPin = 4;
+static constexpr uint8_t kImuTriggerPin = 30;
+static constexpr uint8_t kImuSyncPin = 27;
 static constexpr bool kImuTriggerActiveHigh = true;
 // The exact SN74LV14APWR inverts the physical active-high SyncOut edge.
 static constexpr bool kImuSyncActiveHigh = false;
@@ -245,24 +245,24 @@ static constexpr int8_t kMotorDutySignForExtension = 1;          // Verify motor
 
 // Fixed V6 Teensy pin contract. Wiring verification gates operation; it does
 // not change these assignments.
-static constexpr uint8_t kMotorRightPwmPin = 22;
-static constexpr uint8_t kMotorLeftPwmPin = 23;
-static constexpr uint8_t kMotorEnablePin = 38;
-static constexpr uint8_t kEncoderPhaseAPin = 30;
-static constexpr uint8_t kEncoderPhaseBPin = 31;
-static constexpr uint8_t kMinLimitTripPin = 34;
+static constexpr uint8_t kMotorRightPwmPin = 5;
+static constexpr uint8_t kMotorLeftPwmPin = 4;
+static constexpr uint8_t kMotorEnablePin = 23;
+static constexpr uint8_t kEncoderPhaseAPin = 12;
+static constexpr uint8_t kEncoderPhaseBPin = 11;
+static constexpr uint8_t kMinLimitTripPin = 22;
 // V6's exact SN74LV14APWR makes an open/tripped NC loop active-low at the MCU.
 static constexpr bool kMinLimitTrippedActiveHigh = false;
 static constexpr bool kMinLimitPresent = true;
 // TPS3897ADRYT supervises EXT5_FIELD through an 84.5 kOhm / 10.0 kOhm divider.
 // Its open-drain output and a 10 kOhm core-3.3-V pull-up create FIELD_VALID on
-// D27: HIGH means qualified field power and LOW means invalid/off. Hardware
+// D31: HIGH means qualified field power and LOW means invalid/off. Hardware
 // FIELD_VALID gating disables U3/U6 independently. As a secondary defense, the
 // falling edge asynchronously removes the MCU's shared BTS enable and the
 // 10 ms control loop clears requests and zeroes both PWMs.
 // Motion remains disabled until the assembled supervisor and polarity have
 // been verified.
-static constexpr uint8_t kFieldValidPin = 27;
+static constexpr uint8_t kFieldValidPin = 31;
 static constexpr bool kFieldValidSupervisorVerified = false;
 static constexpr bool kFieldValidActiveHigh = true;
 

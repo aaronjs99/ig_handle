@@ -32,7 +32,7 @@ separate supervisor qualifies the rail near 4.7 V.
 Relative timing remains unqualified until the assembled board is measured with
 an oscilloscope or logic analyzer. V6 pulls the DS3231 open-drain `INT/SQW`
 output to 3.3 V; its falling edge triggers a hardware one-shot. The resulting
-active-high pulse fans to both VLP-16s, and Teensy D12 captures that same shaped
+active-high pulse fans to both VLP-16s, and Teensy D38 captures that same shaped
 rising edge. The DS3231 datasheet places the 1 Hz square-wave high transition
 approximately 500 ms after the seconds-register transfer; capturing the falling
 edge therefore supports association with the next divider boundary, but it is
@@ -76,7 +76,7 @@ does not power the PoE cameras. Touching 1x6 J5 carries cameras 1-2 and 1x6 J7
 carries cameras 3-4; each camera's OPTOGND is bonded to board signal ground.
 Use IP-rated M8 cables or sealing plugs to retain the camera's ingress rating.
 
-V6 uses one D11 command and four hardware-buffered fanout branches; it does not
+V6 uses one D34 command and four hardware-buffered fanout branches; it does not
 claim four sequential GPIO writes are simultaneous. R66-R69 are separate
 10 kOhm connector-side pulldowns that hold `CAM1_OPTOIN` through
 `CAM4_OPTOIN` low during MCU reset/high-Z, core-off, driver-disable, or an open

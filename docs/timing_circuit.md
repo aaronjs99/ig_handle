@@ -1,15 +1,15 @@
 # Heron V6 timing and motion circuit
 
-**Document role:** source-of-truth explanation of the V6 electrical design
-**Revision:** V6 CAD review candidate
-**Updated:** 2026-08-26
+**Document role:** source-of-truth explanation of the V6 electrical design<br>
+**Revision:** V6 CAD review candidate<br>
+**Updated:** 2026-08-28<br>
 **Applies to:** 2 VLP-16s, 1 Xsens MTi-30, 4 FLIR Forge cameras, 1 BTS7960/IBT-2 motor driver, 1 A/B encoder, and 1 normally-closed limit switch
 
 > Update this file and `timing_circuit.pdf` whenever the V6 schematic, connector pinout, Teensy pin assignment, power architecture, or firmware safety contract changes.
 
 ## Release status
 
-This document defines the target V6 circuit. V6 is a **CAD review candidate** as of 2026-08-26: the canonical project reports whole-hierarchy ERC = 0 errors/0 warnings and PCB DRC = 0 violations with schematic parity, all-track checks, zero unconnected pads, and zero footprint errors. All 12 D1-D3 channels also pass bridge-removal flow-through audits. It is neither fabrication-ready nor field-ready until the physical-fit and bench gates below are completed.
+This document defines the target V6 circuit. V6 remains a **CAD review candidate** after the 2026-08-28 Teensy pin reassignment. The schematic/PCB parity and electronic CAD gate must be regenerated: the latest checked board still has two no-net micro-segments at unused U2 D21, one isolated B.Cu ground island, and five Phoenix board-versus-library footprint warnings whose reversed library pad ordering must not be applied blindly. It is neither fabrication-ready nor field-ready until those CAD findings and the physical-fit and bench gates below are completed.
 
 ## Requirements
 
@@ -78,7 +78,7 @@ flowchart TD
     EF --> FF[field fuse/PTC] --> FIELD[EXT5_FIELD]
     CORE --> CLOAD[Teensy VIN + timing logic]
     FIELD --> FLOAD[encoder + BTS logic]
-    FIELD --> FS[TPS3897 field-valid supervisor] -->|active-high FIELD_VALID| MCU[Teensy D27]
+    FIELD --> FS[TPS3897 field-valid supervisor] -->|active-high FIELD_VALID| MCU[Teensy D31]
 ```
 
 - J1 is labeled **5 V ONLY**. A TPS259470 eFuse immediately after J1 protects both downstream branches. Its nominal EN/UVLO turn-on is 4.547 V, nominal overvoltage cutoff is 5.302 V, and nominal current limit is about 1.51 A. Including comparator, 0.1% divider, and pin-leakage tolerances, the expected UVLO and OVLO rising ranges are approximately 4.406-4.710 V and 5.142-5.489 V. The threshold network is 374 kOhm / 19.1 kOhm / 115 kOhm at 0.1%; use 2.21 kOhm at `ILM`, 2.2 nF C0G at `dVdt`, exact C14/C15 TDK C3216X7R1H225K160AB 2.2 uF +/-10%, X7R, 50 V, 1206 input/output capacitors, and leave `ITIMER`, `AUXOFF`, and `FLT` open. The approximately 5.5 ms controlled rise occurs only at power-up and adds no sensor-signal delay. EN/UVLO falling is roughly 4.15 V because of U11's internal hysteresis, so U11 alone is not proof that 5 V field logic remains in its guaranteed range and must not be described as always disconnecting before AHCT falls below 4.5 V. U12 `FIELD_VALID`, near 4.7 V, is the runtime field-logic validity gate.
@@ -89,7 +89,7 @@ flowchart TD
 - The computer's normal shielded cable plugs directly into the Teensy onboard Micro-B receptacle. V6 carries no USB D+/D- or shield traces, no second USB receptacle, and no internal USB data pigtail.
 - A short, insulated, strain-relieved 24-28 AWG wire from the exact Teensy underside VUSB-side test/cut pad to the carrier's single VUSB-tap solder pad supplies only the USB backup path. Never tap the VIN side of the cut.
 - Cut the Teensy 4.1 `VUSB-VIN` link and meter-prove the cut before connecting both sources.
-- U12 TPS3897ADRYT supervises `EXT5_FIELD`. R48 84.5 kOhm and R49 10.0 kOhm, both 0.1%, give 4.725 V nominal rising and 4.678 V nominal falling thresholds; the tolerance-plus-`I_SENSE` rising range is approximately 4.668-4.782 V. C17 100 nF is its local VCC bypass. The roughly 40 us valid qualification is nominal/formula-based, not a guaranteed maximum. Its open-drain output, R62 10 kOhm core-3.3-V pull-up, and R64 100 kOhm pulldown create active-high D27 `FIELD_VALID`: LOW means invalid/off and remains fail-low with the core off. Invalid propagation is about 16 us typical, but the datasheet specifies no maximum; characterize assembled worst case and retain the independent hard E-stop. Q2 onsemi BSS138K uses `FIELD_VALID` to pull U3 pins 1/19 `U3_OE_N` low only while valid; R63 10 kOhm to `EXT5_FIELD` disables U3 when Q2 is off. All four U6 active-high OE pins use `FIELD_VALID` directly. These OE-only gates add no component to any signal data path. As secondary defense, a D27 falling-edge ISR performs only a shared-enable-low write and a one-bit latch; the 10 ms loop polls, clears motion/homing requests, and zeroes both PWM channels. Restoration requires a fresh command. With the core off and the nominal field rail present, R48 bounds hypothetical sense-clamp feed to no more than 59 uA; this is not a zero-Ioff claim.
+- U12 TPS3897ADRYT supervises `EXT5_FIELD`. R48 84.5 kOhm and R49 10.0 kOhm, both 0.1%, give 4.725 V nominal rising and 4.678 V nominal falling thresholds; the tolerance-plus-`I_SENSE` rising range is approximately 4.668-4.782 V. C17 100 nF is its local VCC bypass. The roughly 40 us valid qualification is nominal/formula-based, not a guaranteed maximum. Its open-drain output, R62 10 kOhm core-3.3-V pull-up, and R64 100 kOhm pulldown create active-high D31 `FIELD_VALID`: LOW means invalid/off and remains fail-low with the core off. Invalid propagation is about 16 us typical, but the datasheet specifies no maximum; characterize assembled worst case and retain the independent hard E-stop. Q2 onsemi BSS138K uses `FIELD_VALID` to pull U3 pins 1/19 `U3_OE_N` low only while valid; R63 10 kOhm to `EXT5_FIELD` disables U3 when Q2 is off. All four U6 active-high OE pins use `FIELD_VALID` directly. These OE-only gates add no component to any signal data path. As secondary defense, a D31 falling-edge ISR performs only a shared-enable-low write and a one-bit latch; the 10 ms loop polls, clears motion/homing requests, and zeroes both PWM channels. Restoration requires a fresh command. With the core off and the nominal field rail present, R48 bounds hypothetical sense-clamp feed to no more than 59 uA; this is not a zero-Ioff claim.
 - Firmware also treats `FIELD_VALID` as a prerequisite for every field-timed path. While it is LOW, camera/MTi events and LiDAR reference/NMEA work are dropped, the relative epoch is discarded, the timing runtime reports `field_power_invalid`, and scheduled field outputs remain inactive. This is secondary diagnostic defense behind the U3/U6 hardware OE gates.
 - Use 47-100 uF core bulk, 1 uF at the mux, and 100 nF at every IC. Final fuse values follow load and inrush measurements.
 
@@ -100,15 +100,15 @@ The external buck is accepted only after the complete assembled load demonstrate
 | Pin | Signal | Direction | Purpose |
 | --- | --- | --- | --- |
 | D1 / Serial1 TX | shared VLP NMEA | out | One firmware-peripheral-inverted UART stream fans through non-inverting drivers to both VLPs |
-| D12 | shaped PPS capture | in | Captures the same post-one-shot edge delivered to both VLPs |
-| D11 | common camera trigger | out | Four hardware-buffered branches |
-| D14-D17 | camera 1-4 feedback | in | Separate ExposureActive timestamps |
-| D5 / D4 | MTi SyncIn / SyncOut | out / in | IMU event command and evidence |
-| D22 / D23 | BTS RPWM / LPWM | out | PWM and direction under firmware control |
-| D38 | BTS common enable | out | Fans to R_EN and L_EN; default low |
-| D30 / D31 | encoder A / B | in | Quadrature capture |
-| D34 | minimum limit tripped | in | Open NC loop means trip/fault |
-| D27 / A13 | `FIELD_VALID` | in | TPS3897 open-drain supervisor output; high=qualified field, low=invalid/off; R62/R64 bias the board node and the MCU uses a plain input, so D27-branch continuity is required for firmware evidence |
+| D38 | shaped PPS capture | in | Captures the same post-one-shot edge delivered to both VLPs |
+| D34 | common camera trigger | out | Four hardware-buffered branches |
+| D17 / D16 / D15 / D14 | camera 1 / 2 / 3 / 4 feedback | in | Separate ExposureActive timestamps |
+| D30 / D27 | MTi SyncIn / SyncOut | out / in | IMU event command and evidence |
+| D5 / D4 | BTS RPWM / LPWM | out | PWM and direction under firmware control |
+| D23 | BTS common enable | out | Fans to R_EN and L_EN; default low |
+| D12 / D11 | encoder A / B | in | Quadrature capture |
+| D22 | minimum limit tripped | in | Open NC loop means trip/fault |
+| D31 | `FIELD_VALID` | in | TPS3897 open-drain supervisor output; high=qualified field, low=invalid/off; R62/R64 bias the board node and the MCU uses a plain input, so D31-branch continuity is required for firmware evidence |
 | D18 / D19 | RTC SDA / SCL | bidirectional | Native I2C at 3.3 V |
 
 Timed outputs and motion remain fail-closed until wiring, polarity, device settings, geometry, encoder sign, blocked motor direction, and hard E-stop operation are verified.
@@ -117,7 +117,7 @@ Timed outputs and motion remain fail-closed until wiring, polarity, device setti
 
 The intended retained module is the original Adafruit DS3231 product 3013 with coin cell. The official Eagle source defines a 22.86 x 17.78 mm outline with 2.54 mm corner radii, a 1x8 header on 2.54 mm pitch, and two 2.5 mm plated mounting holes at (2.54, 15.24) and (20.32, 15.24) mm from the lower-left datum. The carrier footprint reproduces that geometry and reserves battery/body clearance. Power it from 3.3 V so its onboard I2C pull-ups cannot expose Teensy pins to 5 V. Before fabrication, confirm the installed module is product 3013 and perform a physical print/fit check; the larger product 5188 STEMMA variant does not fit this footprint.
 
-The open-drain `SQW` output uses a 4.7 kOhm pull-up to 3.3 V. Its falling edge triggers an SN74LVC1G123, whose active-high output rises to create `PPS_MASTER`. The DS3231 datasheet places the 1 Hz square-wave high transition approximately 500 ms after the seconds-register transfer, so using the falling edge supports association with the next divider boundary; it does not prove exact unmeasured phase. A nominal 100 kOhm/100 nF network makes an approximately 10 ms PPS. That is pulse width, not start delay; the leading edge is delayed only by nanosecond-scale logic propagation. Teensy D12 captures the shaped rising edge. Scope the assembled SQW against RTC register rollover and `PPS_MASTER`, then confirm the width and both loaded outputs before making any timing claim. The battery-backed RTC can retain square-wave mode; firmware now probes it on every boot and requests `DS3231_OFF` whenever all timing gates are false. This cannot suppress a pre-initialization edge or prove shutdown if the RTC is unreachable, so hardware gating and scope verification remain release gates.
+The open-drain `SQW` output uses a 4.7 kOhm pull-up to 3.3 V. Its falling edge triggers an SN74LVC1G123, whose active-high output rises to create `PPS_MASTER`. The DS3231 datasheet places the 1 Hz square-wave high transition approximately 500 ms after the seconds-register transfer, so using the falling edge supports association with the next divider boundary; it does not prove exact unmeasured phase. A nominal 100 kOhm/100 nF network makes an approximately 10 ms PPS. That is pulse width, not start delay; the leading edge is delayed only by nanosecond-scale logic propagation. Teensy D38 captures the shaped rising edge. Scope the assembled SQW against RTC register rollover and `PPS_MASTER`, then confirm the width and both loaded outputs before making any timing claim. The battery-backed RTC can retain square-wave mode; firmware now probes it on every boot and requests `DS3231_OFF` whenever all timing gates are false. This cannot suppress a pre-initialization edge or prove shutdown if the RTC is unreachable, so hardware gating and scope verification remain release gates.
 
 R61 is a 10 kOhm `PPS_MASTER` pulldown physically beside the U3 inputs. If `EXT5_FIELD` powers U3 while the core/one-shot is off, R61 holds both LiDAR PPS branches low rather than allowing a floating startup pulse.
 
@@ -150,7 +150,7 @@ The PoE cameras receive no power from V6. J5 carries cameras 1-2 and the touchin
 
 Within each 1x6 connector, pins 1-3 carry the first camera and pins 4-6 carry the second in the M8-pin-2, M8-pin-3, M8-pin-6 order. J5 and J7 therefore provide 12 positions total. Each M8 pin 3 OPTOGND is bonded to board signal ground. Camera-power ground on M8 pin 7 is not carried or bonded. Each open-collector OPTOOUT gets its own starting-value 1.0 kOhm pull-up to board 3.3 V referenced to OPTOGND, followed by connector-local protection, series resistance, and the exact SN74LV14APWR receiver. U4's Ioff partial-power-down behavior prevents externally present camera, MTi, or limit signals from back-powering an unpowered 3.3 V core. Characterize sink current and rise time on the actual cable before release.
 
-Four output-driver channels create closely aligned trigger edges. A common 10 kOhm pulldown holds D11's trigger command low during reset; each buffered branch has 100-220 Ohm series resistance and connector-local TVS. R66-R69 are separate 10 kOhm connector-side pulldowns on `CAM1_OPTOIN` through `CAM4_OPTOIN`; they hold every camera trigger low during MCU reset/high-Z, core-off, driver-disable, or an open harness. These are static fail-low loads, not RC timing filters. Four separate 3.3 V Schmitt inputs capture the pulled-up OPTOOUT lines. Firmware records command and feedback; the camera's approximately 7-25 us optocoupler delay dominates the board's nanosecond-scale delay. The disabled-by-default scheduler uses a 200 ms period (5 Hz) to match the checked-in Forge acquisition-rate target; host camera triggering remains unchanged until the device configuration and feedback path are commissioned together.
+Four output-driver channels create closely aligned trigger edges. A common 10 kOhm pulldown holds D34's trigger command low during reset; each buffered branch has 100-220 Ohm series resistance and connector-local TVS. R66-R69 are separate 10 kOhm connector-side pulldowns on `CAM1_OPTOIN` through `CAM4_OPTOIN`; they hold every camera trigger low during MCU reset/high-Z, core-off, driver-disable, or an open harness. These are static fail-low loads, not RC timing filters. Four separate 3.3 V Schmitt inputs capture the pulled-up OPTOOUT lines. Firmware records command and feedback; the camera's approximately 7-25 us optocoupler delay dominates the board's nanosecond-scale delay. The disabled-by-default scheduler uses a 200 ms period (5 Hz) to match the checked-in Forge acquisition-rate target; host camera triggering remains unchanged until the device configuration and feedback path are commissioned together.
 
 ## Xsens MTi-30
 
@@ -229,15 +229,15 @@ DT100 and Ping360 are intentionally not wired to V6 in this revision. This is a 
 - Touching J5/J7 face the camera bulkhead; J3 faces the MTi cable.
 - J1, TPS259470, the USB-backup tap, and TPS2121 share the service edge.
 - The Teensy onboard Micro-B receptacle is accessible at the left board edge with plug and bend clearance. Its normal shielded cable connects directly to the computer.
-- Teensy is central; RTC, one-shot, and sensor-output buffer sit near D1/D11/D12.
+- Teensy is central; RTC, one-shot, and sensor-output buffer sit near D1/D34/D38.
 - TVS arrays sit within millimeters of their connectors.
-- The frozen board outline is **110 x 90 mm** on four layers with a solid `In1.Cu` ground plane. The four M3 centers are (14, 14), (116, 14), (14, 96), and (116, 96) mm in the CAD coordinate system; each is a 3.2 mm NPTH with a 6.5 mm all-layer keepout. The final route keeps signals off `In1.Cu`, uses 946 track segments and 133 vias, and carries no USB data traces.
+- The live board outline is **94 x 55 mm** on four layers with `In1.Cu` reserved for the ground plane. The four M3 centers are (18, 18), (102, 18), (17.5, 62), and (102, 62.75) mm in the CAD coordinate system; each is a 3.2 mm NPTH with a 6.5 mm all-layer keepout. The current route keeps signals off `In1.Cu` and carries no USB data traces; route-count and DRC evidence must be regenerated after the pin reassignment.
 - Phoenix SPTA terminal footprints use the manufacturer's official asymmetric 65-degree, 10 mm body geometry and 1.1 mm drills. Top-edge connectors rotate 180 degrees and face outward; bottom-edge connectors remain at 0 degrees and face outward. Preserve at least 1.30 mm body-to-board-edge and 1.05 mm courtyard-to-board-edge clearance. Installed height is 12.4 mm and the required wire strip length is 8 mm.
 - Mount on insulating standoffs at least 6 mm tall and preserve at least 2 mm insulation/clearance from every through-hole tail to any conductive tray surface. Before release, dry-fit ferrule insertion, spring release-tool access, the host USB plug/cable bend, and RTC body/coin-cell access with the exact board, tray, standoffs, sockets, and harnesses.
-- Place every fitted component on the top side. Reserve the bottom for copper and vias, and keep it assembly-clear against the tray floor.
+- Keep the socketed modules, through-hole connectors, and other service-access parts on the top side. Low-profile SMD logic and passives are intentionally fitted on `B.Cu` beneath the raised Teensy/RTC modules; verify module-body clearance above them and solder-joint/standoff/tray clearance below them, and keep tall or hand-service parts off the bottom.
 - U2 and U8 remain socketed; reserve the exact module-stack, USB-plug/cable-bend, and RTC battery/body volumes in the enclosure model.
 
-These dimensions and clearances are the physical CAD contract. The electronic CAD checks are complete, but the exact-part dry-fit, through-hole-tail/tray clearance, ferrule and release-tool access, module identification, and bench gates remain open.
+These dimensions and clearances are the physical CAD contract. The electronic CAD checks must be regenerated after the pin reassignment, and the exact-part dry-fit, through-hole-tail/tray clearance, ferrule and release-tool access, module identification, and bench gates remain open.
 
 No knob or switch is currently justified. Add labeled test points for all rails and major timing/motion nets. A future RC input may be a three-pin DNP reservation only after receiver voltage/protocol are known.
 
@@ -251,8 +251,8 @@ No knob or switch is currently justified. Add labeled test points for all rails 
 | Field rail restored | old motion request remains cleared; a fresh valid command is required |
 | Both sources absent | board off; connector-side motor-command pulldowns and hard E-stop remain independent; R61 holds field-powered PPS branches low if the core alone is off; R65-R69 hold MTi SyncIn and all camera trigger branches low |
 | Teensy reset/high-Z or core off | connector-side pulldowns hold RPWM, LPWM, enable, MTi SyncIn, and all four camera trigger branches low without firmware |
-| D27 branch opens between the `FIELD_VALID` board node and MCU | firmware observation is indeterminate/unavailable, so this is a loss of firmware evidence rather than a guaranteed invalid reading; U3/U6 hardware OE control remains independently tied to the board node; route continuity, fault injection, and the independent hard E-stop are required |
-| D27 shorts high or supervisor output fails open with R62 intact | can masquerade as valid; commissioning fault injection and the independent hard E-stop remain required |
+| D31 branch opens between the `FIELD_VALID` board node and MCU | firmware observation is indeterminate/unavailable, so this is a loss of firmware evidence rather than a guaranteed invalid reading; U3/U6 hardware OE control remains independently tied to the board node; route continuity, fault injection, and the independent hard E-stop are required |
+| D31 shorts high or supervisor output fails open with R62 intact | can masquerade as valid; commissioning fault injection and the independent hard E-stop remain required |
 | Limit loop opens | tripped; motion toward minimum blocked |
 | Encoder stops during motion | stall fault |
 | Camera/MTi feedback missing | timing fault; no invented event |
@@ -266,19 +266,19 @@ No knob or switch is currently justified. Add labeled test points for all rails 
 - [ ] Before inserting U2, prove the Teensy VUSB-VIN cut and the insulated, strain-relieved VUSB-side tap.
 - [ ] Prove the VUSB tap is on the USB side of the cut, is fused at 0.5 A, is insulated/strain-relieved, and does not back-power the computer or field rail.
 - [ ] Test external-only, USB-only, and both-source cases with no backfeed; USB-only must not power field loads.
-- [ ] Scope SQW against RTC register rollover, then scope the one-shot PPS, D12 capture, both loaded VLP PPS branches, and NMEA polarity/timing; do not claim exact SQW phase before this measurement.
+- [ ] Scope SQW against RTC register rollover, then scope the one-shot PPS, D38 capture, both loaded VLP PPS branches, and NMEA polarity/timing; do not claim exact SQW phase before this measurement.
 - [ ] Install a normally-closed hard E-stop in the 12 V motor-power path, physically prove that it removes motor power independently, and only then set both hard-E-stop commissioning gates true.
 - [ ] On both VLPs, read back and save PPS Qualifier and GPS Qualifier `Require GPS Receiver Valid` = OFF; after the sensor's lock delay verify PPS Locked, packet PPS status 2, copied status-V RMC, and continuous time across `:58` to `:00` with no duplicate/skipped second. Preserve `V`; never fabricate `A` or position.
 - [ ] Measure four-camera trigger skew and capture all ExposureActive returns.
 - [ ] Verify MTi-30 settings, levels, cable pins, polarity, and packet marker.
 - [ ] Prove R65-R69 hold `MTI_SYNCIN` and `CAM1_OPTOIN` through `CAM4_OPTOIN` low during reset/high-Z, core-off, driver-disable, and open-harness tests.
 - [ ] Test encoder maximum rate, sign, bounded telemetry, and stall behavior.
-- [ ] Prove D27 high only inside the qualified `EXT5_FIELD` range; measure the 4.668-4.782 V rising band, nominal 4.678 V falling threshold, nominal/formula-based 40 us qualification, and assembled worst-case invalid delay (16 us is typical only; no datasheet maximum). Continuity-test the complete board-node-to-D27 branch. Fault-inject field loss, a D27 branch open, D27 short-high, and supervisor-output stuck-open/low; confirm a branch open is treated as lost/indeterminate firmware evidence while the board-node U3/U6 OE gates still disable independently, then verify secondary interrupt handling, 10 ms polling backup, fresh-command recovery, and independent hard-E-stop behavior.
+- [ ] Prove D31 high only inside the qualified `EXT5_FIELD` range; measure the 4.668-4.782 V rising band, nominal 4.678 V falling threshold, nominal/formula-based 40 us qualification, and assembled worst-case invalid delay (16 us is typical only; no datasheet maximum). Continuity-test the complete board-node-to-D31 branch. Fault-inject field loss, a D31 branch open, D31 short-high, and supervisor-output stuck-open/low; confirm a branch open is treated as lost/indeterminate firmware evidence while the board-node U3/U6 OE gates still disable independently, then verify secondary interrupt handling, 10 ms polling backup, fresh-command recovery, and independent hard-E-stop behavior.
 - [ ] Prove limit open-circuit, blocked-direction, reset/core-off, command-timeout, USB-loss, and hard-E-stop behavior.
 - [ ] Confirm the final V6 remains the lean shared-ground design with no TMR0511, ISO7760, `FIELD_GND`, isolation moat, or obsolete motor gates.
-- [ ] Verify the 110 x 90 mm four-layer outline, all four M3 centers, 3.2 mm NPTHs, 6.5 mm all-layer keepouts, Phoenix 65-degree body/orientation/edge-clearance contract, 1.1 mm terminal drills, 12.4 mm installed height, 8 mm strip length, insulating standoffs of at least 6 mm, and at least 2 mm through-hole-tail insulation from the conductive tray. Dry-fit ferrule insertion and release-tool access.
+- [ ] Verify the 94 x 55 mm four-layer outline; M3 centers at (18, 18), (102, 18), (17.5, 62), and (102, 62.75) mm; 3.2 mm NPTHs; 6.5 mm all-layer keepouts; Phoenix 65-degree body/orientation/edge-clearance contract; 1.1 mm terminal drills; 12.4 mm installed height; 8 mm strip length; insulating standoffs of at least 6 mm; and at least 2 mm through-hole-tail insulation from the conductive tray. Dry-fit ferrule insertion and release-tool access.
 - [ ] Physically fit U2 with the selected Amphenol-or-supplied male rows and two PPPC241LFBN-RC sockets, verify every U2 drill is 1.016 mm, and fit U8's included 1x8 male header in a PPPC081LFBN-RC socket; prove tray, standoff, USB plug/cable, and RTC coin-cell/body clearance.
-- [x] Complete the electronic CAD gate: assigned exact footprints include the project-owned TI DQA A/B-compatible footprint; whole-hierarchy ERC is 0/0; the board is fully routed; schematic-parity/all-track DRC is 0 with zero unconnected pads and zero footprint errors; and every D1-D3 channel passes the bridge-removal audit. Regenerate this evidence after any edit.
+- [ ] Regenerate the electronic CAD gate after the 2026-08-28 pin reassignment: remove the two U2 D21 no-net micro-segments, connect the isolated B.Cu GND island, resolve or explicitly accept the five Phoenix library mismatches without reversing pad order, then rerun whole-hierarchy ERC, schematic-parity/all-track DRC, zero-unconnected checks, and the D1-D3 bridge-removal audit.
 
 ## References
 

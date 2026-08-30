@@ -31,7 +31,9 @@ catkin_install_python(
     scripts/mocap/bridge.py
     scripts/frames/export.py
     scripts/frames/broadcast.py
+    scripts/imu/analyze_stationary_bag.py
     scripts/imu/force_wakeup.py
+    scripts/imu/validate_stationary_candidate.py
     scripts/external_sensor_provider.py
     scripts/network_config.py
     scripts/sensor_bringup.py

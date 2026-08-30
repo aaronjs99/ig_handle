@@ -2,6 +2,7 @@
 
 | File | Relevance | Dependencies | Used by |
 | --- | --- | --- | --- |
+| imu_characterization.md | Defines the non-actuating Xsens stationary-analysis workflow, candidate-only covariance boundary, physical follow-up gates, and DLiO uncertainty qualification requirements. | ../scripts/imu/analyze_stationary_bag.py, ../scripts/imu/validate_stationary_candidate.py, ../config/sensors/sensor_contract.yaml | IMU calibration review, future experiment execution, and covariance commissioning decisions |
 | platform.md | Defines the physical sensor platform, network, supervision, recording, and device-identity boundaries. | runtime_surface.yaml, sensor_contract.yaml, sensor_frames.yaml, sensor_network.yaml | Sensor integration and field preparation |
 | platform.pdf | Rendered sensor-platform reference. | platform.md | Review and offline sharing |
 | sensor_timing.md | Defines fail-closed Teensy reference and field-valid qualification, hardware-owned VLP PPS, bounded inverted status-V NMEA with per-unit qualifier/lock readback, camera/MTi trigger-feedback contracts, asynchronous sonar safety boundary, and bench acceptance gates. | ../config/teensy/firmware_config.h, ../main/sensor_sync.h, official device manuals | Firmware integration and commissioning |

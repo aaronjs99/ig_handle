@@ -32,7 +32,9 @@
   <exec_depend>heron_msgs</exec_depend>
   <exec_depend>python3-dbus</exec_depend>
   <exec_depend>python3-gi</exec_depend>
+  <exec_depend>python3-numpy</exec_depend>
   <exec_depend>python3-rospkg</exec_depend>
+  <exec_depend>rosbag</exec_depend>
   <exec_depend>rospy</exec_depend>
   <exec_depend>sensor_msgs</exec_depend>
   <exec_depend>spinnaker_camera_driver</exec_depend>

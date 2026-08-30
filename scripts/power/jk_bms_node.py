@@ -16,12 +16,16 @@ from ig_handle.msg import JkBmsDetails
 from power.battery_registry import BatteryRegistry, BatteryRegistryError
 from power.bluez_ble import BluezBleClient, BluezError
 from power.jk_bms_protocol import (
+    INITIAL_READ_QUERY_COMMANDS,
+    PERIODIC_READ_QUERY_COMMANDS,
     DeviceInfo,
     FrameAssembler,
     JkBmsDecoder,
     ProtocolError,
+    ReadQueryGate,
     Telemetry,
     build_query,
+    response_kind,
 )
 from power.reconnect_guard import ConsecutiveErrorThreshold
 
@@ -205,6 +209,7 @@ class JkBmsNode:
         self._rx_errors = 0
         self._valid = False
         self._validity_reason = ""
+        self._query_gate = ReadQueryGate()
         self._publish_unavailable("starting")
         self.client = BluezBleClient(
             adapter=_required_text("adapter"),
@@ -219,12 +224,14 @@ class JkBmsNode:
             reconnect_delay_sec=_required_float("reconnect_delay_sec"),
             on_notification=self._notification,
             on_state=self._connection_state,
+            periodic_query_ready=lambda: self._query_gate.identity_admitted,
+            periodic_query_needed=lambda: self._query_gate.telemetry_query_needed,
         )
         self.worker = threading.Thread(
             target=self.client.run,
             args=(
-                (build_query(0x97),),
-                (build_query(0x97), build_query(0x96)),
+                tuple(build_query(command) for command in INITIAL_READ_QUERY_COMMANDS),
+                tuple(build_query(command) for command in PERIODIC_READ_QUERY_COMMANDS),
             ),
             name="jk_bms_ble",
             daemon=True,
@@ -242,6 +249,7 @@ class JkBmsNode:
 
     def _connection_state(self, connected: bool, reason: str) -> None:
         if not connected:
+            self._query_gate.reset()
             self._protocol_errors.record_success()
             with self._lock:
                 self._device_info = None
@@ -252,17 +260,30 @@ class JkBmsNode:
         try:
             for frame in self.assembler.feed(chunk):
                 self._rx_frames += 1
-                if frame[4] == 0x03:
+                kind = response_kind(frame[4])
+                if kind == "device_info":
                     info = self.decoder.decode_device_info(frame)
                     self._admit_identity(info)
-                elif frame[4] == 0x02:
+                    self._query_gate.admit_identity()
+                elif kind == "telemetry":
+                    if not self._query_gate.identity_admitted:
+                        # A warm BMS may still be auto-streaming from the prior
+                        # connection.  The frame is transport evidence only;
+                        # fail closed until this connection admits 0x03 identity.
+                        rospy.logdebug(
+                            "Ignoring JK telemetry until identity is admitted"
+                        )
+                        continue
                     telemetry = self.decoder.decode_telemetry(frame)
                     self._publish_telemetry(telemetry)
+                    self._query_gate.admit_telemetry()
                     decoded_telemetry = True
                 else:
-                    raise ProtocolError(
-                        "unsupported JK response type 0x{:02X}".format(frame[4])
-                    )
+                    # A 0x96 request may legitimately yield a 0x01 settings
+                    # frame before 0x02 telemetry begins.  It proves transport
+                    # activity but is not a measurement and must not make the
+                    # battery state valid or count as a protocol error.
+                    rospy.logdebug("JK BMS settings response received")
             # A device-info response does not prove that the telemetry path has
             # recovered. Only an admitted telemetry sample clears the streak.
             if decoded_telemetry:

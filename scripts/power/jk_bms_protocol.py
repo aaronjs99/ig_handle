@@ -5,12 +5,21 @@ from dataclasses import dataclass
 import math
 import re
 import struct
+import threading
 from typing import List, Optional, Sequence, Tuple
 
 
 FRAME_HEADER = b"\x55\xaa\xeb\x90"
 FRAME_LENGTH = 300
 SUPPORTED_PROTOCOLS = ("jk02_24s", "jk02_32s")
+SETTINGS_RESPONSE_TYPE = 0x01
+TELEMETRY_RESPONSE_TYPE = 0x02
+DEVICE_INFO_RESPONSE_TYPE = 0x03
+# The JK BLE startup sequence is asymmetric.  Request identity once after
+# notifications are active, then retry only the live telemetry request until
+# the BMS begins its normal stream.
+INITIAL_READ_QUERY_COMMANDS = (0x97,)
+PERIODIC_READ_QUERY_COMMANDS = (0x96,)
 JK02_ALARM_NAMES = (
     "wire_resistance",
     "mosfet_overtemperature",
@@ -155,6 +164,54 @@ def build_query(command: int) -> bytes:
     frame[4] = command
     frame[-1] = sum(frame[:-1]) & 0xFF
     return bytes(frame)
+
+
+def response_kind(response_type: int) -> str:
+    """Classify the read-only response frames admitted by this integration."""
+
+    kinds = {
+        SETTINGS_RESPONSE_TYPE: "settings",
+        TELEMETRY_RESPONSE_TYPE: "telemetry",
+        DEVICE_INFO_RESPONSE_TYPE: "device_info",
+    }
+    try:
+        return kinds[response_type]
+    except KeyError as exc:
+        raise ProtocolError(
+            "unsupported JK response type 0x{:02X}".format(response_type)
+        ) from exc
+
+
+class ReadQueryGate:
+    """Track admitted responses for the nonredundant JK read handshake."""
+
+    def __init__(self) -> None:
+        self._identity_admitted = threading.Event()
+        self._telemetry_admitted = threading.Event()
+
+    def reset(self) -> None:
+        self._identity_admitted.clear()
+        self._telemetry_admitted.clear()
+
+    def admit_identity(self) -> None:
+        self._identity_admitted.set()
+
+    def admit_telemetry(self) -> None:
+        if not self._identity_admitted.is_set():
+            raise ProtocolError("telemetry cannot be admitted before identity")
+        self._telemetry_admitted.set()
+
+    @property
+    def identity_admitted(self) -> bool:
+        return self._identity_admitted.is_set()
+
+    @property
+    def telemetry_admitted(self) -> bool:
+        return self._telemetry_admitted.is_set()
+
+    @property
+    def telemetry_query_needed(self) -> bool:
+        return not self._telemetry_admitted.is_set()
 
 
 class FrameAssembler:

@@ -50,6 +50,8 @@ class BluezBleClient:
         reconnect_delay_sec: float,
         on_notification: Callable[[bytes], None],
         on_state: Callable[[bool, str], None],
+        periodic_query_ready: Optional[Callable[[], bool]] = None,
+        periodic_query_needed: Optional[Callable[[], bool]] = None,
     ) -> None:
         DBusGMainLoop(set_as_default=True)
         self.address = canonical_address(device_address)
@@ -74,6 +76,8 @@ class BluezBleClient:
             raise BluezError("all BLE timing parameters must be positive")
         self.on_notification = on_notification
         self.on_state = on_state
+        self.periodic_query_ready = periodic_query_ready or (lambda: False)
+        self.periodic_query_needed = periodic_query_needed or (lambda: True)
         self.adapter_path = "/org/bluez/{}".format(str(adapter).strip())
         self.device_path = "{}/dev_{}".format(
             self.adapter_path, self.address.replace(":", "_")
@@ -112,7 +116,13 @@ class BluezBleClient:
             try:
                 self._run_connection(initial_queries, periodic_queries)
             except Exception as exc:
-                self.on_state(False, "ble_error:{}".format(type(exc).__name__))
+                detail = " ".join(str(exc).split())
+                self.on_state(
+                    False,
+                    "ble_error:{}:{}".format(
+                        type(exc).__name__, detail or "unspecified"
+                    ),
+                )
             finally:
                 self._disconnect()
             self._stop.wait(self.reconnect_delay_sec)
@@ -177,10 +187,8 @@ class BluezBleClient:
         notify.StartNotify()
         self._last_notification = time.monotonic()
         self._write_queries(writer, write_kind, initial_queries)
-        if self._stop.wait(self.initial_query_delay_sec):
-            return
-        self._raise_if_reconnect_requested()
-        self._write_queries(writer, write_kind, periodic_queries)
+        if self._wait_for_periodic_query_gate():
+            self._write_queries(writer, write_kind, periodic_queries)
         self.on_state(True, "connected")
         next_request = time.monotonic() + self.request_period_sec
         while not self._stop.wait(0.1):
@@ -191,8 +199,38 @@ class BluezBleClient:
             if now - self._last_notification > self.sample_timeout_sec:
                 raise BluezError("BMS telemetry timeout")
             if now >= next_request:
-                self._write_queries(writer, write_kind, periodic_queries)
+                if self.periodic_query_needed():
+                    self._write_queries(writer, write_kind, periodic_queries)
                 next_request = now + self.request_period_sec
+
+    def _wait_for_periodic_query_gate(self) -> bool:
+        """Wait for admitted identity; reconnect rather than query anonymously."""
+
+        deadline = time.monotonic() + self.initial_query_delay_sec
+        while not self._stop.is_set():
+            self._raise_if_reconnect_requested()
+            telemetry_query_needed = bool(self.periodic_query_needed())
+            if not telemetry_query_needed:
+                return False
+            if self.periodic_query_due(
+                identity_admitted=bool(self.periodic_query_ready()),
+                telemetry_query_needed=telemetry_query_needed,
+            ):
+                return True
+            if time.monotonic() >= deadline:
+                raise BluezError("BMS identity response timeout")
+            self._stop.wait(0.05)
+        return False
+
+    @staticmethod
+    def periodic_query_due(
+        *,
+        identity_admitted: bool,
+        telemetry_query_needed: bool,
+    ) -> bool:
+        """Return whether one read-only telemetry query may be sent now."""
+
+        return bool(telemetry_query_needed and identity_admitted)
 
     def _raise_if_reconnect_requested(self) -> None:
         requested, reason = self._reconnect_request.snapshot()

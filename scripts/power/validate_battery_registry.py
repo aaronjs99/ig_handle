@@ -7,6 +7,7 @@ import argparse
 import copy
 import json
 import tempfile
+import threading
 from pathlib import Path
 from typing import Dict, List
 
@@ -19,10 +20,18 @@ from power.battery_registry import (
     jk_identity_from_config,
     require_jk_config_match,
 )
+from power.bluez_ble import BluezBleClient, BluezError
 from power.reconnect_guard import (
     MAX_PROTOCOL_ERROR_RECONNECT_THRESHOLD,
     ConsecutiveErrorThreshold,
     ReconnectRequest,
+)
+from power.jk_bms_protocol import (
+    INITIAL_READ_QUERY_COMMANDS,
+    PERIODIC_READ_QUERY_COMMANDS,
+    ProtocolError,
+    ReadQueryGate,
+    response_kind,
 )
 
 PACKAGE_ROOT = Path(rospkg.RosPack().get_path("ig_handle"))
@@ -109,6 +118,98 @@ def validate(registry_path: Path, jk_config_path: Path, cases_path: Path) -> dic
         "request_period_sec={} sample_timeout_sec={}".format(
             request_period, sample_timeout
         ),
+    )
+    record(
+        "jk_initial_query_requests_identity_once",
+        INITIAL_READ_QUERY_COMMANDS == (0x97,),
+        "commands={}".format(INITIAL_READ_QUERY_COMMANDS),
+    )
+    record(
+        "jk_periodic_query_requests_telemetry_only",
+        PERIODIC_READ_QUERY_COMMANDS == (0x96,),
+        "commands={}".format(PERIODIC_READ_QUERY_COMMANDS),
+    )
+    record(
+        "jk_settings_response_is_admitted_without_measurement",
+        response_kind(0x01) == "settings",
+    )
+    record(
+        "jk_telemetry_and_identity_responses_are_distinct",
+        response_kind(0x02) == "telemetry" and response_kind(0x03) == "device_info",
+    )
+    try:
+        response_kind(0xFF)
+        unsupported_response_rejected = False
+    except ProtocolError:
+        unsupported_response_rejected = True
+    record("jk_unknown_response_is_rejected", unsupported_response_rejected)
+    query_gate = ReadQueryGate()
+    try:
+        query_gate.admit_telemetry()
+        preidentity_telemetry_rejected = False
+    except ProtocolError:
+        preidentity_telemetry_rejected = True
+    initial_state = (
+        not query_gate.identity_admitted
+        and not query_gate.telemetry_admitted
+        and query_gate.telemetry_query_needed
+    )
+    query_gate.admit_identity()
+    identity_state = query_gate.identity_admitted and query_gate.telemetry_query_needed
+    query_gate.admit_telemetry()
+    streaming_state = (
+        query_gate.telemetry_admitted and not query_gate.telemetry_query_needed
+    )
+    query_gate.reset()
+    reset_state = (
+        not query_gate.identity_admitted
+        and not query_gate.telemetry_admitted
+        and query_gate.telemetry_query_needed
+    )
+    record(
+        "jk_query_gate_stops_after_admitted_telemetry_and_resets",
+        preidentity_telemetry_rejected
+        and initial_state
+        and identity_state
+        and streaming_state
+        and reset_state,
+    )
+    transport_gate_valid = (
+        not BluezBleClient.periodic_query_due(
+            identity_admitted=False,
+            telemetry_query_needed=True,
+        )
+        and BluezBleClient.periodic_query_due(
+            identity_admitted=True,
+            telemetry_query_needed=True,
+        )
+        and not BluezBleClient.periodic_query_due(
+            identity_admitted=False,
+            telemetry_query_needed=False,
+        )
+        and not BluezBleClient.periodic_query_due(
+            identity_admitted=True,
+            telemetry_query_needed=False,
+        )
+    )
+    record(
+        "jk_transport_query_requires_identity_and_stops_on_stream",
+        transport_gate_valid,
+    )
+    timeout_probe = object.__new__(BluezBleClient)
+    timeout_probe.initial_query_delay_sec = 0.001
+    timeout_probe._stop = threading.Event()
+    timeout_probe._reconnect_request = ReconnectRequest()
+    timeout_probe.periodic_query_ready = lambda: False
+    timeout_probe.periodic_query_needed = lambda: True
+    try:
+        timeout_probe._wait_for_periodic_query_gate()
+        identity_timeout_rejected = False
+    except BluezError as exc:
+        identity_timeout_rejected = str(exc) == "BMS identity response timeout"
+    record(
+        "jk_identity_timeout_reconnects_without_telemetry_query",
+        identity_timeout_rejected,
     )
 
     protocol_error_threshold = jk_config.get("protocol_error_reconnect_threshold")

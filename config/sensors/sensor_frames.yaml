@@ -1,6 +1,3 @@
-# Canonical Heron / IG Handle sensor frames and configured geometry.
-# Model specifications and network endpoints live in sibling config files.
-
 sensor_frames:
   version: 2026-08-11_provider_specific_sonar_seed
   frame_convention:
@@ -11,11 +8,11 @@ sensor_frames:
   notes:
   - All translations are in meters unless explicitly marked otherwise.
   - All rotations are expressed as parent-to-child transforms.
-  - The operator accepts the configured IMU and LiDAR translations for the
-    current test campaign. They are operative runtime configuration, not an
-    automatic actuation lock.
-  - dt100_link and ping360_link are separate because their scan planes differ;
-    neither seed transform is physical-marker eligible until measured.
+  - The operator accepts the configured IMU and LiDAR translations for the current
+    test campaign. They are operative runtime configuration, not an automatic actuation
+    lock.
+  - dt100_link and ping360_link are separate because their scan planes differ; neither
+    seed transform is physical-marker eligible until measured.
   - Prefer runtime TF edges base_link->lidar_h_link, lidar_h_link->lidar_v_link, base_link->imu_link,
     and base_link->F*_optical.
   - Do not publish both base_link->lidar_v_link and lidar_h_link->lidar_v_link at
@@ -44,9 +41,7 @@ sensor_frames:
     translation_status: operator_accepted_for_current_testing
     orientation_status: unverified
     orientation_verified: false
-    # Empty means no physical verification has been recorded yet. ROS1
-    # parameter XML-RPC cannot marshal YAML null values.
-    last_verified: ""
+    last_verified: ''
     note: Runtime uses these configured transforms. Orientation metrology remains
       documented as pending and does not automatically inhibit propulsion.
   transforms:
@@ -94,22 +89,41 @@ sensor_frames:
       parent: lidar_h_link
       child: lidar_v_link
       translation:
-      - 0.03781
-      - 0.0
-      - -0.08819
-      rotation_rpy:
-      - 3.141592653589793
-      - 0.0
-      - -1.5707963267948966
-      rotation_quat_xyzw:
-      - 0.7071067811865476
-      - -0.7071067811865476
-      - 0.0
-      - 0.0
+      - 0.10224697174650367
+      - 0.01047556232016442
+      - -0.10445424492647087
+      rotation_rpy: &id001
+      - 2.8005131794289806
+      - -1.552022588110132
+      - 0.36056823684566575
+      rotation_quat_xyzw: &id002
+      - 0.7132751949111322
+      - 0.00917099877905514
+      - 0.7008089239980545
+      - -0.0046088122732774964
       axes_in_lidar_h:
-        x_lidar_v: -Y_lidar_h
-        y_lidar_v: -X_lidar_h
-        z_lidar_v: -Z_lidar_h
+        x_lidar_v:
+        - 0.01756548965216762
+        - 0.006623098343031361
+        - 0.9998237785438087
+        y_lidar_v:
+        - 0.01954268542360988
+        - -0.9997893032616488
+        - 0.006279532627612557
+        z_lidar_v:
+        - 0.9996547088968841
+        - 0.019428938517735857
+        - -0.017691221788237812
+      calibration_provenance:
+        status: provisional_operator_selected
+        method: Equal-weight mean of two matched full point-to-plane ICP fits
+        capture_date: '2026-09-07'
+        selected_date: '2026-09-08'
+        rotation_repeatability_deg: 0.05014501368879198
+        translation_repeatability_m: 0.005217941462362262
+        absolute_accuracy: unverified; no independent holdout; shared systematic bias
+          possible
+        measurement_difference_m: 0.06727842445250629
     sonar:
       parent: base_link
       child: sonar_link
@@ -293,32 +307,18 @@ sensor_frames:
     derived_transforms:
       base_link_to_lidar_v_link:
         translation_xyz_m:
-        - 0.03781
-        - 0.0
-        - 0.20835
-        rotation_rpy:
-        - 3.141592653589793
-        - 0.0
-        - -1.5707963267948966
-        rotation_quat_xyzw:
-        - 0.7071067811865476
-        - -0.7071067811865476
-        - 0.0
-        - 0.0
+        - 0.10224697174650367
+        - 0.01047556232016442
+        - 0.19208575507352915
+        rotation_rpy: *id001
+        rotation_quat_xyzw: *id002
       lidar_h_link_to_lidar_v_link:
         translation_xyz_m:
-        - 0.03781
-        - 0.0
-        - -0.08819
-        rotation_rpy:
-        - 3.141592653589793
-        - 0.0
-        - -1.5707963267948966
-        rotation_quat_xyzw:
-        - 0.7071067811865476
-        - -0.7071067811865476
-        - 0.0
-        - 0.0
+        - 0.10224697174650367
+        - 0.01047556232016442
+        - -0.10445424492647087
+        rotation_rpy: *id001
+        rotation_quat_xyzw: *id002
     urdf_body_transforms:
       lidar_h_mount:
         parent: base_link

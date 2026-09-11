@@ -2,4 +2,5 @@
 
 | File | Relevance | Dependencies | Used by |
 | --- | --- | --- | --- |
-| sensors.launch | Starts the contract-driven sensor supervisor, which launches internally owned providers and observes externally owned providers with explicit selection and reachability state. | config/sensors/sensor_contract.yaml, scripts/sensor_bringup.py | GRANDE bringup and direct IG Handle sensor health observation |
+| battery.launch | Launches standalone JK BMS acquisition without a logger. | jk_bms_node.py, battery registry | Battery monitoring service and launch |
+| sensors.launch | Starts the required sensor supervisor; explicit use_external_sensor_provider also owns the required selected fixed-profile Xsens provider for a single test. Default false preserves standalone service composition. | sensor contract, sensor_bringup.py, external_sensor_provider.py | GRANDE bringup and standalone sensor observation |

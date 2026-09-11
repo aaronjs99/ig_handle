@@ -1,150 +1,103 @@
-# Local ignores
-.vscode/
-scripts/mocap/natnet/natnet_sdk_*/
+# BEGIN GRANDE SHARED IGNORE RULES
+# Keep this block identical across GRANDE-owned repositories.
 
-# Python
-# Byte-compiled / optimized / DLL files
+# Operating-system and editor state
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+*.orig
+*.rej
+
+# Secrets and local environments
+.env
+.env.*
+!.env.example
+!.env.sample
+!.env.template
+/.venv/
+/venv/
+/env/
+/ENV/
+.pdm-python
+.pdm-build/
+.pypirc
+
+# Python-generated files
 __pycache__/
 *.py[cod]
 *$py.class
-
-# C extensions
-*.so
-
-# Distribution / packaging
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-share/python-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-MANIFEST
-
-# PyInstaller
-*.manifest
-*.spec
-
-# Installer logs
-pip-log.txt
-pip-delete-this-directory.txt
-
-# Unit test / coverage reports
+.cache/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.pyre/
+.pytype/
+.dmypy.json
+dmypy.json
+.coverage
+.coverage.*
+coverage.xml
+nosetests.xml
+*.cover
+*.py,cover
 htmlcov/
 .tox/
 .nox/
-.coverage
-.coverage.*
-.cache
-nosetests.xml
-coverage.xml
-*.cover
-*.py,cover
 .hypothesis/
-cover/
-
-# Translations
-*.mo
-*.pot
-
-# Django stuff
-*.log
-local_settings.py
-db.sqlite3
-db.sqlite3-journal
-
-# Flask stuff
-instance/
-.webassets-cache
-
-# Scrapy stuff
-.scrapy
-
-# Sphinx documentation
-docs/_build/
-
-# PyBuilder
-.pybuilder/
-target/
-
-# Jupyter Notebook
-.ipynb_checkpoints
-
-# IPython
-profile_default/
-ipython_config.py
-
-# pyenv
-# .python-version
-
-# pipenv
-#Pipfile.lock
-
-# poetry
-#poetry.lock
-#poetry.toml
-
-# pdm
-#pdm.lock
-#pdm.toml
-.pdm-python
-.pdm-build/
-
-# PEP 582; used by e.g. github.com/David-OConnor/pyflow and pdm
+*.egg
+*.egg-info/
+/dist/
+/wheels/
 __pypackages__/
+.ipynb_checkpoints/
 
-# Celery stuff
-celerybeat-schedule
-celerybeat.pid
+# ROS, catkin, CMake, and compiler outputs
+/.catkin_tools/
+/build/
+/devel/
+/install/
+/log/
+/logs/
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+CTestTestfile.cmake
+compile_commands.json
+*.o
+*.obj
+*.a
+*.so
+*.dll
+*.dylib
 
-# SageMath parsed files
-*.sage.py
+# Robot recordings and generated media
+*.bag
+*.bag.active
+*.db3
+*.db3-wal
+*.db3-shm
+*.mcap
+*.mp4
+*.avi
+*.mov
+*.mkv
 
-# Environments
-.env
-.venv
-env/
-venv/
-ENV/
-env.bak/
-venv.bak/
+# Runtime and generated-tool residue
+*.log
+*.tmp
+*.temp
+*.pid
+docs/_build/
+node_modules/
 
-# Spyder project settings
-.spyderproject
-.spyproject
+# END GRANDE SHARED IGNORE RULES
 
-# Rope project settings
-.ropeproject
+# Repository-specific rules
 
-# mkdocs documentation
-/site
-
-# mypy
-.mypy_cache/
-.dmypy.json
-dmypy.json
-
-# Pyre type checker
-.pyre/
-
-# pytype static type analyzer
-.pytype/
-
-# Cython debug symbols
-cython_debug/
-
-# Ruff
-.ruff_cache/
-
-# PyPI configuration
-.pypirc
+# Vendor SDK extracted locally for motion-capture integration
+/scripts/mocap/natnet/natnet_sdk_*/

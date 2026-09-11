@@ -42,12 +42,53 @@ investigation.
 
 GRANDE's canonical physical IMU is the serial-qualified Xsens MTi-30 on IG
 Handle. Sensor contract ID 1 binds serial `0368319D` to `/dev/sensors/imu`,
-publishes only below `/sensors/imu`, and is owned by the persistent
-`ig-handle-xsens.service`. The service waits without opening another device
-when the exact serial or physical Heron ROS master is unavailable. It restarts
-the provider after USB loss, stale output, driver exit, or ROS-master
-replacement and refuses duplicate publishers. `sensor_bringup` observes this
-external owner for readiness but never opens or stops its serial port.
+publishes only below `/sensors/imu`, and is owned by exactly one persistent
+Xsens service. The standalone user service uses the independently owned local
+master at `http://127.0.0.1:11311` and advertises the sensor-LAN address
+`192.168.50.10`; the integrated system service explicitly uses the physical
+Heron master. Both values are validated from the canonical network contract.
+The provider waits without opening another device when its selected master or
+exact serial is unavailable, restarts after USB loss, stale output, driver exit,
+or master replacement, and refuses duplicate publishers. It records immutable
+process identities and revalidates current ancestry before signaling anything.
+`sensor_bringup` observes this external owner for readiness but never opens or
+stops its serial port.
+
+Internally owned providers are launched only when the ROS publisher graph is
+available and the required topics are unclaimed. The supervisor verifies each
+publisher against the current managed process tree before reporting it alive,
+uses bounded ROS XML-RPC calls, and signals only processes whose PID, immutable
+start time, and current ancestry are all revalidated. Publishers on disabled
+sensor topics remain untouched but are exposed explicitly in health output.
+Every `sensor_bringup` instance also holds the same advisory lease at
+`/run/lock/ig-handle-sensor-bringup.lock` for its full lifetime. Because both
+standalone and integrated launches pass through this process, cameras and
+LiDAR cannot be started on two ROS masters at once. The kernel releases the
+lease on exit or crash; stale file contents never establish ownership.
+
+## Fixed ROS Graph Profiles
+
+The active deployment uses integrated sensing on the Heron graph:
+`ig-handle-xsens-integrated.service` owns the IMU and
+`ig-handle-sensors-integrated.service` owns camera/LiDAR supervision. These
+transient user units are not themselves a verified reboot-persistence guarantee.
+The separate `ig-handle-roscore-user.service` owns the loopback master used by
+`battery-ighandle-monitor.service`; that battery-only graph does not own physical
+IMU, camera, or LiDAR devices.
+
+The maintained standalone alternative consists of the core, Xsens-user, and
+sensor-bringup-user units under `systemd/`. Do not enable those sensor units while
+integrated sensing owns the devices. Both profiles use the same sensor leases,
+explicit master selection, publisher checks, and serial identity checks. A profile
+change requires stopping the current owner first; it never happens automatically.
+
+User services source `GRANDE_WORKSPACE_SETUP` from the optional
+`~/.config/grande/environment` deployment configuration, with the conventional
+workspace below the current user's home as default. Network addresses come from
+`sensor_network.yaml`, accessed through `network_config.py`. The local master
+must remain loopback-only and its advertised sensor address must be assigned to
+a local interface. A battery service may use that core without starting the
+standalone physical sensor stack.
 
 The stock Heron `/imu/*` and `/cv5/ros_mscl_node` surfaces describe an optional
 onboard MicroStrain installation. They are not aliases for the IG Handle Xsens.
@@ -94,10 +135,12 @@ as operator-entered provenance, not as authenticated user identity.
 
 Persistent selection state, installation history, normalized samples, and
 figures default to `~/.local/share/grande/battery`. The standalone IG Handle
-service uses a local ROS master when the Heron is off; the combined service
-uses the physical Heron master and validated `/sense_heron` ingress. Both use
-the same data root and are mutually exclusive. Repository data remains retained
+battery service depends on the independently owned local ROS master when the
+Heron is off; it never creates or stops that core. The combined service uses the
+physical Heron master and validated `/sense_heron` ingress. Both use the same
+data root and are mutually exclusive. Repository data remains retained
 historical evidence rather than live mutable state.
+
 Energy integration is available only from contiguous, identity-qualified compute
 pack power. Propulsion motor-controller currents are preserved for diagnosis but
 do not establish total pack current; propulsion energy therefore remains null

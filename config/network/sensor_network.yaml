@@ -33,6 +33,10 @@ sensor_network:
       host: 192.168.131.1
   ros:
     heron_local_ip: 192.168.131.10
+    # Reboot-persistent standalone sensing owns this loopback ROS master and
+    # advertises the sensor-LAN interface declared below. It is distinct from
+    # both the physical Heron graph and the isolated simulation graph.
+    standalone_master_uri: http://127.0.0.1:11311
     # Simulation owns a dedicated ROS master so it cannot join the physical
     # Heron/sensor graph on the conventional ROS port.
     local_master_uri: http://192.168.1.81:11312

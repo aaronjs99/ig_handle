@@ -1,0 +1,17 @@
+<launch>
+  <arg name="battery_registry_file"
+       default="$(find ig_handle)/config/sensors/battery_registry.yaml"/>
+  <arg name="bms_config_file"
+       default="$(find ig_handle)/config/sensors/jk_bms.yaml"/>
+  <arg name="battery_topic" default="/sense_ighandle"/>
+  <arg name="details_topic" default="/sense_ighandle/details"/>
+
+  <node pkg="ig_handle" type="jk_bms_node.py"
+        name="ighandle_jk_bms" output="screen" required="true">
+    <rosparam command="load" file="$(arg bms_config_file)"/>
+    <param name="enabled" type="bool" value="true"/>
+    <param name="battery_registry_file" value="$(arg battery_registry_file)"/>
+    <param name="battery_topic" value="$(arg battery_topic)"/>
+    <param name="details_topic" value="$(arg details_topic)"/>
+  </node>
+</launch>

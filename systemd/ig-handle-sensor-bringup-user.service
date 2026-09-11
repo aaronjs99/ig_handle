@@ -1,0 +1,24 @@
+[Unit]
+Description=Standalone GRANDE sensor bringup and supervision
+Requires=ig-handle-roscore-user.service
+Wants=ig-handle-xsens-user.service
+After=network-online.target ig-handle-roscore-user.service ig-handle-xsens-user.service
+PartOf=ig-handle-roscore-user.service
+StartLimitIntervalSec=600
+StartLimitBurst=20
+
+[Service]
+Type=simple
+Environment=PYTHONDONTWRITEBYTECODE=1
+Environment=GRANDE_WORKSPACE_SETUP=/home/ig-handle/catkin_ws/heron_ws/devel/setup.bash
+EnvironmentFile=-/home/ig-handle/.config/grande/environment
+ExecStart=/bin/bash -lc 'set -Ee -o pipefail; source /opt/ros/noetic/setup.bash; if [ -r "$${GRANDE_WORKSPACE_SETUP}" ]; then source "$${GRANDE_WORKSPACE_SETUP}"; fi; master_uri="$$(rosrun ig_handle network_config.py standalone_master_uri)"; ros_ip="$$(rosrun ig_handle network_config.py sensor_lan_ip)"; test "$${master_uri}" = "http://127.0.0.1:11311"; test "$${ros_ip}" = "192.168.50.10"; unset ROS_HOSTNAME; export ROS_MASTER_URI="$${master_uri}" ROS_IP="$${ros_ip}"; exec roslaunch --wait ig_handle sensors.launch'
+Restart=on-failure
+RestartSec=5
+KillSignal=SIGINT
+KillMode=control-group
+TimeoutStopSec=20
+NoNewPrivileges=true
+
+[Install]
+WantedBy=default.target

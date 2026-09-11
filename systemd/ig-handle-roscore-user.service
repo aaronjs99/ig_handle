@@ -1,0 +1,24 @@
+[Unit]
+Description=Standalone GRANDE sensing ROS master
+After=network-online.target
+Wants=network-online.target
+StartLimitIntervalSec=600
+StartLimitBurst=20
+
+[Service]
+Type=simple
+Environment=PYTHONDONTWRITEBYTECODE=1
+Environment=GRANDE_WORKSPACE_SETUP=%h/catkin_ws/heron_ws/devel/setup.bash
+EnvironmentFile=-%h/.config/grande/environment
+ExecStart=/bin/bash -lc 'set -Ee -o pipefail; source /opt/ros/noetic/setup.bash; if [ -r "$${GRANDE_WORKSPACE_SETUP}" ]; then source "$${GRANDE_WORKSPACE_SETUP}"; fi; master_uri="$$(rosrun ig_handle network_config.py standalone_master_uri)"; ros_ip="$$(rosrun ig_handle network_config.py sensor_lan_ip)"; test "$${master_uri}" = "http://127.0.0.1:11311"; ip -o -4 addr show | grep -Fq " $${ros_ip}/"; unset ROS_HOSTNAME; export ROS_MASTER_URI="$${master_uri}" ROS_IP="$${ros_ip}"; exec roscore -p 11311'
+ExecStartPost=/bin/bash -lc 'source /opt/ros/noetic/setup.bash; for attempt in {1..50}; do ROS_MASTER_URI=http://127.0.0.1:11311 timeout 1s rosparam list >/dev/null 2>&1 && exit 0; sleep 0.2; done; exit 1'
+Restart=on-failure
+RestartSec=5
+KillSignal=SIGINT
+KillMode=control-group
+TimeoutStartSec=20
+TimeoutStopSec=15
+NoNewPrivileges=true
+
+[Install]
+WantedBy=default.target

@@ -9,6 +9,7 @@ import time
 from pathlib import Path
 from typing import Optional
 
+import rosgraph
 import rospy
 from sensor_msgs.msg import BatteryState
 
@@ -28,6 +29,7 @@ from power.jk_bms_protocol import (
     response_kind,
 )
 from power.reconnect_guard import ConsecutiveErrorThreshold
+from sensors.ros_master import MasterLost, RosMasterLease
 
 
 def _required_text(name: str) -> str:
@@ -236,16 +238,31 @@ class JkBmsNode:
             name="jk_bms_ble",
             daemon=True,
         )
+        self._shutdown_lock = threading.Lock()
+        self._shutdown_complete = False
         self.worker.start()
         rospy.on_shutdown(self._shutdown)
         self.watchdog = rospy.Timer(rospy.Duration(0.5), self._watchdog)
 
     def _shutdown(self) -> None:
-        self.client.stop()
-        device_lock = getattr(self, "_device_lock", None)
-        if device_lock is not None:
-            device_lock.close()
-            self._device_lock = None
+        with self._shutdown_lock:
+            if self._shutdown_complete:
+                return
+            watchdog = getattr(self, "watchdog", None)
+            if watchdog is not None:
+                watchdog.shutdown()
+            self.client.stop()
+            self.worker.join(timeout=5.0)
+            if self.worker.is_alive():
+                rospy.logerr(
+                    "JK BMS worker has not stopped; retaining device lock until process exit"
+                )
+                return
+            device_lock = getattr(self, "_device_lock", None)
+            if device_lock is not None:
+                device_lock.close()
+                self._device_lock = None
+            self._shutdown_complete = True
 
     def _connection_state(self, connected: bool, reason: str) -> None:
         if not connected:
@@ -517,9 +534,18 @@ class JkBmsNode:
 
 
 def main() -> None:
-    rospy.init_node("ighandle_jk_bms")
+    node = None
     try:
-        JkBmsNode()
+        master_lease = RosMasterLease(rosgraph.get_master_uri(), "/ighandle_jk_bms")
+        rospy.init_node("ighandle_jk_bms")
+        master_lease.check()
+        node = JkBmsNode()
+        while not rospy.is_shutdown():
+            master_lease.check()
+            time.sleep(0.5)
+    except MasterLost as exc:
+        rospy.logfatal("%s", exc)
+        raise SystemExit(75)
     except (
         BatteryRegistryError,
         BluezError,
@@ -530,7 +556,9 @@ def main() -> None:
     ) as exc:
         rospy.logfatal("Invalid JK BMS configuration: %s", exc)
         raise SystemExit(2)
-    rospy.spin()
+    finally:
+        if node is not None:
+            node._shutdown()
 
 
 if __name__ == "__main__":

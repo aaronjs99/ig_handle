@@ -3,7 +3,6 @@
 
 from __future__ import annotations
 
-import argparse
 from pathlib import Path
 from typing import Any, Dict, Tuple
 
@@ -33,6 +32,7 @@ KEY_PATHS: Dict[str, Tuple[str, ...]] = {
     "sonar_ip": ("endpoints", "sonar", "host"),
     "heron_ip": ("endpoints", "heron", "host"),
     "heron_local_ip": ("ros", "heron_local_ip"),
+    "standalone_master_uri": ("ros", "standalone_master_uri"),
     "local_master_uri": ("ros", "local_master_uri"),
     "local_ros_ip": ("ros", "local_ros_ip"),
     "mocap_natnet_server_ip": ("mocap", "natnet_server_ip"),
@@ -67,23 +67,3 @@ def network_value(
             return str(default)
         value = value[part]
     return str(value)
-
-
-def main() -> int:
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("key", choices=sorted(KEY_PATHS))
-    parser.add_argument("--package-root", default=str(PACKAGE_ROOT))
-    parser.add_argument("--default", default="")
-    args = parser.parse_args()
-    print(
-        network_value(
-            args.key,
-            package_root=args.package_root,
-            default=args.default,
-        )
-    )
-    return 0
-
-
-if __name__ == "__main__":
-    raise SystemExit(main())

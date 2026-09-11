@@ -109,8 +109,13 @@ sensor_contract:
   # Sensor ids are opaque inventory keys. They are not positions, counts, array
   # indexes, or a promise that ids are contiguous; consumers must iterate this
   # mapping or resolve deployment bindings above.
+  # Every sensor_bringup-owned sensor must declare the exact ROS publisher that
+  # belongs to its selected launch mode before it may be enabled. Optional,
+  # mode-dependent sensors remain disabled and fail closed until that ownership
+  # binding is commissioned; publisher uniqueness alone is not ownership proof.
   sensors:
     "1":
+      model: Xsens MTi-30
       label: Xsens IMU
       family: imu
       lifecycle_owner: external_service
@@ -147,8 +152,10 @@ sensor_contract:
             literal: /sensors/imu
 
     "2":
+      model: Velodyne VLP-16
       label: Horizontal VLP-16 LiDAR
       family: lidar
+      expected_publisher: /sensors/lidar/hori/lidar_h_link_nodelet_manager
       dashboard_kind: pointcloud
       dashboard_mode: ROS point cloud
       startup_order: 20
@@ -175,8 +182,10 @@ sensor_contract:
             field: topics.points
 
     "3":
+      model: Velodyne VLP-16
       label: Vertical VLP-16 LiDAR
       family: lidar
+      expected_publisher: /sensors/lidar/vert/lidar_v_link_nodelet_manager
       dashboard_kind: pointcloud
       dashboard_mode: ROS point cloud
       startup_order: 30
@@ -203,8 +212,10 @@ sensor_contract:
             field: topics.points
 
     "4":
+      model: FLIR Forge
       label: Forge F1 camera
       family: camera
+      expected_publisher: /F1/camera_nodelet_manager
       dashboard_kind: camera
       dashboard_mode: Live MJPEG
       role: front_right
@@ -244,8 +255,10 @@ sensor_contract:
             field: startup_delay_sec
 
     "5":
+      model: FLIR Forge
       label: Forge F2 camera
       family: camera
+      expected_publisher: /F2/camera_nodelet_manager
       dashboard_kind: camera
       dashboard_mode: Live MJPEG
       role: front_left
@@ -283,8 +296,10 @@ sensor_contract:
             field: startup_delay_sec
 
     "6":
+      model: FLIR Forge
       label: Forge F3 camera
       family: camera
+      expected_publisher: /F3/camera_nodelet_manager
       dashboard_kind: camera
       dashboard_mode: Live MJPEG
       role: top_left
@@ -322,8 +337,10 @@ sensor_contract:
             field: startup_delay_sec
 
     "7":
+      model: FLIR Forge
       label: Forge F4 camera
       family: camera
+      expected_publisher: /F4/camera_nodelet_manager
       dashboard_kind: camera
       dashboard_mode: Live MJPEG
       role: top_right
@@ -363,6 +380,9 @@ sensor_contract:
     "8":
       label: Imaging sonar
       family: sonar
+      # Intentionally no expected_publisher yet: the publisher changes with the
+      # selected DT100, passive UDP, or Ping360 provider. Keep this sensor
+      # disabled until the commissioned mode declares its exact owner.
       dashboard_kind: raw
       dashboard_mode: ROS raw UDP datagrams
       startup_order: 80
@@ -501,28 +521,3 @@ sensor_contract:
             field: allow_active_transmit
           sound_speed_mps:
             field: sound_speed_mps
-
-    "9":
-      label: Boson thermal camera
-      family: thermal
-      dashboard_kind: camera
-      dashboard_mode: Live MJPEG
-      startup_order: 90
-      default_requested: false
-      reachability: none
-      namespace: thermal
-      frame: thermal_link
-      device_path: /dev/video0
-      topics:
-        image_raw: /sensors/thermal/image_raw
-      launch:
-        file: package://ig_handle/launch/sensors/start_thermal.launch
-        args:
-          topic:
-            field: topics.image_raw
-          namespace:
-            field: namespace
-          frame_id:
-            field: frame
-          dev:
-            field: device_path

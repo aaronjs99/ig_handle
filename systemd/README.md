@@ -2,5 +2,7 @@
 
 | File | Relevance | Dependencies | Used by |
 | --- | --- | --- | --- |
-| ig-handle-xsens.service | Runs the serial-qualified external Xsens provider as the single reboot-persistent owner of sensor contract ID 1. | systemd, ROS Noetic, IG Handle install or workspace overlay, dialout group | IG Handle host boot and GRANDE physical sensor readiness |
-| ig-handle-xsens-user.service | Provides the same single-owner contract through the persistent `ig-handle` user manager when system-unit installation is unavailable. Install exactly one of the two units; user persistence requires linger. | systemd user manager, linger, ROS Noetic, IG Handle install or workspace overlay, dialout membership | IG Handle host boot and GRANDE physical sensor readiness |
+| ig-handle-roscore-user.service | Owns the independent local ROS master and validates the configured network interface. | ROS Noetic, sensor_network.yaml | Standalone battery and optional standalone sensor services |
+| ig-handle-sensor-bringup-user.service | Supervises the standalone sensor profile; mutually exclusive with integrated physical sensing. | Independent core and Xsens user services | Explicit standalone deployment |
+| ig-handle-xsens-user.service | Runs the serial-qualified Xsens provider in the fixed standalone profile under the persistent `ig-handle` user manager. | ig-handle-roscore-user.service, systemd user manager with linger, ROS Noetic, dialout membership | Reboot-persistent standalone physical sensing |
+| ig-handle-xsens.service | Runs the serial-qualified Xsens provider in the explicit integrated profile against the physical Heron ROS master. | systemd, ROS Noetic, IG Handle install or workspace overlay, dialout group | Manual integrated GRANDE sensing |

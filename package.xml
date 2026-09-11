@@ -2,8 +2,8 @@
 <package format="2">
   <name>ig_handle</name>
   <version>1.0.1</version>
-  <description>ig-handle: a handheld inspector gadget</description>
-  
+  <description>Physical sensor, timing, networking, and raw-acquisition interface for GRANDE.</description>
+
   <author email="aaronjs@g.ucla.edu">Aaron John Sabu</author>
   <author email="adthoms@ucla.edu">Alexander Thoms</author>
   <author email="gearle@uwaterloo.ca">Gabriel Earle</author>
@@ -14,16 +14,15 @@
   <license>MIT</license>
   <url type="repository">https://github.com/aaronjs99/ig_handle</url>
   <url type="bugtracker">https://github.com/aaronjs99/ig_handle/issues</url>
-  
+
   <buildtool_depend>catkin</buildtool_depend>
-  
+
   <build_depend>message_generation</build_depend>
   <build_depend>std_msgs</build_depend>
   <build_export_depend>message_runtime</build_export_depend>
   <build_export_depend>std_msgs</build_export_depend>
 
   <exec_depend>dt100_driver</exec_depend>
-  <exec_depend>flir_boson_usb</exec_depend>
   <exec_depend>geometry_msgs</exec_depend>
   <exec_depend>message_runtime</exec_depend>
   <exec_depend>image_proc</exec_depend>
@@ -34,7 +33,9 @@
   <exec_depend>python3-gi</exec_depend>
   <exec_depend>python3-numpy</exec_depend>
   <exec_depend>python3-rospkg</exec_depend>
+  <exec_depend>python3-usb</exec_depend>
   <exec_depend>rosbag</exec_depend>
+  <exec_depend>rosgraph</exec_depend>
   <exec_depend>rospy</exec_depend>
   <exec_depend>sensor_msgs</exec_depend>
   <exec_depend>spinnaker_camera_driver</exec_depend>

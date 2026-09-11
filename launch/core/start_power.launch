@@ -15,13 +15,11 @@
     <param name="expected_publisher" value="$(arg expected_heron_sense_publisher)"/>
   </node>
 
-  <node if="$(arg ighandle_bms_enabled)"
-        pkg="ig_handle" type="jk_bms_node.py"
-        name="ighandle_jk_bms" output="screen" required="true">
-    <rosparam command="load" file="$(arg ighandle_bms_config_file)"/>
-    <param name="enabled" type="bool" value="true"/>
-    <param name="battery_registry_file" value="$(arg battery_registry_file)"/>
-    <param name="battery_topic" value="$(arg ighandle_sense_topic)"/>
-    <param name="details_topic" value="$(arg ighandle_sense_details_topic)"/>
-  </node>
+  <include if="$(arg ighandle_bms_enabled)"
+           file="$(find ig_handle)/launch/battery.launch">
+    <arg name="bms_config_file" value="$(arg ighandle_bms_config_file)"/>
+    <arg name="battery_registry_file" value="$(arg battery_registry_file)"/>
+    <arg name="battery_topic" value="$(arg ighandle_sense_topic)"/>
+    <arg name="details_topic" value="$(arg ighandle_sense_details_topic)"/>
+  </include>
 </launch>

@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 """Republish the raw Heron MCU contract on IG Handle's canonical topic."""
 
-import math
-
 import rospy
 from heron_msgs.msg import Sense
 
@@ -49,10 +47,9 @@ class HeronSenseIngress:
                 self.expected_publisher,
             )
             return
-        values = (message.battery, message.current_left, message.current_right)
-        if not all(math.isfinite(value) for value in values):
-            rospy.logerr_throttle(2.0, "Dropping non-finite raw Heron sense")
-            return
+        # Preserve the MCU observation as a whole so RC takeover remains
+        # observable when an independent electrical channel is unavailable.
+        # Electrical consumers validate voltage and each current separately.
         self.publisher.publish(message)
 
 

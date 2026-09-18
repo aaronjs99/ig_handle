@@ -7,8 +7,10 @@
   <arg name="battery_registry_file" default="$(find ig_handle)/config/sensors/battery_registry.yaml"/>
   <arg name="ighandle_sense_topic" default="/sense_ighandle"/>
   <arg name="ighandle_sense_details_topic" default="/sense_ighandle/details"/>
+  <arg name="use_heron_sense_ingress" default="true"
+       doc="Start the ingress only when this ROS master does not already own it."/>
 
-  <node pkg="ig_handle" type="heron_sense_ingress.py"
+  <node if="$(arg use_heron_sense_ingress)" pkg="ig_handle" type="heron_sense_ingress.py"
         name="heron_sense_ingress" output="screen" required="true">
     <param name="input_topic" value="$(arg heron_sense_raw_topic)"/>
     <param name="output_topic" value="$(arg heron_sense_topic)"/>

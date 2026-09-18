@@ -33,6 +33,7 @@ catkin_install_python(
     scripts/frames/broadcast.py
     scripts/imu/analyze_stationary_bag.py
     scripts/imu/force_wakeup.py
+    scripts/imu/sample_clock.py
     scripts/imu/validate_stationary_candidate.py
     scripts/sensors/external_sensor_provider.py
     scripts/sensors/network_config.py

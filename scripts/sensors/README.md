@@ -5,7 +5,6 @@
 | __init__.py | Declares the installed sensor-support package. | Python standard library | Python packaging |
 | contracts.py | Loads, validates, and queries the canonical sensor lifecycle contract. | PyYAML | sensor_bringup.py, external_sensor_provider.py, and launch integration |
 | external_sensor_provider.py | Owns serial-qualified Xsens under fixed integrated, standalone or isolated ground graph profiles; accepts roslaunch remappings and exits on master/device loss. | Sensor contract, ROS | Xsens service profiles and per-test integrated sensors.launch |
-| imu_candidate_validation.py | Provides reusable, fail-closed identity, provenance, units, finiteness, symmetry, positive-semidefinite, and standard-deviation consistency checks for offline stationary IMU candidate artifacts. | NumPy, PyYAML | IMU candidate validator |
 | network.py | Loads canonical host, interface, and sensor-network values. | PyYAML, rospkg | Sensor providers, mocap, sonar, and network_config.py |
 | network_config.py | Prints one endpoint from the canonical network contract. | sensors.network | Services and deployment tools |
 | parameters.py | Rejects ambiguous string and numeric stand-ins for boolean runtime parameters. | Python standard library | Sensor and transport nodes |

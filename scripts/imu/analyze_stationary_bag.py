@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Produce a provenance-bound, provisional stationary IMU characterization.
+"""Describe stationary IMU timing, noise, and drift.
 
 The analysis is descriptive. A stationary bag without independent attitude or
 rate ground truth can estimate repeatability and noise, but it cannot establish
@@ -8,18 +8,13 @@ absolute accuracy or commission a covariance model for autonomous operation.
 
 import argparse
 import csv
-import hashlib
 import json
 import math
-import re
-import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
 import numpy as np
 import rosbag
-import yaml
-from sensors.imu_candidate_validation import validate_artifact
 
 
 AXES = ("x", "y", "z")
@@ -27,7 +22,6 @@ DEFAULT_IMU_TOPIC = "/sensors/imu/data"
 DEFAULT_MAG_TOPIC = "/sensors/imu/mag"
 DEFAULT_TIME_TOPIC = "/sensors/imu/time"
 EXPECTED_IMU_MESSAGE_TYPE = "sensor_msgs/Imu"
-PLACEHOLDERS = {"", "unknown", "unspecified", "n/a", "na", "none"}
 
 
 def quaternion_to_rpy(x, y, z, w):
@@ -42,14 +36,6 @@ def quaternion_to_rpy(x, y, z, w):
     cosy_cosp = 1.0 - 2.0 * (y * y + z * z)
     yaw = math.atan2(siny_cosp, cosy_cosp)
     return roll, pitch, yaw
-
-
-def sha256_file(path):
-    digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
 
 
 def utc_iso(epoch_seconds):
@@ -519,14 +505,11 @@ def main():
     if output_dir.exists():
         raise FileExistsError(f"output directory already exists: {output_dir}")
     bag_stat_before = bag_path.stat()
-    bag_sha256_before = sha256_file(bag_path)
     stem = bag_path.stem
     analysis_path = output_dir / f"{stem}_analysis.json"
     timeline_path = output_dir / f"{stem}_one_second.csv"
     allan_path = output_dir / f"{stem}_allan_deviation.csv"
     spectral_path = output_dir / f"{stem}_power_spectral_density.csv"
-    candidate_path = output_dir / f"{stem}_stationary_candidate.yaml"
-    manifest_path = output_dir / f"{stem}_manifest.json"
 
     imu_messages = []
     magnetometer_rows = []
@@ -783,60 +766,11 @@ def main():
     windows = one_second_windows(
         elapsed, gyro, accel, rpy_degrees, magnetometer_elapsed
     )
-    derived_covariances = [
-        np.asarray(gyro_payload["covariance"], dtype=float),
-        np.asarray(gyro_payload["difference_covariance"], dtype=float),
-        np.asarray(accel_payload["covariance"], dtype=float),
-        np.asarray(accel_payload["difference_covariance"], dtype=float),
-    ]
-    derived_covariance_finite = bool(
-        all(np.all(np.isfinite(matrix)) for matrix in derived_covariances)
-    )
-    first_difference_proxy_positive_definite = False
-    if derived_covariance_finite:
-        first_difference_proxy_positive_definite = bool(
-            np.min(np.linalg.eigvalsh(derived_covariances[1])) > 1e-15
-            and np.min(np.linalg.eigvalsh(derived_covariances[3])) > 1e-15
-        )
-    candidate_checks = {
-        "declared_stationary": bool(args.declared_stationary),
-        "minimum_duration_60_seconds": duration >= 60.0,
-        "minimum_sample_count_6000": len(messages) >= 6000,
-        "effective_rate_80_to_120_hz": 80.0 <= effective_rate <= 120.0,
-        "device_id_recorded": device_id.lower() not in PLACEHOLDERS,
-        "source_revision_is_full_git_sha": bool(
-            re.fullmatch(r"[0-9a-f]{40}", source_revision)
-        ),
-        "mounting_state_recorded": mounting_state.lower() not in PLACEHOLDERS,
-        "location_recorded": location.lower() not in PLACEHOLDERS,
-        "frame_matches": frame_ids == [args.expected_frame],
-        "publisher_identity_matches": imu_caller_ids == [args.expected_caller_id],
-        "message_type_matches": imu_message_types == [EXPECTED_IMU_MESSAGE_TYPE],
-        "sequence_continuous": bool(np.all(sequence_differences == 1)),
-        "timestamps_strictly_increasing": True,
-        "maximum_interval_below_1p5_expected": bool(
-            np.max(delta_time) <= gap_threshold
-        ),
-        "imu_header_stamps_nonzero": not bool(np.any(header_stamp_fallbacks)),
-        "measurements_finite": True,
-        "quaternions_normalized": bool(np.max(np.abs(quaternion_norms - 1.0)) <= 1e-6),
-        "derived_covariance_finite": derived_covariance_finite,
-        "first_difference_noise_proxy_positive_definite": (
-            first_difference_proxy_positive_definite
-        ),
-    }
-    candidate_eligible = all(candidate_checks.values())
-
     analysis = {
         "schema_version": "1.0",
         "review_status": "provisional",
-        "candidate_gate": {
-            "eligible": candidate_eligible,
-            "checks": candidate_checks,
-        },
         "provenance": {
             "bag_path": str(bag_path),
-            "bag_sha256": bag_sha256_before,
             "bag_size_bytes": bag_stat_before.st_size,
             "bag_start_utc": utc_iso(bag_start),
             "bag_end_utc": utc_iso(bag_end),
@@ -846,6 +780,12 @@ def main():
             "imu_topic": args.imu_topic,
             "mag_topic": args.mag_topic,
             "time_topic": args.time_topic,
+        },
+        "setup": {
+            "declared_stationary": bool(args.declared_stationary),
+            "mounting_state": mounting_state,
+            "location": location,
+            "operator_notes": args.operator_notes,
         },
         "sampling": {
             "samples": int(len(messages)),
@@ -983,7 +923,7 @@ def main():
         "limitations": [
             "Stationarity was assumed from test setup and was not independently observed.",
             "Stationary repeatability does not establish absolute orientation, rate, or acceleration accuracy.",
-            "Orientation covariance requires an independent reference and is intentionally omitted from the candidate artifact.",
+            "Orientation covariance requires an independent reference and is not estimated here.",
             "First-difference covariance is a descriptive noise proxy, not a commissioned sensor or estimator measurement covariance.",
             "The device ID was asserted by the operator at analysis time and is not independently observable from the IMU bag.",
             "LiDAR registration and vehicle-state uncertainty are not observable from this IMU-only bag.",
@@ -991,87 +931,7 @@ def main():
         ],
     }
 
-    candidate = {
-        "schema_version": "1.0",
-        "artifact_type": "stationary_imu_characterization_candidate",
-        "qualification": "candidate",
-        "commissioned": False,
-        "device": {
-            "id": device_id or None,
-            "frame_id": args.expected_frame,
-            "identity_basis": "operator_asserted_cli_not_observable_in_bag",
-        },
-        "source": {
-            "bag_sha256": analysis["provenance"]["bag_sha256"],
-            "bag_size_bytes": analysis["provenance"]["bag_size_bytes"],
-            "bag_start_utc": analysis["provenance"]["bag_start_utc"],
-            "bag_end_utc": analysis["provenance"]["bag_end_utc"],
-            "source_revision": source_revision or None,
-            "imu_topic": args.imu_topic,
-            "imu_caller_ids": imu_caller_ids,
-            "expected_imu_caller_id": args.expected_caller_id,
-            "imu_message_types": imu_message_types,
-            "expected_imu_message_type": EXPECTED_IMU_MESSAGE_TYPE,
-            "sample_count": len(messages),
-            "duration_seconds": duration,
-            "effective_rate_hz": effective_rate,
-        },
-        "test": {
-            "declared_stationary": bool(args.declared_stationary),
-            "mounting_state": mounting_state,
-            "location": location,
-            "operator_notes": args.operator_notes,
-        },
-        "capture_checks": dict(candidate_checks),
-        "measurements": {
-            "angular_velocity": {
-                "units": "rad/s",
-                "mean": gyro_payload["mean"],
-                "stationary_covariance": gyro_payload["covariance"],
-                "first_difference_noise_proxy_covariance": gyro_payload[
-                    "difference_covariance"
-                ],
-                "first_difference_noise_proxy_stddev": gyro_payload[
-                    "difference_stddev"
-                ],
-            },
-            "linear_acceleration": {
-                "units": "m/s^2",
-                "mean": accel_payload["mean"],
-                "stationary_covariance": accel_payload["covariance"],
-                "first_difference_noise_proxy_covariance": accel_payload[
-                    "difference_covariance"
-                ],
-                "first_difference_noise_proxy_stddev": accel_payload[
-                    "difference_stddev"
-                ],
-            },
-            "orientation": {"status": "unavailable_without_independent_reference"},
-        },
-        "limitations": analysis["limitations"],
-    }
-    candidate_validation_error = None
-    if candidate_eligible:
-        try:
-            validate_artifact(candidate, device_id, args.expected_frame)
-        except (KeyError, TypeError, ValueError) as error:
-            candidate_eligible = False
-            candidate_validation_error = str(error)
-    candidate_checks["artifact_validator_passes"] = candidate_eligible
-    analysis["candidate_gate"] = {
-        "eligible": candidate_eligible,
-        "checks": candidate_checks,
-        "validation_error": candidate_validation_error,
-    }
     analysis = json_safe(analysis)
-    bag_stat_after = bag_path.stat()
-    bag_sha256_after = sha256_file(bag_path)
-    if (
-        bag_stat_after.st_size != bag_stat_before.st_size
-        or bag_stat_after.st_mtime_ns != bag_stat_before.st_mtime_ns
-        or bag_sha256_after != bag_sha256_before
-    ):
-        raise RuntimeError("source bag changed while it was being analyzed")
     output_dir.parent.mkdir(parents=True, exist_ok=True)
     output_dir.mkdir(exist_ok=False)
     analysis_path.write_text(
@@ -1091,64 +951,10 @@ def main():
             "magnetometer", magnetometer_payload["spectral"]
         )
     write_csv(spectral_path, spectral_output_rows)
-    if candidate_eligible:
-        candidate_path.write_text(
-            yaml.safe_dump(candidate, sort_keys=False), encoding="utf-8"
-        )
-    artifact_paths = [analysis_path, timeline_path, allan_path, spectral_path]
-    if candidate_eligible:
-        artifact_paths.append(candidate_path)
-    manifest = {
-        "schema_version": "1.0",
-        "run_id": stem,
-        "created_at_utc": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
-        "status": (
-            "analysis_complete_candidate_only"
-            if candidate_eligible
-            else "analysis_complete_candidate_withheld"
-        ),
-        "command": [str(value) for value in sys.argv],
-        "provenance": {
-            "source_bag": str(bag_path),
-            "source_bag_sha256": analysis["provenance"]["bag_sha256"],
-            "analyzer": str(Path(__file__).resolve()),
-            "analyzer_sha256": sha256_file(Path(__file__).resolve()),
-            "source_revision": source_revision or None,
-            "device_id": device_id or None,
-            "frame_id": args.expected_frame,
-            "publisher_caller_ids": imu_caller_ids,
-            "expected_publisher_caller_id": args.expected_caller_id,
-        },
-        "artifacts": [
-            {
-                "path": path.name,
-                "sha256": sha256_file(path),
-                "size_bytes": path.stat().st_size,
-            }
-            for path in artifact_paths
-        ],
-        "gates": {
-            "stationarity_independently_verified": False,
-            "publisher_identity_matches": imu_caller_ids == [args.expected_caller_id],
-            "candidate_emitted": candidate_eligible,
-            "orientation_reference_available": False,
-            "lidar_covariance_available": False,
-            "candidate_commissioned": False,
-        },
-    }
-    manifest_path.write_text(
-        json.dumps(manifest, indent=2, sort_keys=True, allow_nan=False) + "\n",
-        encoding="utf-8",
-    )
     print(analysis_path)
     print(timeline_path)
     print(allan_path)
     print(spectral_path)
-    if candidate_eligible:
-        print(candidate_path)
-    else:
-        print("candidate withheld; see candidate_gate in analysis JSON")
-    print(manifest_path)
 
 
 if __name__ == "__main__":

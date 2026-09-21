@@ -34,14 +34,12 @@ catkin_install_python(
     scripts/imu/analyze_stationary_bag.py
     scripts/imu/force_wakeup.py
     scripts/imu/sample_clock.py
-    scripts/imu/validate_stationary_candidate.py
     scripts/sensors/external_sensor_provider.py
     scripts/sensors/network_config.py
     scripts/sensors/sensor_bringup.py
     scripts/teensy/teensy_rosserial_launcher.py
     scripts/power/heron_sense_ingress.py
     scripts/power/jk_bms_node.py
-    scripts/power/validate_battery_registry.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 

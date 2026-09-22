@@ -26,6 +26,7 @@ import rosgraph
 from std_msgs.msg import String
 
 from sensors.network import network_value
+from sensors.process_identity import read_process_stat
 from sensors.contracts import (
     load_contract,
     sensor_reachable,
@@ -613,7 +614,7 @@ class SensorBringup:
             return evidence
         try:
             publisher_pid = self._lookup_publisher_pid(expected)
-            publisher_stat = self._process_stat(publisher_pid)
+            publisher_stat = read_process_stat(publisher_pid)
             publisher_process_group_id = publisher_stat["process_group_id"]
         except Exception as exc:
             evidence["reason"] = "publisher_identity_unavailable:{}:{}".format(
@@ -919,7 +920,7 @@ class SensorBringup:
                 proc = subprocess.Popen(args, start_new_session=True)
                 self.processes[sensor_id] = proc
                 try:
-                    root_stat = self._process_stat(proc.pid)
+                    root_stat = read_process_stat(proc.pid)
                     self.managed_process_identities[sensor_id] = {
                         proc.pid: root_stat["start_time_ticks"]
                     }
@@ -975,29 +976,10 @@ class SensorBringup:
                 queue_size=1,
             )
 
-    @staticmethod
-    def _process_stat(pid: int) -> Dict[str, Any]:
-        """Read the identity and parentage fields needed for safe signalling."""
-        raw = (Path("/proc") / str(int(pid)) / "stat").read_text()
-        closing_paren = raw.rfind(")")
-        if closing_paren < 0:
-            raise RuntimeError("process {} has an invalid stat record".format(pid))
-        fields = raw[closing_paren + 2 :].split()
-        if len(fields) <= 19:
-            raise RuntimeError("process {} has a short stat record".format(pid))
-        return {
-            "pid": int(pid),
-            "state": fields[0],
-            "parent_pid": int(fields[1]),
-            "process_group_id": int(fields[2]),
-            "session_id": int(fields[3]),
-            "start_time_ticks": int(fields[19]),
-        }
-
     @classmethod
     def _identity_matches(cls, pid: int, start_time_ticks: int) -> bool:
         try:
-            stat = cls._process_stat(pid)
+            stat = read_process_stat(pid)
             return (
                 stat["start_time_ticks"] == int(start_time_ticks)
                 and stat.get("state") != "Z"
@@ -1023,7 +1005,7 @@ class SensorBringup:
         visited = set()
         while current > 0 and current not in visited:
             try:
-                stat = cls._process_stat(current)
+                stat = read_process_stat(current)
             except (
                 FileNotFoundError,
                 PermissionError,
@@ -1046,7 +1028,7 @@ class SensorBringup:
     ) -> Dict[int, Tuple[int, int]]:
         """Return current descendants as PID -> (start ticks, tree depth)."""
         try:
-            root_stat = cls._process_stat(root_pid)
+            root_stat = read_process_stat(root_pid)
         except (
             FileNotFoundError,
             PermissionError,
@@ -1096,7 +1078,7 @@ class SensorBringup:
                 if child in tree:
                     continue
                 try:
-                    child_stat = cls._process_stat(child)
+                    child_stat = read_process_stat(child)
                 except (
                     FileNotFoundError,
                     PermissionError,
@@ -1119,7 +1101,7 @@ class SensorBringup:
         root_start = known.get(int(proc.pid))
         if root_start is None and proc.poll() is None:
             try:
-                root_start = self._process_stat(proc.pid)["start_time_ticks"]
+                root_start = read_process_stat(proc.pid)["start_time_ticks"]
             except (
                 FileNotFoundError,
                 PermissionError,
@@ -1136,7 +1118,7 @@ class SensorBringup:
         groups = set()
         for pid, (start_time_ticks, _depth) in tree.items():
             try:
-                stat = self._process_stat(pid)
+                stat = read_process_stat(pid)
             except (
                 FileNotFoundError,
                 PermissionError,
@@ -1169,7 +1151,7 @@ class SensorBringup:
             if proc.poll() is not None:
                 return {}
             try:
-                root_start = cls._process_stat(root_pid)["start_time_ticks"]
+                root_start = read_process_stat(root_pid)["start_time_ticks"]
             except (
                 FileNotFoundError,
                 PermissionError,

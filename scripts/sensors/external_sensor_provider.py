@@ -24,6 +24,7 @@ import rospkg
 from sensor_msgs.msg import Imu
 
 from sensors.network import network_value
+from sensors.process_identity import read_process_stat
 from sensors.contracts import load_contract, sensor_value
 
 
@@ -212,27 +213,9 @@ def _launch_arguments(
     return arguments
 
 
-def _process_stat(pid: int) -> Dict[str, Any]:
-    raw = (Path("/proc") / str(int(pid)) / "stat").read_text()
-    closing_paren = raw.rfind(")")
-    if closing_paren < 0:
-        raise RuntimeError("process {} has an invalid stat record".format(pid))
-    fields = raw[closing_paren + 2 :].split()
-    if len(fields) <= 19:
-        raise RuntimeError("process {} has a short stat record".format(pid))
-    return {
-        "pid": int(pid),
-        "state": fields[0],
-        "parent_pid": int(fields[1]),
-        "process_group_id": int(fields[2]),
-        "session_id": int(fields[3]),
-        "start_time_ticks": int(fields[19]),
-    }
-
-
 def _identity_matches(pid: int, start_time_ticks: int) -> bool:
     try:
-        process = _process_stat(pid)
+        process = read_process_stat(pid)
     except (
         FileNotFoundError,
         PermissionError,
@@ -257,7 +240,7 @@ def _pid_descends_from(
     visited = set()
     while current > 0 and current not in visited:
         try:
-            process = _process_stat(current)
+            process = read_process_stat(current)
         except (
             FileNotFoundError,
             PermissionError,
@@ -279,7 +262,7 @@ def _managed_tree(
     root_pid: int, root_start_time_ticks: int
 ) -> Dict[int, Tuple[int, int]]:
     try:
-        root = _process_stat(root_pid)
+        root = read_process_stat(root_pid)
     except (
         FileNotFoundError,
         PermissionError,
@@ -323,7 +306,7 @@ def _managed_tree(
             if child in tree:
                 continue
             try:
-                child_process = _process_stat(child)
+                child_process = read_process_stat(child)
             except (
                 FileNotFoundError,
                 PermissionError,
@@ -350,7 +333,7 @@ def _refresh_tracked_identities(
         if proc.poll() is not None:
             return {}
         try:
-            root_start = _process_stat(root_pid)["start_time_ticks"]
+            root_start = read_process_stat(root_pid)["start_time_ticks"]
         except (
             FileNotFoundError,
             PermissionError,
@@ -364,7 +347,7 @@ def _refresh_tracked_identities(
     verified_tree: Dict[int, Tuple[int, int]] = {}
     for pid, (start_time_ticks, depth) in tree.items():
         try:
-            process = _process_stat(pid)
+            process = read_process_stat(pid)
         except (
             FileNotFoundError,
             PermissionError,
@@ -420,7 +403,7 @@ def _owned_process_stat_now(
     if tracked.get(int(pid)) != start_time_ticks:
         return None
     try:
-        process = _process_stat(int(pid))
+        process = read_process_stat(int(pid))
     except (
         FileNotFoundError,
         PermissionError,

@@ -4,7 +4,10 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Dict, Tuple
+from typing import Any, Dict, MutableMapping, Optional, Tuple
+import os
+import socket
+import subprocess
 
 import rospkg
 import yaml
@@ -67,3 +70,41 @@ def network_value(
             return str(default)
         value = value[part]
     return str(value)
+
+
+def route_source_ip(target_ip: str) -> Optional[str]:
+    """Return the local source address selected by the kernel for a target."""
+    try:
+        output = subprocess.check_output(
+            ["ip", "-o", "route", "get", target_ip],
+            text=True,
+            stderr=subprocess.DEVNULL,
+        )
+    except Exception:
+        return None
+    parts = output.split()
+    for index, part in enumerate(parts):
+        if part == "src" and index + 1 < len(parts):
+            return parts[index + 1]
+    return None
+
+
+def configure_heron_ros_environment(
+    enabled: bool,
+    host: str,
+    host_ip: str,
+    local_ip: str,
+    *,
+    environ: Optional[MutableMapping[str, str]] = None,
+) -> None:
+    """Select the Heron ROS master and local route when automatic setup is enabled."""
+    if not enabled:
+        return
+    try:
+        master_ip = socket.gethostbyname(host)
+    except OSError:
+        master_ip = host_ip
+    env = os.environ if environ is None else environ
+    env["ROS_MASTER_URI"] = "http://{}:11311".format(master_ip)
+    env["ROS_IP"] = route_source_ip(master_ip) or local_ip
+    env.pop("ROS_HOSTNAME", None)

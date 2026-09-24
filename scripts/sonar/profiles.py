@@ -95,7 +95,7 @@ def _override_or_profile_or_default(
         return override
     if key in profile:
         return profile[key]
-    network_key = {"sonar_ip": "sonar_ip", "udp_dest_ip": "sonar_lan_ip"}.get(key)
+    network_key = {"sonar_ip": "dt100_ip", "udp_dest_ip": "sonar_lan_ip"}.get(key)
     if network_key:
         value = network_value(network_key)
         if value:

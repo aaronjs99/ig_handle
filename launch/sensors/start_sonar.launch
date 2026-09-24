@@ -4,33 +4,32 @@
   <arg name="bridge_adapter" default="br0"/>
   <arg name="headless"       default="false"/>
   <arg name="driver_mode"    default="dt100"/>
-  <arg name="udp_port"/>
-  <arg name="raw_topic"/>
-  <arg name="dt100_frame"/>
-  <arg name="dt100_extrinsic_revision"/>
-  <arg name="ping360_frame"/>
-  <arg name="ping360_extrinsic_revision"/>
-  <arg name="unverified_frame"/>
-  <arg name="unverified_extrinsic_revision"/>
-  <arg name="ping360_raw_topic" default="/sensors/sonar/ping360/raw"/>
+  <arg name="udp_port" default="0"/>
+  <arg name="raw_topic" default="/sensors/sonar/echosounder/raw"/>
+  <arg name="dt100_frame" default="dt100_link"/>
+  <arg name="dt100_extrinsic_revision" default="dt100-seed-2026-08-11-v1"/>
+  <arg name="ping360_frame" default="ping360_link"/>
+  <arg name="ping360_extrinsic_revision" default="ping360-seed-2026-08-11-v1"/>
+  <arg name="unverified_frame" default="sonar_link"/>
+  <arg name="unverified_extrinsic_revision" default="unverified-sonar-frame-v1"/>
+  <arg name="ping360_raw_topic" default="/sensors/sonar/imaging/raw"/>
   <arg name="profile_topic" default="/sensors/sonar/imaging/profile"/>
-  <arg name="diagnostics_topic" default="/sensors/sonar/ping360/diagnostics"/>
+  <arg name="diagnostics_topic" default="/sensors/sonar/imaging/diagnostics"/>
   <arg name="operation_mode" default="identity"/>
   <arg name="allow_active_transmit" default="false"/>
   <arg name="sound_speed_mps" default="1480.0"/>
   <arg name="sensor_id"/>
-  <!-- The lifecycle owner resolves and validates every provider value before
-       including this leaf launch. Direct invocation therefore fails closed
-       unless the complete admission bundle is supplied explicitly. -->
-  <arg name="dt100_hardware_commissioned"/>
-  <arg name="dt100_expected_udp_source_ip"/>
-  <arg name="dt100_expected_udp_source_port"/>
-  <arg name="bind_ip"/>
-  <arg name="sonar_ip"/>
-  <arg name="udp_dest_ip"/>
+  <!-- The lifecycle owner supplies the selected device inputs. Defaults for
+       the other device keep this shared leaf launch composable twice. -->
+  <arg name="dt100_hardware_commissioned" default="false"/>
+  <arg name="dt100_expected_udp_source_ip" default=""/>
+  <arg name="dt100_expected_udp_source_port" default="0"/>
+  <arg name="bind_ip" default="0.0.0.0"/>
+  <arg name="sonar_ip" default=""/>
+  <arg name="udp_dest_ip" default=""/>
   <arg name="sonar_reachable"/>
-  <arg name="sonar_profile"/>
-  <arg name="sonar_profile_config"/>
+  <arg name="sonar_profile" default="harbor"/>
+  <arg name="sonar_profile_config" default="$(find ig_handle)/config/sensors/sonar/profiles.yaml"/>
   <arg name="verbose_deltat_ini" default="false"/>
 
   <param name="/ig_handle/sensors/$(arg sensor_id)/reachable" value="$(arg sonar_reachable)"/>

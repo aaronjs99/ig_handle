@@ -22,7 +22,7 @@ def _repo_default_path() -> Path:
         ).strip()
     except (OSError, subprocess.CalledProcessError):
         package_dir = str(Path(__file__).resolve().parents[2])
-    return Path(package_dir) / "config" / "sensors" / "sensor_frames.yaml"
+    return Path(package_dir) / "config" / "sensors" / "platform" / "sensor_frames.yaml"
 
 
 def _load(path: Path) -> dict:

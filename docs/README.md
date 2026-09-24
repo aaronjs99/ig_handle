@@ -2,7 +2,7 @@
 
 | File | Relevance | Dependencies | Used by |
 | --- | --- | --- | --- |
-| imu_characterization.md | Describes stationary Xsens timing/noise analysis, output tables, and the physical measurements needed for calibration. | ../scripts/imu/analyze_stationary_bag.py, ../config/sensors/sensor_contract.yaml | IMU characterization and plot interpretation |
+| imu_characterization.md | Describes stationary Xsens timing/noise analysis, output tables, and the physical measurements needed for calibration. | ../scripts/imu/analyze_stationary_bag.py, ../config/sensors/platform/sensor_contract.yaml | IMU characterization and plot interpretation |
 | platform.md | Defines the physical sensor platform, network, supervision, recording, and device-identity boundaries. | runtime_surface.yaml, sensor_contract.yaml, sensor_frames.yaml, sensor_network.yaml | Sensor integration and field preparation |
 | platform.pdf | Rendered sensor-platform reference. | platform.md | Review and offline sharing |
 | sensor_timing.md | Defines fail-closed Teensy reference and field-valid qualification, hardware-owned VLP PPS, bounded inverted status-V NMEA with per-unit qualifier/lock readback, camera/MTi trigger-feedback contracts, asynchronous sonar safety boundary, and bench acceptance gates. | ../config/teensy/firmware_config.h, ../main/sensor_sync.h, official device manuals | Firmware integration and commissioning |

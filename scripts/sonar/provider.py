@@ -70,7 +70,7 @@ def _print_usage() -> None:
         "Usage: provider.py {receiver|deltat|ping360} [args]\n"
         "\n"
         "Commands:\n"
-        "  receiver  Publish raw vendor UDP datagrams on /sensors/sonar/raw.\n"
+        "  receiver  Publish raw DT100 echosounder datagrams on /sensors/sonar/echosounder/raw.\n"
         "  deltat    Generate Linux_DeltaT.INI from config and exec the DeltaT binary.\n"
         "  ping360   Publish Ping360 wire packets, profiles, and diagnostics.",
         file=sys.stderr,

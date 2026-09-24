@@ -7,6 +7,7 @@ import hashlib
 import json
 import socket
 import struct
+import time
 from dataclasses import dataclass
 from typing import Dict, Optional, Tuple
 
@@ -72,13 +73,13 @@ class Ping360Provider:
         self._validate_configuration()
 
         self.raw_topic = str(
-            rospy.get_param("~raw_topic", "/sensors/sonar/ping360/raw")
+            rospy.get_param("~raw_topic", "/sensors/sonar/imaging/raw")
         )
         self.profile_topic = str(
             rospy.get_param("~profile_topic", "/sensors/sonar/imaging/profile")
         )
         self.diagnostics_topic = str(
-            rospy.get_param("~diagnostics_topic", "/sensors/sonar/ping360/diagnostics")
+            rospy.get_param("~diagnostics_topic", "/sensors/sonar/imaging/diagnostics")
         )
         self.raw_pub = rospy.Publisher(self.raw_topic, Ping360RawPacket, queue_size=100)
         self.profile_pub = rospy.Publisher(
@@ -95,6 +96,7 @@ class Ping360Provider:
         self.device_id = self.destination_device_id
         self.protocol_version: Optional[tuple] = None
         self.active_scan_started = False
+        self.last_valid_profile_monotonic: Optional[float] = None
         self.active_scan_destination_device_id: Optional[int] = None
         self.scan_identity_faulted = False
         self.last_request_time = rospy.Time(0)
@@ -168,6 +170,14 @@ class Ping360Provider:
         self._publish_diagnostics("awaiting_identity")
         while not rospy.is_shutdown():
             self._receive_once()
+            if (
+                self.active_scan_started
+                and self.last_valid_profile_monotonic is not None
+                and time.monotonic() - self.last_valid_profile_monotonic > 10.0
+            ):
+                self._stop_active_scan(
+                    "scan_response_timeout", latch_identity_fault=True
+                )
             if self._identity_valid() and self.operation_mode == "scan":
                 self._start_scan_once()
             elif not self._identity_valid():
@@ -199,6 +209,7 @@ class Ping360Provider:
         )
         self.active_scan_destination_device_id = destination_device_id
         self.active_scan_started = True
+        self.last_valid_profile_monotonic = time.monotonic()
         self._publish_diagnostics("scanning")
 
     def _stop_active_scan(self, state: str, *, latch_identity_fault: bool) -> bool:
@@ -353,6 +364,7 @@ class Ping360Provider:
         msg.max_range_m = profile.number_of_samples * msg.sample_interval_m
         msg.intensities = list(profile.intensities)
         self.profile_pub.publish(msg)
+        self.last_valid_profile_monotonic = time.monotonic()
         self.counters.profiles_published += 1
 
     def _publish_raw(self, frame, packet_id: str, stamp, source) -> None:

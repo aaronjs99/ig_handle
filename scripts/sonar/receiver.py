@@ -30,7 +30,7 @@ class SonarRawReceiver:
 
     def __init__(self):
         self.port = int(rospy.get_param("~port", 4040))
-        self.topic = str(rospy.get_param("~topic", "/sensors/sonar/raw"))
+        self.topic = str(rospy.get_param("~topic", "/sensors/sonar/echosounder/raw"))
         self.bind_ip = str(
             rospy.get_param("~bind_ip", network_value("mocap_udp_bind_ip"))
         )

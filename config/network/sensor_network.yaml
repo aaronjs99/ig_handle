@@ -1,5 +1,5 @@
 # IG Handle live sensor and host endpoints.
-# Frame geometry and model specifications live under config/sensors/.
+# Frame geometry and model specifications live under config/sensors/platform/.
 
 sensor_network:
   endpoints:
@@ -21,9 +21,12 @@ sensor_network:
     lidar_v:
       label: Vertical VLP-16 LiDAR
       host: 192.168.50.202
-    sonar:
-      label: Imaging sonar
-      host: 192.168.2.4
+    dt100:
+      label: DT100 echosounder (endpoint unconfigured)
+      host: ""
+    ping360:
+      label: Ping360 imaging sonar (endpoint unconfigured)
+      host: ""
     imu:
       label: Xsens IMU
       device_path: /dev/sensors/imu

@@ -28,6 +28,29 @@ consumes canonical sensor topics; GRANDE composes and records the runtime.
 
 Each narrative document has a matching PDF. Markdown is canonical.
 
+## Independent sonar devices
+
+Sensor ID 8 owns DT100 echosounder UDP acquisition; sensor ID 9 owns Ping360
+identity and, only when explicitly configured, imaging profiles. Both can be
+selected together. Their network endpoints, frames, provider processes, raw
+topics, and data-availability reports are independent. The DT100 endpoint is
+unconfigured; its current passive UDP receiver does not establish that a packet
+came from a commissioned DT100. The Ping360 device address is also unconfigured; the typical Ethernet UDP
+port `12345` remains unverified for the installed device. Ping360 starts in identity mode, which does not produce scan
+profiles or images. Missing imagery is reported without restarting the provider.
+A scan that stops returning valid profiles sends one motor-off command and
+remains stopped until a new explicit session.
+
+The proposed underwater arrangement has one arm cable feeding an Ethernet
+switch and separate regulated DC outputs in a junction box. At 10/100 Mbps,
+two intact twisted pairs carry Ethernet; the other conductors may carry a
+custom DC feed only after cable ampacity, voltage drop, connectors, supply,
+switch, and installed sonar revisions are checked. Published [DT100 specifications](https://imagenex.com/assets/images/downloads/DT100_Specs_rev5.pdf)
+state 22–32 V, while the [Ping360 Ethernet wiring guide](https://bluerobotics.com/learn/changing-communications-interface-on-the-ping360/)
+states 11–18 V. Use separate regulated outputs after checking the installed
+revisions. This is a topology proposal, not a wiring or physical-readiness claim.
+
+
 Physical addresses, frames, serials, ports, polarity, geometry, and current
 scales must come from reviewed hardware records. Values marked provisional,
 placeholder, or unverified are not commissioned facts. A launch or session may

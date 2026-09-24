@@ -2,9 +2,16 @@
 
 | File | Relevance | Dependencies | Used by |
 | --- | --- | --- | --- |
-| battery_registry.yaml | Defines the commissioned JK-backed `IGHANDLE-01` identity and provisional `HERON-01`/`HERON-02` asset labels, roles, and evidence methods. The Heron records remain uncommissioned until their exact durable labels are physically applied and inspected; electrical behavior is never an identity source. | Commissioned JK device metadata and explicit physical-label commissioning state | battery_registry.py, jk_bms_node.py, GRANDE fleet telemetry |
-| jk_bms.yaml | Defines the exact address/name/model/hardware/software/serial/date, read-only JK02-32S BLE contract, polling cadence, stale timeout, bounded malformed-frame reconnect threshold, and physical plausibility bounds for IG Handle's own battery telemetry. | Physical BMS app Device Info evidence plus live read-only frame capture | launch/battery.launch, launch/core/start_power.launch, scripts/power/jk_bms_node.py |
-| sensor_contract.yaml | Owns sensor identity, model and family metadata, deployment bindings, acquisition topics and launch policy. | sensor_network.yaml, cameras/, sonar/ | sensor contract runtime, external sensor service, sensor_bringup.py, sensors.launch |
-| sensor_frames.html | Interactive reference for configured static sensor origins; labels partial translation evidence, unverified orientation, and omitted dynamic navigation transforms. | sensor_frames.yaml, Plotly | Hardware, TF, and simulator review |
-| sensor_frames.yaml | Owns sensor frame names, parent-child transforms, verification metadata, and measurement references. Provisional LiDAR rotation uses repeat-capture full-pose ICP with selected translation retained. | Physical measurement evidence | scripts/frames/export.py, GRANDE TF launch and dashboard, Heron Simulator sensor profile |
-| sensor_models.yaml | Records reference sensor-family capabilities separately from deployed device identity. | Manufacturer specifications | Hardware and simulator review |
+| README.md | Explains the sensor configuration modules and their ownership. | platform/, cameras/, power/, sonar/ | IG Handle operators and launch maintainers |
+| platform/sensor_contract.yaml | Owns deployed sensor identities, bindings, acquisition topics, and launch policy. | network/sensor_network.yaml, cameras/, sonar/ | sensor contract runtime, sensor bringup, external sensor service, GRANDE launch |
+| platform/sensor_frames.yaml | Owns sensor frame names, static extrinsics, verification metadata, and measurement references. | Physical measurement evidence | TF export/broadcast, GRANDE launch, Heron Simulator |
+| platform/sensor_models.yaml | Records reference sensor-family capabilities separately from deployed device identity. | Manufacturer specifications | Hardware and simulator review |
+| platform/sensor_frames.html | Interactive review of the configured sensor origins and frame evidence. | platform/sensor_frames.yaml, Plotly | Hardware, TF, and simulator review |
+| cameras/README.md | Documents serial-bound camera profiles and calibration status. | cameras/*.yaml, sensor contract | Camera launch and calibration work |
+| power/README.md | Documents battery registry and JK BMS configuration ownership. | power/battery_registry.yaml, power/jk_bms.yaml | Battery launch and passive power telemetry |
+| sonar/README.md | Documents sonar profiles and their deployment assumptions. | sonar/profiles.yaml, sensor contract | Sonar launch and processing |
+
+The directory is split by responsibility: platform metadata and extrinsics are
+under `platform/`, while camera, power, and sonar inputs remain in their
+modality-specific modules. Runtime code refers to these paths explicitly; no
+second copy is maintained.

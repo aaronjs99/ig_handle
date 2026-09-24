@@ -1,8 +1,8 @@
 <launch>
   <arg name="battery_registry_file"
-       default="$(find ig_handle)/config/sensors/battery_registry.yaml"/>
+       default="$(find ig_handle)/config/sensors/power/battery_registry.yaml"/>
   <arg name="bms_config_file"
-       default="$(find ig_handle)/config/sensors/jk_bms.yaml"/>
+       default="$(find ig_handle)/config/sensors/power/jk_bms.yaml"/>
   <arg name="battery_topic" default="/sense_ighandle"/>
   <arg name="details_topic" default="/sense_ighandle/details"/>
 

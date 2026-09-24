@@ -1,5 +1,5 @@
 <launch>
-  <arg name="sensor_contract_file" default="$(find ig_handle)/config/sensors/sensor_contract.yaml"/>
+  <arg name="sensor_contract_file" default="$(find ig_handle)/config/sensors/platform/sensor_contract.yaml"/>
   <arg name="extra_sensor_ids" default=""/>
   <arg name="disabled_sensor_ids" default=""/>
   <arg name="sensor_reachability_check" default="true"/>

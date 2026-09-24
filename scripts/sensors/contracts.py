@@ -98,7 +98,9 @@ def sensor_reachable(
 def _resolve_contract_path(package_root: str, contract_file: str) -> Path:
     if contract_file:
         return Path(str(contract_file).replace("package://ig_handle", package_root))
-    return Path(package_root) / "config" / "sensors" / "sensor_contract.yaml"
+    return (
+        Path(package_root) / "config" / "sensors" / "platform" / "sensor_contract.yaml"
+    )
 
 
 def _sensor(contract: Dict[str, Any], sensor_id: str) -> Dict[str, Any]:

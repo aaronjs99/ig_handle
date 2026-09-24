@@ -19,9 +19,12 @@ topics:
   teensy_camera_time: /sensors/camera/time
   teensy_imu_time: /sensors/imu/time
   teensy_timing_status: /sensors/timing/status
-  sonar_raw: /sensors/sonar/raw
-  sonar_ping360_raw: /sensors/sonar/ping360/raw
-  sonar_scan: /sensors/sonar/scan
-  sonar_profile: /sensors/sonar/imaging/profile
-  sonar_image: /sensors/sonar/imaging/image
-  sonar_ping360_diagnostics: /sensors/sonar/ping360/diagnostics
+  # Sonar device families: DT100 echosounder and Blue Robotics Ping360 imaging sonar.
+  sonar_echosounder_raw: /sensors/sonar/echosounder/raw
+  sonar_imaging_raw: /sensors/sonar/imaging/raw
+  sonar_echosounder_cloud: /sensors/sonar/echosounder/cloud
+  sonar_echosounder_map_cloud: /sensors/sonar/echosounder/map_cloud
+  sonar_echosounder_latest_slice_cloud: /sensors/sonar/echosounder/latest_slice_map
+  sonar_imaging_profile: /sensors/sonar/imaging/profile
+  sonar_imaging_image: /sensors/sonar/imaging/image
+  sonar_imaging_diagnostics: /sensors/sonar/imaging/diagnostics

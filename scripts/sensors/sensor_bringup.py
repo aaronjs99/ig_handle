@@ -1297,6 +1297,8 @@ class SensorBringup:
         )
 
     def _sensor_unhealthy_reason(self, sensor_id: str, sensor: Dict[str, Any]) -> str:
+        if not bool(sensor.get("restart_on_missing_data", True)):
+            return ""
         started = self.process_started.get(sensor_id, time.monotonic())
         if time.monotonic() - started <= self._startup_grace_sec(sensor):
             return ""
@@ -1418,7 +1420,11 @@ class SensorBringup:
                 state = (
                     "starting"
                     if elapsed <= self._startup_grace_sec(sensor)
-                    else "topic_stale"
+                    else (
+                        "running_no_recent_data"
+                        if not bool(sensor.get("restart_on_missing_data", True))
+                        else "topic_stale"
+                    )
                 )
             elif not publisher_owned:
                 state = "publisher_invalid"
@@ -1431,6 +1437,8 @@ class SensorBringup:
                 "reachable": reachable,
                 "probe_reachable": bool(selection.get("probe_reachable", False)),
                 "alive": alive,
+                "process_running": proc_running,
+                "data_available": topics_fresh,
                 "state": state,
                 "lifecycle_owner": lifecycle_owner,
                 "expected_publisher": expected_publisher or None,
@@ -1527,7 +1535,11 @@ class SensorBringup:
         if self.contract_file:
             return _resolve_package_uri(self.package_root, self.contract_file)
         return str(
-            Path(self.package_root) / "config" / "sensors" / "sensor_contract.yaml"
+            Path(self.package_root)
+            / "config"
+            / "sensors"
+            / "platform"
+            / "sensor_contract.yaml"
         )
 
     def _arg_value(self, sensor_id: str, spec: Any) -> str:

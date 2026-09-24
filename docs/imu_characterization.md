@@ -23,7 +23,7 @@ spectral density CSV tables. Timing, frame, publisher, sequence gaps, covariance
 noise proxies, and drift are reported as observations. It does not generate a
 calibration candidate, manifest, file hashes, or a pass/fail certificate.
 
-Raw bags remain outside Git under /home/ig-handle/bags/grande/calibration/imu/.
+Raw bags remain outside Git under /home/ig-handle/bags/sensors/imu/.
 Place analysis outputs under analysis/<run-id> there. Existing output directories
 are not overwritten. The source bag is read-only.
 

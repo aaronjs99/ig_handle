@@ -8,6 +8,7 @@ import json
 import socket
 import struct
 import time
+import uuid
 from dataclasses import dataclass
 from typing import Dict, Optional, Tuple
 
@@ -91,6 +92,7 @@ class Ping360Provider:
         self.socket = self._open_socket()
         self.counters = Counters()
         self.sequence = 0
+        self.acquisition_epoch = uuid.uuid4().hex
         self.device_info: Optional[tuple] = None
         self.identified_device_id: Optional[int] = None
         self.device_id = self.destination_device_id
@@ -338,11 +340,18 @@ class Ping360Provider:
         msg.header.stamp = stamp
         msg.header.frame_id = self.frame_id
         msg.profile_id = hashlib.sha256(
-            (packet_id + self.configuration_hash).encode("ascii")
+            "{}:{}:{}:{}:{}".format(
+                self.acquisition_epoch,
+                packet_id,
+                self.configuration_hash,
+                stamp.to_nsec(),
+                self.sequence,
+            ).encode("ascii")
         ).hexdigest()
         msg.provider = "blue_robotics_ping360"
         msg.model = "Ping360"
         msg.raw_packet_id = packet_id
+        msg.source_session_id = self.acquisition_epoch
         msg.extrinsic_revision = self.extrinsic_revision
         msg.synthetic = False
         msg.sequence = self.sequence
@@ -373,6 +382,8 @@ class Ping360Provider:
         msg.header.frame_id = self.frame_id
         msg.packet_id = packet_id
         msg.provider = "blue_robotics_ping360"
+        msg.source_session_id = self.acquisition_epoch
+        msg.synthetic = False
         msg.extrinsic_revision = self.extrinsic_revision
         msg.source_address = source[0]
         msg.source_port = source[1]
@@ -390,6 +401,8 @@ class Ping360Provider:
         msg.header.frame_id = self.frame_id
         msg.packet_id = hashlib.sha256(data).hexdigest()
         msg.provider = "blue_robotics_ping360"
+        msg.source_session_id = self.acquisition_epoch
+        msg.synthetic = False
         msg.extrinsic_revision = self.extrinsic_revision
         msg.source_address = source[0]
         msg.source_port = source[1]

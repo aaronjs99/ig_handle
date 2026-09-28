@@ -18,8 +18,11 @@ rosrun ig_handle analyze_stationary_bag.py INPUT.bag \
 ~~~
 
 The analyzer reads /sensors/imu/data and optional time-reference and magnetometer
-topics. It writes analysis JSON plus one-second, Allan-deviation, and power
-spectral density CSV tables. Timing, frame, publisher, sequence gaps, covariance,
+topics. Its time-reference default is `/sensors/imu/sample_time`; older bags can
+select another recorded topic with `--time-topic`. The device-relative diagnostic
+clock remains separate from ROS and acquisition time. It writes analysis JSON plus
+one-second, Allan-deviation, and power spectral density CSV tables. Timing, frame,
+publisher, sequence gaps, covariance,
 noise proxies, and drift are reported as observations. It does not generate a
 calibration candidate, manifest, file hashes, or a pass/fail certificate.
 

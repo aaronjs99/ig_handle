@@ -4,6 +4,7 @@
   <arg name="disabled_sensor_ids" default=""/>
   <arg name="sensor_reachability_check" default="true"/>
   <arg name="external_sensor_profile" default="integrated"/>
+  <arg name="timing_events_topic" default="/sensors/timing/events"/>
   <arg name="use_external_sensor_provider" default="false"
        doc="Own the integrated Xsens provider in this launch; exclude any separate provider first."/>
 
@@ -21,5 +22,6 @@
     <param name="extra_sensor_ids" value="$(arg extra_sensor_ids)"/>
     <param name="disabled_sensor_ids" value="$(arg disabled_sensor_ids)"/>
     <param name="sensor_reachability_check" value="$(arg sensor_reachability_check)"/>
+    <param name="timing_events_topic" value="$(arg timing_events_topic)"/>
   </node>
 </launch>

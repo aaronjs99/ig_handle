@@ -3,8 +3,9 @@
   <arg name="baud" default="115200"/>
   <arg name="pps_time_topic" default="/sensors/pps/time"/>
   <arg name="camera_time_topic" default="/sensors/camera/time"/>
-  <arg name="imu_time_topic" default="/sensors/imu/time"/>
+  <arg name="imu_sync_event_topic" default="/sensors/imu/sync_event"/>
   <arg name="timing_status_topic" default="/sensors/timing/status"/>
+  <arg name="firmware_event_topic" default="/sensors/timing/firmware_event"/>
   <arg name="expected_firmware_build_id" default=""/>
   <arg name="device_timeout_sec" default="10.0"/>
   <arg name="identity_timeout_sec" default="5.0"/>
@@ -15,8 +16,9 @@
     <param name="baud" value="$(arg baud)"/>
     <param name="pps_time_topic" value="$(arg pps_time_topic)"/>
     <param name="camera_time_topic" value="$(arg camera_time_topic)"/>
-    <param name="imu_time_topic" value="$(arg imu_time_topic)"/>
+    <param name="imu_sync_event_topic" value="$(arg imu_sync_event_topic)"/>
     <param name="timing_status_topic" value="$(arg timing_status_topic)"/>
+    <param name="firmware_event_topic" value="$(arg firmware_event_topic)"/>
     <param name="expected_firmware_build_id" value="$(arg expected_firmware_build_id)"/>
     <param name="device_timeout_sec" value="$(arg device_timeout_sec)"/>
     <param name="identity_timeout_sec" value="$(arg identity_timeout_sec)"/>

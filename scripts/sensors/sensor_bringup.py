@@ -123,6 +123,10 @@ class SensorBringup:
     def __init__(self) -> None:
         self.package_root = rospkg.RosPack().get_path("ig_handle")
         self.contract_file = str(rospy.get_param("~sensor_contract_file", ""))
+        self.timing_events_topic = str(
+            rospy.get_param("~timing_events_topic", "/sensors/timing/events")
+            or "/sensors/timing/events"
+        ).strip()
         self.extra_sensor_ids = str(rospy.get_param("~extra_sensor_ids", ""))
         self.disabled_sensor_ids = str(rospy.get_param("~disabled_sensor_ids", ""))
         self.reachability_check = self._param_bool("~sensor_reachability_check", True)
@@ -892,6 +896,8 @@ class SensorBringup:
         args = ["roslaunch", "--wait", launch_file]
         for name, spec in dict(launch.get("args", {}) or {}).items():
             args.append(f"{name}:={self._arg_value(sensor_id, spec)}")
+        if str(sensor.get("family", "")).strip().lower() == "lidar":
+            args.append("timing_events_topic:=" + self.timing_events_topic)
         return args
 
     def _launch_sensor(self, sensor_id: str, sensor: Dict[str, Any]) -> bool:

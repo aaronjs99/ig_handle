@@ -70,10 +70,10 @@ static constexpr uint8_t kCameraExposurePins[kCameraCount] = {17, 16, 15, 14};
 static constexpr bool kCameraTriggerActiveHigh[kCameraCount] = {true, true, true, true};
 // The exact SN74LV14APWR feedback receiver inverts active-high OPTOOUT.
 static constexpr bool kCameraExposureActiveHigh[kCameraCount] = {false, false, false, false};
-static const char* const kCameraSources[kCameraCount] = {"diagnostic_relative_epoch_not_utc_forge_f1_exposure_mid",
-                                                         "diagnostic_relative_epoch_not_utc_forge_f2_exposure_mid",
-                                                         "diagnostic_relative_epoch_not_utc_forge_f3_exposure_mid",
-                                                         "diagnostic_relative_epoch_not_utc_forge_f4_exposure_mid"};
+static const char* const kCameraSources[kCameraCount] = {"camera_f1_exposure_midpoint",
+                                                         "camera_f2_exposure_midpoint",
+                                                         "camera_f3_exposure_midpoint",
+                                                         "camera_f4_exposure_midpoint"};
 
 // A shared 5 Hz trigger epoch matches the checked-in Forge acquisition-rate
 // target, but host camera triggering remains intentionally unchanged here.
@@ -165,7 +165,7 @@ static constexpr bool kImuTriggerActiveHigh = true;
 // The exact SN74LV14APWR inverts the physical active-high SyncOut edge.
 static constexpr bool kImuSyncActiveHigh = false;
 static constexpr uint32_t kImuFeedbackTimeoutUs = 50000;
-static const char kImuSource[] = "diagnostic_relative_epoch_not_utc_xsens_mti30_syncout";
+static const char kImuSource[] = "xsens_mti30_syncout";
 
 // The RTC/one-shot is a shared physical source. Enabling any timed receiver
 // therefore also drives both VLP PPS connectors; both LiDAR branches must be
@@ -221,6 +221,7 @@ static_assert(!kCommonTimingRequested ||
 static const char kPpsTimeTopic[] = "/pps/time";
 static const char kCameraTimeTopic[] = "/cam/time";
 static const char kImuTimeTopic[] = "/imu/time";
+static const char kFirmwareTimingEventTopic[] = "/timing/firmware_event";
 static const char kTimingStatusTopic[] = "/timing/status";
 
 namespace telescope {
@@ -291,4 +292,5 @@ static constexpr float kPositionKp = 1.0f;
 // motor-current ROS topic therefore publishes NaN rather than invented data.
 
 }  // namespace telescope
+
 }  // namespace ig_handle_firmware_config

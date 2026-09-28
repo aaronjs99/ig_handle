@@ -1,6 +1,8 @@
 <launch>
   <arg name="topic"/>
-  <arg name="time_topic"/>
+  <arg name="timed_output_topic"/>
+  <arg name="sample_time_topic"/>
+  <arg name="clock_event_topic"/>
   <arg name="receipt_topic" default="$(arg topic)_receipt"/>
   <arg name="port" default="/dev/sensors/imu"/>
   <arg name="baudrate" default="115200"/>
@@ -19,8 +21,9 @@
     <param name="pub_transform" value="false"/>
     <param name="pub_sampletime" value="true"/>
     <remap from="imu/data"             to="$(arg receipt_topic)"/>
-    <remap from="imu/time"             to="$(arg time_topic)"/>
-    <remap from="imu/time_ref"         to="$(arg time_topic)"/>
+    <remap from="imu/time"             to="$(arg sample_time_topic)"/>
+    <remap from="imu/time_ref"         to="$(arg sample_time_topic)"/>
+    <remap from="imu/clock_event"     to="$(arg clock_event_topic)"/>
     <remap from="imu/mag"              to="/sensors/imu/mag"/>
     <remap from="imu/acceleration"     to="/sensors/imu/acceleration"/>
     <remap from="imu/angular_velocity" to="/sensors/imu/angular_velocity"/>
@@ -30,8 +33,8 @@
   <!-- Preserve the canonical publisher name while keeping raw receipt timing. -->
   <node name="$(arg node_name)" ns="$(arg node_namespace)"
         pkg="ig_handle" type="sample_clock.py" output="screen">
-    <param name="input_topic" value="$(arg receipt_topic)"/>
-    <param name="time_topic" value="$(arg time_topic)"/>
+    <param name="clock_event_topic" value="$(arg clock_event_topic)"/>
     <param name="output_topic" value="$(arg topic)"/>
+    <param name="timed_output_topic" value="$(arg timed_output_topic)"/>
   </node>
 </launch>

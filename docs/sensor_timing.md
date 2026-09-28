@@ -45,10 +45,139 @@ for camera or MTi timing also physically drives both VLP PPS connectors while
 capture and diagnostics; it is not an independent hardware PPS disconnect.
 Consequently both VLP PPS branches must be safely wired and electrically
 commissioned before any common timing function is enabled.
+The standard Xsens device-time diagnostic remains on
+`/sensors/imu/sample_time` as ``sensor_msgs/TimeReference``. The typed acquisition
+event used for pairing is published on `/sensors/imu/clock_event` as
+`xsens_mti_driver/XsensClockEvent`. Each event carries a driver source-instance ID (not a hardware boot ID),
+OS boot ID, process-start monotonic value, source sequence and sequence width,
+raw device time, explicit device-clock epoch, ROS-time epoch, and both ROS and
+monotonic receipt timestamps. Xsens does not expose a hardware boot ID, so the
+typed event marks that identity invalid and keeps the driver instance separate. Monotonic receipt time is captured in the Xsens
+callback before the packet enters its queue, not when the queued packet is later
+processed.
+The sequence links the event to the receipt-stamped IMU packet. Raw device time
+establishes chronological order; the finite packet counter is used to report
+ordinary gaps, while ambiguous wrap/outage gaps are accepted only when raw time
+advances. A delayed event from a retired process or host boot is rejected.
+
+The canonical `/sensors/imu/data` remains a `sensor_msgs/Imu` stream. The
+sample-clock adapter also publishes `/sensors/imu/data_timed` as
+`ig_handle/ClockedImu`, carrying mapped ROS time together with source and
+receipt clocks, adapter and driver-instance identities, an explicitly unknown hardware boot ID, source, device-clock and ROS epochs,
+sequence width, uncertainty, and the applied mapping revision. The receipt-offset map
+is explicitly marked uncalibrated; its uncertainty is unknown until measured.
+A mapping revision changes whenever an offset is anchored. A source-clock
+reanchor preserves chronology unless the matched post-request event shows a
+raw device-clock rollback; that explicit request then establishes a new mapped
+epoch using the actual new interval. The Xsens driver increments a separate device-clock epoch immediately when
+raw time rolls back and the packet counter proves forward progression. If the counter is ambiguous, an isolated rollback is skipped. A reset
+candidate must return both raw time and packet counter below half their prior
+high-water values, then show increasing raw time and forward counter
+progression on the next packet. This avoids interpreting a short reordered pair
+as a reboot. It is still an inference: the device stream exposes no independent
+boot identifier, so a sufficiently long delayed sequence can resemble a reset.
+After confirmation, callback-ingress monotonic time rejects packets queued before
+the new epoch; counter wrap across the old high-water mark is not used to reject
+new-epoch data. Events from retired device-clock epochs are rejected. After a ROS
+time reset, same-host monotonic receipt time rejects events already queued
+before the reset; the explicit event ROS epoch is used when ROS simulated time
+is active or the producer runs on another host. DLiO consumes this envelope so
+clock continuity changes are explicit inputs rather than timestamp guesses.
+
+The Teensy publishes typed `ig_handle/FirmwareTimingEvent` records on
+`/sensors/timing/firmware_event`. Each record carries its event kind, source
+index, full 32-bit source sequence, raw relative-MCU time, and relative-clock
+epoch. The firmware also records the trigger scheduler's command sequence and
+stamps that command immediately after writing the GPIO output. Each completed
+camera exposure-feedback event and MTi SyncOut event carries the scheduler
+sequence that armed it. The sequence relation is scoped to the firmware clock
+epoch and is not a durable cross-restart capture ID. The trigger timestamp is a
+software command time, not a measurement of the electrical edge at the camera.
+The relative-clock epoch is valid only for the current firmware timing session;
+it is not a boot identifier, UTC, or ROS time. PPS, trigger commands, each
+camera exposure midpoint, and MTi SyncOut retain distinct source sequences. The older
+`sensor_msgs/TimeReference` topics remain diagnostic surfaces. Their
+`header.seq` is not used as event identity because ROS transports may rewrite it.
+
+IG Handle converts the typed firmware records into
+`ig_handle/AcquisitionTimingEvent` on `/sensors/timing/events`. It records host
+ROS and monotonic receipt clocks, the host boot ID, firmware build ID when
+available, source epoch validity, the related trigger source/sequence, sequence
+gaps, duplicates, reordering, and inferred firmware restarts. The numeric
+trigger relation is scoped to the firmware clock epoch and remains distinct
+from the `correlated_capture_id` field, which stays invalid without a
+restart-safe shared capture identity. A source rollback is treated as a restart only
+after later ordered records support that interpretation. Since firmware does
+not expose a durable boot ID, the inferred generation is valid only during
+this adapter lifetime; `event_id` is scoped by the adapter UUID. The VLP PPS
+event represents the shared PPS input to the pair, not independent packet-time
+measurements from both LiDARs.
+
+Each physical VLP launch also records a separate
+`KIND_LIDAR_CLOUD_HEADER` event for its point-cloud stream. It preserves the
+cloud's ROS `Header.seq` counter and `Header.stamp`, with the event's ROS and
+monotonic receipt clocks. The source clock domain is deliberately named
+`ros_pointcloud_header_unverified`; neither the header stamp nor its sequence
+is treated as a hardware packet/acquisition clock. The horizontal and vertical
+VLP records have distinct source IDs. A zero stamp, repeated counter, or
+out-of-order stamp remains visible in the record, and mapped acquisition time,
+calibration, and uncertainty remain unavailable. This provides a per-stream
+diagnostic pair for later characterization without claiming PPS correlation.
+The event destination is shared with the firmware and camera records and follows
+the bringup's configured timing-events topic.
+
+Each Spinnaker driver publishes a `CameraFrameTiming` record and an optional
+`CameraFrameCapture` envelope. The envelope carries the complete image with its
+camera serial, per-connection stream UUID, full frame counter, raw device
+timestamp, and SDK-arrival host ROS and monotonic clocks. The timing adapter
+preserves those values in an acquisition event. This makes the image and its
+frame identity travel together and lets records be matched by serial, stream
+UUID, and full counter. It does not establish a relationship between a camera
+frame and a Teensy exposure-feedback or trigger event. The Teensy counter
+relates its command and feedback records, but no shared identity currently
+joins that counter to the Spinnaker frame counter. Establishing that join and
+measuring the electrical trigger/exposure path still require circuit
+characterization.
+
+The firmware relative clock begins at the first qualified PPS and is explicitly
+not UTC. Timing events remain unmapped by default. An operator may provide an
+offline fit through the adapter's clock_mappings_file parameter, but the fit
+must exactly match source domain, source instance, source epoch, host boot ID,
+and ROS-time epoch. For a camera this means source domain
+spinnaker_device_timestamp_ns, source instance equal to that camera connection's
+stream UUID, source epoch unknown, reference domain ros_time, reference instance
+equal to the Linux host boot ID, and reference epoch equal to the adapter's
+ROS-time epoch. The JSON fit includes a positive mapping revision; increase it
+whenever the fitted coefficients or paired evidence change.
+
+Create fits only from explicitly identified one-to-one event pairs. The fit
+utility never pairs by receipt-time proximity and never removes residual outliers.
+If pair standard uncertainties are unavailable, the output may map timestamps
+for offline analysis, but the event remains uncalibrated with unknown uncertainty.
+MARINER uses a camera capture for geometric timing only when the event's serial,
+stream UUID, full frame counter, raw device timestamp, and both receipt clocks
+match the image envelope and the mapping is calibrated. It stores the raw and
+mapped timing provenance with the image. Receipt time alone never becomes
+acquisition time.
+
+A mapped camera device clock does not itself prove that an image was exposed
+at a Teensy trigger edge: no shared identity currently joins the Teensy trigger
+counter to a Spinnaker frame counter. Measuring trigger-to-exposure delay and
+the electrical path still requires circuit characterization. The adapter is
+passive and does not enable or change physical timing outputs. The camera itself
+does not expose a durable hardware boot ID, and sonar sources without hardware
+acquisition timestamps remain receipt-timed.
+
+GRANDE's `runtime`, `raw`, and `slam` bag profiles include the typed timing
+events, timed IMU and Xsens clock-event topics, and configured sensor topics.
+The raw profile was composed offline and includes both VLP point streams. The
+compact `navigation` and `oracle` profiles omit acquisition-timing topics;
+use a runtime, raw, or SLAM recording when timing provenance is needed.
+
 The currently available square wave is not a verified UTC/GNSS phase source.
 Published firmware time references use
 a monotonic epoch beginning at the first qualified edge and explicitly do not
-claim UTC. On the existing `sensor_msgs/TimeReference` diagnostics,
+claim UTC. On the existing ``sensor_msgs/TimeReference`` diagnostics,
 `header.stamp` is only the ROS publication-receipt time and `time_ref` is the
 unmapped relative MCU epoch. These topics are non-authoritative and are not a
 ROS-time calibration contract.
@@ -182,6 +311,54 @@ default-low enable so reset, boot, disconnected MCU, or high-impedance GPIO
 cannot energize either half-bridge. The independent hard E-stop remains in the
 12 V motor-power path. Firmware fail-closed states supplement those electrical
 controls; they do not replace them.
+
+## Structured acquisition records and characterization
+
+AcquisitionTimingEvent carries source event identity, acquisition session,
+boot/clock epoch validity, original 64-bit sequence/counter, raw clock domain/time,
+receipt ROS and monotonic clocks, host boot identity, mapping revision, calibrated
+state, known/unknown uncertainty, and capture correlation. Xsens ClockedImu
+retains its device sample identity alongside the mapped standard IMU message.
+The camera driver publishes CameraFrameCapture with its actual frame counter
+and device timestamp. Diagnostic text is not the identity authority.
+
+Each camera independently correlates frame, trigger, and exposure events.
+A shared electrical trigger can identify four camera captures; it does not
+merge their frame counters. Duplicate, reordered, dropped, ambiguous, or
+counter-width-invalid events remain explicit. Unknown ordering preserves the
+established source generation rather than reusing generation zero.
+
+Clock offset/rate fitting uses identified event correspondences. Receipt delay
+alone cannot establish phase. Raw clocks remain reconstructable. A clock
+mapping that breaks chronology starts a declared mapped continuity epoch;
+timestamps are never clamped or assigned fabricated intervals. DS3231 time
+remains local. PPS availability does not make it UTC. Both VLP packet/point
+timing branches remain independent; gps_time=false is not silently changed.
+
+For the separately authorized circuit characterization:
+
+1. Record original firmware edge events, camera frame counters/device clocks,
+   ClockedImu/sample markers, both VLP timing records, and standard sensor data.
+   Use the runtime or raw recording profile with the required camera transport.
+2. Measure PPS phase, each trigger-to-exposure delay, four independent exposure
+   feedback branches, and the IMU SyncIn/SyncOut-to-sample relationship.
+3. Save instrument timebase, wiring/polarity, source identities, device readback,
+   uncertainty, dropped-event counts, and calibration revision with the recording.
+4. Fit clock offset/rate only for uniquely identified pairs. Retain unresolved
+   and reset intervals separately, then check both LiDAR packet/point conventions.
+5. Compare DLiO with the fixed-alignment mocap baseline after timing is measured.
+
+Host fixtures cover association, drops, duplicate/reordered data, reset identity,
+clock mapping revisions, failed reload rollback, and late correlation. They do
+not measure electrical phase or enable firmware outputs. The vertical LiDAR's
+reported hardware fault remains unresolved; its software/fixture support stays
+available. Sonar hardware acquisition timing and acoustic calibration remain
+unmeasured.
+
+The reviewed timing-only staged source compiled for Teensy 4.1 on 2026-09-28
+with the pinned toolchain and generated FirmwareTimingEvent header. No upload
+or output enablement occurred. Historical firmware metadata and the separate
+uncommitted lighting image do not certify this timing-only source.
 
 ## Primary references
 

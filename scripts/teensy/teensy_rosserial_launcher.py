@@ -23,11 +23,14 @@ class TeensyRosserialLauncher:
         self.camera_time_topic = str(
             rospy.get_param("~camera_time_topic", "/sensors/camera/time")
         )
-        self.imu_time_topic = str(
-            rospy.get_param("~imu_time_topic", "/sensors/imu/time")
+        self.imu_sync_event_topic = str(
+            rospy.get_param("~imu_sync_event_topic", "/sensors/imu/sync_event")
         )
         self.timing_status_topic = str(
             rospy.get_param("~timing_status_topic", "/sensors/timing/status")
+        )
+        self.firmware_event_topic = str(
+            rospy.get_param("~firmware_event_topic", "/sensors/timing/firmware_event")
         )
         self.expected_firmware_build_id = str(
             rospy.get_param("~expected_firmware_build_id", "")
@@ -78,8 +81,9 @@ class TeensyRosserialLauncher:
             "_baud:=" + str(self.baud),
             "/pps/time:=" + self.pps_time_topic,
             "/cam/time:=" + self.camera_time_topic,
-            "/imu/time:=" + self.imu_time_topic,
+            "/imu/time:=" + self.imu_sync_event_topic,
             "/timing/status:=" + self.timing_status_topic,
+            "/timing/firmware_event:=" + self.firmware_event_topic,
         ]
 
     @staticmethod

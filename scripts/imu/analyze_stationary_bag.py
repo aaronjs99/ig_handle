@@ -20,7 +20,7 @@ import rosbag
 AXES = ("x", "y", "z")
 DEFAULT_IMU_TOPIC = "/sensors/imu/data"
 DEFAULT_MAG_TOPIC = "/sensors/imu/mag"
-DEFAULT_TIME_TOPIC = "/sensors/imu/time"
+DEFAULT_TIME_TOPIC = "/sensors/imu/sample_time"
 EXPECTED_IMU_MESSAGE_TYPE = "sensor_msgs/Imu"
 
 

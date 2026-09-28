@@ -1,6 +1,9 @@
 std_msgs/Header header
 string packet_id
 string provider
+# Publisher acquisition-session identity; not a hardware boot ID.
+string source_session_id
+bool synthetic
 string extrinsic_revision
 string source_address
 uint16 source_port

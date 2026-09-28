@@ -9,14 +9,18 @@ sensor_contract:
     pps_time: /sensors/pps/time
     camera_time: /sensors/camera/time
     timing_status: /sensors/timing/status # Non-authoritative MCU diagnostic state.
+    firmware_timing_event: /sensors/timing/firmware_event
   deployment_bindings:
     state_input:
       sensor: "1"
       topic: topics.data
       frame: frame
-    state_input_time:
+    state_input_sample_time:
       sensor: "1"
-      topic: topics.time
+      topic: topics.sample_time
+    state_input_clocked:
+      sensor: "1"
+      topic: topics.data_timed
     mapping_primary:
       sensor: "2"
       topic: topics.points
@@ -130,18 +134,25 @@ sensor_contract:
       frame: imu_link
       topics:
         data: /sensors/imu/data
-        time: /sensors/imu/time
+        data_timed: /sensors/imu/data_timed
+        sample_time: /sensors/imu/sample_time
+        clock_event: /sensors/imu/clock_event
       required_topics:
-        # Keep the remap available when the driver or MCU publishes it, but do
-        # not fail passive sensor checks when the unsynchronized time channel is absent.
-        time: false
+        # Status-only checks may omit this channel. Canonical IMU normalization
+        # cannot publish until Xsens samples and sample times are paired.
+        sample_time: false
+        clock_event: false
       launch:
         file: package://ig_handle/launch/sensors/start_imu.launch
         args:
           topic:
             field: topics.data
-          time_topic:
-            field: topics.time
+          sample_time_topic:
+            field: topics.sample_time
+          clock_event_topic:
+            field: topics.clock_event
+          timed_output_topic:
+            field: topics.data_timed
           frame_id:
             field: frame
           port:
@@ -234,6 +245,8 @@ sensor_contract:
       topics:
         image_raw: /sensors/camera/f1/image_raw
         camera_info: /sensors/camera/f1/camera_info
+        frame_timing: /sensors/camera/f1/frame_timing
+        frame_capture: /sensors/camera/f1/frame_capture
       launch:
         file: package://ig_handle/launch/sensors/start_cam.launch
         args:
@@ -251,6 +264,10 @@ sensor_contract:
             field: topics.image_raw
           camera_info_topic:
             field: topics.camera_info
+          frame_timing_topic:
+            field: topics.frame_timing
+          frame_capture_topic:
+            field: topics.frame_capture
           startup_delay_sec:
             field: startup_delay_sec
 
@@ -275,6 +292,8 @@ sensor_contract:
       topics:
         image_raw: /sensors/camera/f2/image_raw
         camera_info: /sensors/camera/f2/camera_info
+        frame_timing: /sensors/camera/f2/frame_timing
+        frame_capture: /sensors/camera/f2/frame_capture
       launch:
         file: package://ig_handle/launch/sensors/start_cam.launch
         args:
@@ -292,6 +311,10 @@ sensor_contract:
             field: topics.image_raw
           camera_info_topic:
             field: topics.camera_info
+          frame_timing_topic:
+            field: topics.frame_timing
+          frame_capture_topic:
+            field: topics.frame_capture
           startup_delay_sec:
             field: startup_delay_sec
 
@@ -316,6 +339,8 @@ sensor_contract:
       topics:
         image_raw: /sensors/camera/f3/image_raw
         camera_info: /sensors/camera/f3/camera_info
+        frame_timing: /sensors/camera/f3/frame_timing
+        frame_capture: /sensors/camera/f3/frame_capture
       launch:
         file: package://ig_handle/launch/sensors/start_cam.launch
         args:
@@ -333,6 +358,10 @@ sensor_contract:
             field: topics.image_raw
           camera_info_topic:
             field: topics.camera_info
+          frame_timing_topic:
+            field: topics.frame_timing
+          frame_capture_topic:
+            field: topics.frame_capture
           startup_delay_sec:
             field: startup_delay_sec
 
@@ -357,6 +386,8 @@ sensor_contract:
       topics:
         image_raw: /sensors/camera/f4/image_raw
         camera_info: /sensors/camera/f4/camera_info
+        frame_timing: /sensors/camera/f4/frame_timing
+        frame_capture: /sensors/camera/f4/frame_capture
       launch:
         file: package://ig_handle/launch/sensors/start_cam.launch
         args:
@@ -374,6 +405,10 @@ sensor_contract:
             field: topics.image_raw
           camera_info_topic:
             field: topics.camera_info
+          frame_timing_topic:
+            field: topics.frame_timing
+          frame_capture_topic:
+            field: topics.frame_capture
           startup_delay_sec:
             field: startup_delay_sec
 

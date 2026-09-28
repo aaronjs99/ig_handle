@@ -16,8 +16,12 @@ namespace sensor_sync {
 struct CaptureEvent {
   uint8_t channel;
   uint32_t sequence;
+  uint32_t correlation_sequence;
+  bool correlation_sequence_valid;
   uint32_t sec;
   uint32_t nsec;
+  uint32_t source_clock_epoch;
+  bool source_clock_epoch_valid;
 };
 
 class Runtime {
@@ -25,11 +29,16 @@ public:
   Runtime()
       : scheduler_(schedulerConfig()),
         io_configuration_valid_(false),
+        trigger_event_ready_(false),
+        trigger_event_dropped_(0),
         imu_feedback_pending_(false),
         imu_feedback_deadline_us_(0),
+        imu_feedback_trigger_sequence_(0),
         imu_event_ready_(false),
         imu_event_sec_(0),
         imu_event_nsec_(0),
+        imu_event_epoch_(0),
+        imu_event_trigger_sequence_(0),
         imu_sequence_(0),
         imu_dropped_(0),
         camera_invalid_edges_(0) {
@@ -37,9 +46,13 @@ public:
       camera_open_valid_[i] = false;
       camera_open_sec_[i] = 0;
       camera_open_nsec_[i] = 0;
+      camera_open_epoch_[i] = 0;
       camera_event_ready_[i] = false;
       camera_event_sec_[i] = 0;
       camera_event_nsec_[i] = 0;
+      camera_event_epoch_[i] = 0;
+      camera_event_trigger_sequence_[i] = 0;
+      camera_event_trigger_sequence_valid_[i] = false;
       camera_sequence_[i] = 0;
       camera_dropped_[i] = 0;
     }
@@ -68,7 +81,8 @@ public:
     scheduler_.onReferenceEdge(now_us);
   }
 
-  void onTimerTick(uint32_t now_us) {
+  void onTimerTick(uint32_t now_us,
+                   const RelativeEpoch* relative_epoch = 0) {
     using namespace ig_handle_firmware_config::timing;
 
     if (timerRequired() && !fieldPowerHealthy()) {
@@ -82,12 +96,33 @@ public:
     }
     if (actions.assert_trigger) {
       setScheduledTrigger(true);
+      const uint32_t trigger_sequence = scheduler_.triggerCount();
+      if (relative_epoch != 0) {
+        RelativeTime command_time;
+        // Timestamp the software GPIO command, not the electrical edge at the camera.
+        if (relative_epoch->stamp(micros(), &command_time)) {
+          if (trigger_event_ready_) {
+            ++trigger_event_dropped_;
+          }
+          trigger_event_.channel = 0;
+          trigger_event_.sequence = trigger_sequence;
+          trigger_event_.correlation_sequence = trigger_sequence;
+          trigger_event_.correlation_sequence_valid = true;
+          trigger_event_.sec = command_time.sec;
+          trigger_event_.nsec = command_time.nsec;
+          trigger_event_.source_clock_epoch = relative_epoch->generation();
+          trigger_event_.source_clock_epoch_valid = true;
+          trigger_event_ready_ = true;
+        }
+      }
       if (kCameraTriggerEnabled && kCameraFeedbackEnabled) {
-        camera_feedback_.arm(now_us, kCameraFeedbackTimeoutUs);
+        camera_feedback_.arm(now_us, kCameraFeedbackTimeoutUs,
+                             trigger_sequence, true);
       }
       if (kImuTriggerEnabled && kImuFeedbackEnabled) {
         imu_feedback_pending_ = true;
         imu_feedback_deadline_us_ = now_us + kImuFeedbackTimeoutUs;
+        imu_feedback_trigger_sequence_ = trigger_sequence;
       }
     }
 
@@ -129,7 +164,8 @@ public:
     return high == kCameraExposureActiveHigh[channel];
   }
 
-  void onCameraExposureEdge(uint8_t channel, bool active, uint32_t now_us, uint32_t sec, uint32_t nsec) {
+  void onCameraExposureEdge(uint8_t channel, bool active, uint32_t now_us,
+                            uint32_t sec, uint32_t nsec, uint32_t source_clock_epoch) {
     if (!fieldPowerHealthy()) {
       forceFault(Fault::kFieldPowerInvalid);
       return;
@@ -151,6 +187,7 @@ public:
     if (result == ExposureEdgeResult::kOpened) {
       camera_open_sec_[channel] = sec;
       camera_open_nsec_[channel] = nsec;
+      camera_open_epoch_[channel] = source_clock_epoch;
       camera_open_valid_[channel] = true;
       return;
     }
@@ -160,6 +197,10 @@ public:
       return;
     }
     camera_open_valid_[channel] = false;
+    if (camera_open_epoch_[channel] != source_clock_epoch) {
+      ++camera_invalid_edges_;
+      return;
+    }
     const uint64_t open_ns =
         static_cast<uint64_t>(camera_open_sec_[channel]) * 1000000000ULL + camera_open_nsec_[channel];
     const uint64_t close_ns = static_cast<uint64_t>(sec) * 1000000000ULL + nsec;
@@ -173,6 +214,10 @@ public:
     }
     camera_event_sec_[channel] = static_cast<uint32_t>(midpoint_ns / 1000000000ULL);
     camera_event_nsec_[channel] = static_cast<uint32_t>(midpoint_ns % 1000000000ULL);
+    camera_event_epoch_[channel] = source_clock_epoch;
+    camera_event_trigger_sequence_[channel] = camera_feedback_.triggerSequence();
+    camera_event_trigger_sequence_valid_[channel] =
+        camera_feedback_.triggerSequenceValid();
     ++camera_sequence_[channel];
     camera_event_ready_[channel] = true;
     camera_feedback_.complete(channel);
@@ -187,9 +232,28 @@ public:
     if (ready) {
       event->channel = channel;
       event->sequence = camera_sequence_[channel];
+      event->correlation_sequence = camera_event_trigger_sequence_[channel];
+      event->correlation_sequence_valid =
+          camera_event_trigger_sequence_valid_[channel];
       event->sec = camera_event_sec_[channel];
       event->nsec = camera_event_nsec_[channel];
+      event->source_clock_epoch = camera_event_epoch_[channel];
+      event->source_clock_epoch_valid = true;
       camera_event_ready_[channel] = false;
+    }
+    interrupts();
+    return ready;
+  }
+
+  bool takeTriggerCommandEvent(CaptureEvent* event) {
+    if (event == 0) {
+      return false;
+    }
+    noInterrupts();
+    const bool ready = trigger_event_ready_;
+    if (ready) {
+      *event = trigger_event_;
+      trigger_event_ready_ = false;
     }
     interrupts();
     return ready;
@@ -210,7 +274,8 @@ public:
     return high == kImuSyncActiveHigh;
   }
 
-  void onImuSyncEdge(uint32_t now_us, uint32_t sec, uint32_t nsec) {
+  void onImuSyncEdge(uint32_t now_us, uint32_t sec, uint32_t nsec,
+                     uint32_t source_clock_epoch) {
     if (!fieldPowerHealthy()) {
       forceFault(Fault::kFieldPowerInvalid);
       return;
@@ -229,6 +294,8 @@ public:
     }
     imu_event_sec_ = sec;
     imu_event_nsec_ = nsec;
+    imu_event_epoch_ = source_clock_epoch;
+    imu_event_trigger_sequence_ = imu_feedback_trigger_sequence_;
     ++imu_sequence_;
     imu_event_ready_ = true;
     imu_feedback_pending_ = false;
@@ -243,8 +310,12 @@ public:
     if (ready) {
       event->channel = 0;
       event->sequence = imu_sequence_;
+      event->correlation_sequence = imu_event_trigger_sequence_;
+      event->correlation_sequence_valid = true;
       event->sec = imu_event_sec_;
       event->nsec = imu_event_nsec_;
+      event->source_clock_epoch = imu_event_epoch_;
+      event->source_clock_epoch_valid = true;
       imu_event_ready_ = false;
     }
     interrupts();
@@ -259,6 +330,7 @@ public:
     clearCaptureState();
   }
   uint32_t triggerCount() const { return scheduler_.triggerCount(); }
+  uint32_t triggerEventDropped() const { return trigger_event_dropped_; }
   uint8_t stableReferenceEdges() const { return scheduler_.stableReferenceEdges(); }
   uint32_t cameraDropped(uint8_t channel) const { return channel < cameraCount() ? camera_dropped_[channel] : 0; }
   uint32_t imuDropped() const { return imu_dropped_; }
@@ -482,22 +554,32 @@ private:
 
   Scheduler scheduler_;
   bool io_configuration_valid_;
+  volatile bool trigger_event_ready_;
+  volatile uint32_t trigger_event_dropped_;
+  CaptureEvent trigger_event_;
   ExposureFeedbackTracker<ig_handle_firmware_config::timing::kCameraCount> camera_feedback_;
   volatile bool imu_feedback_pending_;
   volatile uint32_t imu_feedback_deadline_us_;
+  volatile uint32_t imu_feedback_trigger_sequence_;
 
   volatile bool camera_open_valid_[ig_handle_firmware_config::timing::kCameraCount];
   volatile uint32_t camera_open_sec_[ig_handle_firmware_config::timing::kCameraCount];
   volatile uint32_t camera_open_nsec_[ig_handle_firmware_config::timing::kCameraCount];
+  volatile uint32_t camera_open_epoch_[ig_handle_firmware_config::timing::kCameraCount];
   volatile bool camera_event_ready_[ig_handle_firmware_config::timing::kCameraCount];
   volatile uint32_t camera_event_sec_[ig_handle_firmware_config::timing::kCameraCount];
   volatile uint32_t camera_event_nsec_[ig_handle_firmware_config::timing::kCameraCount];
+  volatile uint32_t camera_event_epoch_[ig_handle_firmware_config::timing::kCameraCount];
+  volatile uint32_t camera_event_trigger_sequence_[ig_handle_firmware_config::timing::kCameraCount];
+  volatile bool camera_event_trigger_sequence_valid_[ig_handle_firmware_config::timing::kCameraCount];
   volatile uint32_t camera_sequence_[ig_handle_firmware_config::timing::kCameraCount];
   volatile uint32_t camera_dropped_[ig_handle_firmware_config::timing::kCameraCount];
 
   volatile bool imu_event_ready_;
   volatile uint32_t imu_event_sec_;
   volatile uint32_t imu_event_nsec_;
+  volatile uint32_t imu_event_epoch_;
+  volatile uint32_t imu_event_trigger_sequence_;
   volatile uint32_t imu_sequence_;
   volatile uint32_t imu_dropped_;
   volatile uint32_t camera_invalid_edges_;

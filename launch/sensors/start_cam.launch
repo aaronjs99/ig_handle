@@ -8,6 +8,8 @@
   <arg name="camera_info_url"           default="" />
   <arg name="topic"                     default="image_raw"/>
   <arg name="camera_info_topic"         default="camera_info"/>
+  <arg name="frame_timing_topic"        default="frame_timing"/>
+  <arg name="frame_capture_topic"        default="frame_capture"/>
   <arg name="publish_debayered_color"   default="false"/>
   <!-- The current driver polls optional GenICam properties in a separate tight
        thread whenever /diagnostics has a subscriber. Forge cameras do not
@@ -41,6 +43,8 @@
       
       <remap from="image_raw" to="$(arg topic)"/>
       <remap from="camera_info" to="$(arg camera_info_topic)"/>
+      <remap from="frame_timing" to="$(arg frame_timing_topic)"/>
+      <remap from="frame_capture" to="$(arg frame_capture_topic)"/>
       <remap from="/diagnostics" to="$(arg property_diagnostics_topic)"/>
     </node>
 

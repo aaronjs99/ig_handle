@@ -1,6 +1,7 @@
 #include <RTClib.h>
 #include <ros.h>
 #include <sensor_msgs/TimeReference.h>
+#include <ig_handle/FirmwareTimingEvent.h>
 #include <std_msgs/Float32.h>
 #include <std_msgs/String.h>
 
@@ -27,9 +28,6 @@ sensor_sync::Runtime sensor_sync_runtime;
 sensor_sync::RelativeEpoch relative_epoch;
 
 IntervalTimer sensor_sync_timer;
-volatile uint32_t reference_sec = 0;
-volatile uint32_t reference_nsec = 0;
-volatile bool reference_publish_ready = false;
 volatile uint32_t lidar_nmea_due_us = 0;
 volatile uint32_t lidar_nmea_latest_start_us = 0;
 volatile uint32_t lidar_nmea_latest_enqueue_us = 0;
@@ -55,18 +53,30 @@ struct SensorEdge {
   bool active;
 };
 
+struct PpsCaptureRecord {
+  uint32_t sec;
+  uint32_t nsec;
+  uint32_t sequence;
+  uint32_t source_clock_epoch;
+};
+
 sensor_sync::EdgeMailbox<ReferenceEdge, 4> reference_edges;
+sensor_sync::EdgeMailbox<PpsCaptureRecord, 8> pps_capture_events;
+volatile uint32_t pps_time_sequence = 0;
+volatile uint32_t pps_event_drops = 0;
 sensor_sync::EdgeMailbox<SensorEdge, 8> camera_edges[ig_handle_firmware_config::timing::kCameraCount];
 sensor_sync::EdgeMailbox<SensorEdge, 8> imu_edges;
 
 sensor_msgs::TimeReference pps_time_msg;
 sensor_msgs::TimeReference camera_time_msg;
 sensor_msgs::TimeReference imu_time_msg;
+ig_handle::FirmwareTimingEvent firmware_timing_event_msg;
 std_msgs::String timing_status_msg;
-char timing_status_buffer[256];
+char timing_status_buffer[384];
 ros::Publisher pps_time_pub(kPpsTimeTopic, &pps_time_msg);
 ros::Publisher camera_time_pub(kCameraTimeTopic, &camera_time_msg);
 ros::Publisher imu_time_pub(kImuTimeTopic, &imu_time_msg);
+ros::Publisher firmware_timing_event_pub(kFirmwareTimingEventTopic, &firmware_timing_event_msg);
 ros::Publisher timing_status_pub(kTimingStatusTopic, &timing_status_msg);
 
 std_msgs::Float32 telescope_actual_length_msg;
@@ -194,43 +204,69 @@ void serviceLidarNmea() {
   lidar_nmea_transmitting = true;
 }
 
+void publishFirmwareTimingEvent(uint8_t kind, uint8_t source_index, uint32_t source_sequence,
+                                uint32_t source_clock_epoch, bool source_clock_epoch_valid,
+                                uint32_t sec, uint32_t nsec,
+                                bool correlation_sequence_valid = false,
+                                uint32_t correlation_sequence = 0) {
+  firmware_timing_event_msg.kind = kind;
+  firmware_timing_event_msg.source_index = source_index;
+  firmware_timing_event_msg.source_sequence = source_sequence;
+  firmware_timing_event_msg.source_sequence_bits = 32;
+  firmware_timing_event_msg.source_clock_epoch = source_clock_epoch;
+  firmware_timing_event_msg.source_clock_epoch_valid = source_clock_epoch_valid;
+  firmware_timing_event_msg.correlation_sequence_valid = correlation_sequence_valid;
+  firmware_timing_event_msg.correlation_sequence = correlation_sequence;
+  firmware_timing_event_msg.raw_time_sec = sec;
+  firmware_timing_event_msg.raw_time_nsec = nsec;
+  firmware_timing_event_pub.publish(&firmware_timing_event_msg);
+}
+
 void publishReferenceTime() {
-  noInterrupts();
-  const bool ready = reference_publish_ready;
-  const uint32_t sec = reference_sec;
-  const uint32_t nsec = reference_nsec;
-  if (ready) {
-    reference_publish_ready = false;
-  }
-  interrupts();
-  if (!ready) {
+  pps_capture_events.takeOverflowFromOwner();
+  PpsCaptureRecord event;
+  if (!pps_capture_events.popFromOwner(&event)) {
     return;
   }
   ros::Time stamp;
-  stamp.sec = sec;
-  stamp.nsec = nsec;
-  pps_time_msg.header.seq++;
+  stamp.sec = event.sec;
+  stamp.nsec = event.nsec;
+  pps_time_msg.header.seq = event.sequence;
   // No verified UTC/ROS phase mapping exists. header.stamp is only the ROS
   // publication receipt; time_ref carries the relative MCU epoch.
   pps_time_msg.header.stamp = nh.now();
   pps_time_msg.time_ref = stamp;
-  pps_time_msg.source = "diagnostic_relative_monotonic_epoch_not_utc_unmapped_to_ros";
+  pps_time_msg.source = "vlp16_pair_pps_reference";
   pps_time_pub.publish(&pps_time_msg);
+  publishFirmwareTimingEvent(ig_handle::FirmwareTimingEvent::KIND_PPS_REFERENCE, 0,
+                             event.sequence, event.source_clock_epoch, true,
+                             event.sec, event.nsec);
 }
 
 void publishCaptureEvents() {
   sensor_sync::CaptureEvent event;
-  static uint32_t camera_topic_sequence = 0;
+  if (sensor_sync_runtime.takeTriggerCommandEvent(&event)) {
+    publishFirmwareTimingEvent(
+        ig_handle::FirmwareTimingEvent::KIND_SENSOR_TRIGGER_COMMAND, 0,
+        event.sequence, event.source_clock_epoch,
+        event.source_clock_epoch_valid, event.sec, event.nsec,
+        event.correlation_sequence_valid, event.correlation_sequence);
+  }
   for (uint8_t channel = 0; channel < sensor_sync::Runtime::cameraCount(); ++channel) {
     if (!sensor_sync_runtime.takeCameraEvent(channel, &event)) {
       continue;
     }
-    camera_time_msg.header.seq = ++camera_topic_sequence;
+    camera_time_msg.header.seq = event.sequence;
     camera_time_msg.header.stamp = nh.now();
     camera_time_msg.time_ref.sec = event.sec;
     camera_time_msg.time_ref.nsec = event.nsec;
     camera_time_msg.source = ig_handle_firmware_config::timing::kCameraSources[channel];
     camera_time_pub.publish(&camera_time_msg);
+    publishFirmwareTimingEvent(ig_handle::FirmwareTimingEvent::KIND_CAMERA_EXPOSURE_MIDPOINT,
+                               channel, event.sequence, event.source_clock_epoch,
+                               event.source_clock_epoch_valid, event.sec, event.nsec,
+                               event.correlation_sequence_valid,
+                               event.correlation_sequence);
   }
   if (sensor_sync_runtime.takeImuEvent(&event)) {
     imu_time_msg.header.seq = event.sequence;
@@ -239,6 +275,11 @@ void publishCaptureEvents() {
     imu_time_msg.time_ref.nsec = event.nsec;
     imu_time_msg.source = ig_handle_firmware_config::timing::kImuSource;
     imu_time_pub.publish(&imu_time_msg);
+    publishFirmwareTimingEvent(ig_handle::FirmwareTimingEvent::KIND_IMU_SYNC_OUT, 0,
+                               event.sequence, event.source_clock_epoch,
+                               event.source_clock_epoch_valid, event.sec, event.nsec,
+                               event.correlation_sequence_valid,
+                               event.correlation_sequence);
   }
 }
 
@@ -253,14 +294,20 @@ void publishTimingStatus(uint32_t now_ms) {
     camera_drops += sensor_sync_runtime.cameraDropped(channel);
   }
   snprintf(timing_status_buffer, sizeof(timing_status_buffer),
-           "firmware_build_id=%s state=%s fault=%s reference_edges=%u triggers=%lu "
-           "camera_drops=%lu camera_invalid_edges=%lu imu_drops=%lu nmea_sent=%lu nmea_suppressed=%lu",
+           "firmware_build_id=%s state=%s fault=%s relative_epoch=%lu "
+           "ros_phase=unmeasured timing_uncertainty=unmeasured reference_edges=%u triggers=%lu "
+           "camera_drops=%lu trigger_event_drops=%lu camera_invalid_edges=%lu "
+           "imu_drops=%lu pps_event_drops=%lu "
+           "nmea_sent=%lu nmea_suppressed=%lu",
            kFirmwareBuildId, sensor_sync::stateName(sensor_sync_runtime.state()),
            sensor_sync::faultName(sensor_sync_runtime.fault()),
+           static_cast<unsigned long>(relative_epoch.generation()),
            sensor_sync_runtime.stableReferenceEdges(), static_cast<unsigned long>(sensor_sync_runtime.triggerCount()),
            static_cast<unsigned long>(camera_drops),
+           static_cast<unsigned long>(sensor_sync_runtime.triggerEventDropped()),
            static_cast<unsigned long>(sensor_sync_runtime.cameraInvalidEdges()),
-           static_cast<unsigned long>(sensor_sync_runtime.imuDropped()), static_cast<unsigned long>(lidar_nmea_sent),
+           static_cast<unsigned long>(sensor_sync_runtime.imuDropped()),
+           static_cast<unsigned long>(pps_event_drops), static_cast<unsigned long>(lidar_nmea_sent),
            static_cast<unsigned long>(lidar_nmea_suppressed));
   timing_status_msg.data = timing_status_buffer;
   timing_status_pub.publish(&timing_status_msg);
@@ -286,6 +333,7 @@ void setup() {
   nh.advertise(pps_time_pub);
   nh.advertise(camera_time_pub);
   nh.advertise(imu_time_pub);
+  nh.advertise(firmware_timing_event_pub);
   nh.advertise(timing_status_pub);
   nh.advertise(telescope_actual_length_pub);
   nh.advertise(telescope_motor_current_pub);
@@ -394,17 +442,16 @@ void processReferenceEdges() {
     sensor_sync_runtime.onReferenceEdge(edge.timestamp_us);
     if (sensor_sync_runtime.state() != sensor_sync::State::kRunning) {
       relative_epoch.reset();
-      reference_sec = 0;
-      reference_nsec = 0;
-      reference_publish_ready = false;
       lidar_nmea_pending = false;
       lidar_nmea_abort_requested = true;
       continue;
     }
     const sensor_sync::RelativeTime reference = relative_epoch.onQualifiedReference(edge.timestamp_us);
-    reference_sec = reference.sec;
-    reference_nsec = reference.nsec;
-    reference_publish_ready = true;
+    const PpsCaptureRecord capture = {
+        reference.sec, reference.nsec, ++pps_time_sequence, relative_epoch.generation()};
+    if (!pps_capture_events.pushFromIsr(capture)) {
+      ++pps_event_drops;
+    }
     if (ig_handle_firmware_config::timing::kLidarNmeaEnabled) {
       lidar_nmea_due_us = edge.timestamp_us + ig_handle_firmware_config::timing::kLidarNmeaDelayAfterPpsUs;
       lidar_nmea_latest_start_us =
@@ -428,7 +475,8 @@ void processCameraEdges() {
       if (!timestampFromReference(edge.timestamp_us, &sec, &nsec)) {
         continue;
       }
-      sensor_sync_runtime.onCameraExposureEdge(channel, edge.active, edge.timestamp_us, sec, nsec);
+      sensor_sync_runtime.onCameraExposureEdge(channel, edge.active, edge.timestamp_us, sec, nsec,
+                                               relative_epoch.generation());
     }
   }
 }
@@ -444,7 +492,7 @@ void processImuEdges() {
     if (!edge.active || !timestampFromReference(edge.timestamp_us, &sec, &nsec)) {
       continue;
     }
-    sensor_sync_runtime.onImuSyncEdge(edge.timestamp_us, sec, nsec);
+    sensor_sync_runtime.onImuSyncEdge(edge.timestamp_us, sec, nsec, relative_epoch.generation());
   }
 }
 
@@ -455,12 +503,9 @@ void sensorTimerISR() {
   processCameraEdges();
   processImuEdges();
   processReferenceEdges();
-  sensor_sync_runtime.onTimerTick(micros());
+  sensor_sync_runtime.onTimerTick(micros(), &relative_epoch);
   if (sensor_sync_runtime.state() != sensor_sync::State::kRunning) {
     relative_epoch.reset();
-    reference_sec = 0;
-    reference_nsec = 0;
-    reference_publish_ready = false;
     lidar_nmea_pending = false;
     lidar_nmea_abort_requested = true;
   }

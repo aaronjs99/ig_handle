@@ -8,6 +8,7 @@ minimum vendor header used by downstream provenance checks.
 
 import ipaddress
 import socket
+import uuid
 from dataclasses import dataclass
 from typing import Optional, Tuple
 
@@ -86,6 +87,7 @@ class SonarRawReceiver:
                     "DT100 hardware ingress requires ~require_expected_source=true"
                 )
         self.sequence = 0
+        self.source_session_id = uuid.uuid4().hex
         self.publisher = rospy.Publisher(
             self.topic, SonarRawPacketMessage, queue_size=50
         )
@@ -159,6 +161,8 @@ class SonarRawReceiver:
         msg.header.stamp = rospy.Time.now()
         msg.header.frame_id = self.frame_id
         msg.provider = self.provider
+        msg.source_session_id = self.source_session_id
+        msg.synthetic = False
         msg.model = self.model
         msg.packet_kind = data[:3].decode("ascii", errors="replace")
         msg.source_endpoint = "{}:{}".format(src[0], src[1])

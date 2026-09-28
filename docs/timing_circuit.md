@@ -280,6 +280,18 @@ No knob or switch is currently justified. Add labeled test points for all rails 
 - [ ] Physically fit U2 with the selected Amphenol-or-supplied male rows and two PPPC241LFBN-RC sockets, verify every U2 drill is 1.016 mm, and fit U8's included 1x8 male header in a PPPC081LFBN-RC socket; prove tray, standoff, USB plug/cable, and RTC coin-cell/body clearance.
 - [ ] Regenerate the electronic CAD gate after the 2026-08-28 pin reassignment: remove the two U2 D21 no-net micro-segments, connect the isolated B.Cu GND island, resolve or explicitly accept the five Phoenix library mismatches without reversing pad order, then rerun whole-hierarchy ERC, schematic-parity/all-track DRC, zero-unconnected checks, and the D1-D3 bridge-removal audit.
 
+## Software handoff and remaining measurements
+
+IGHandle now emits structured acquisition records with restart-safe identities,
+original clocks and sequence widths, mapping revisions, calibrated-state and
+known/unknown uncertainty. Camera counters correlate with their own trigger and
+exposure events; both VLP branches and IMU feedback remain independent.
+DS3231 time remains local. The software fixtures and builds do not enable circuit
+outputs or establish PPS phase. Follow the sensor-timing characterization
+procedure under separate operation authorization, preserving raw records and
+instrument uncertainty. Vertical-LiDAR repair, physical camera intrinsics, and
+acoustic calibration remain explicit dependencies.
+
 ## References
 
 - [TI TPS2121](https://www.ti.com/lit/ds/symlink/tps2121.pdf)

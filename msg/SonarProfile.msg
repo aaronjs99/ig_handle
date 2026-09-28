@@ -1,6 +1,10 @@
 std_msgs/Header header
+# Acquisition identity. Distinct profiles retain distinct IDs even if their
+# intensities and raw packet bytes are identical; raw_packet_id is content-only.
 string profile_id
 string provider
+# Publisher acquisition-session identity; not a hardware boot ID.
+string source_session_id
 string model
 string raw_packet_id
 string extrinsic_revision

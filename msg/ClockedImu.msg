@@ -1,0 +1,23 @@
+# When clock_mapping_calibrated is false, header.stamp is receipt-anchored; it is not a measured acquisition epoch. source_instance_id identifies the driver stream; device_boot_id is present only when hardware supplies a real boot ID.
+std_msgs/Header header
+string source_id
+string source_boot_id
+bool device_boot_id_valid
+string device_boot_id
+string source_instance_id
+string device_host_boot_id
+uint64 source_instance_generation
+uint64 device_clock_epoch
+string clock_domain
+uint64 source_epoch
+uint64 source_sequence
+uint8 source_sequence_bits
+time source_time
+time receipt_time
+string receipt_host_boot_id
+uint64 receipt_monotonic_ns
+uint64 ros_time_epoch
+float64 timing_uncertainty_sec
+uint64 clock_mapping_revision
+bool clock_mapping_calibrated
+sensor_msgs/Imu measurement

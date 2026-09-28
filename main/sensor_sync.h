@@ -59,9 +59,12 @@ struct RelativeTime {
 // not UTC and has no relationship to ROS time until separately calibrated.
 class RelativeEpoch {
 public:
-  RelativeEpoch() : initialized_(false), reference_us_(0), epoch_ns_(0) {}
+  RelativeEpoch() : initialized_(false), reference_us_(0), epoch_ns_(0), generation_(0) {}
 
   void reset() {
+    if (initialized_) {
+      ++generation_;
+    }
     initialized_ = false;
     reference_us_ = 0;
     epoch_ns_ = 0;
@@ -89,6 +92,7 @@ public:
   }
 
   bool initialized() const { return initialized_; }
+  uint32_t generation() const { return generation_; }
 
 private:
   static RelativeTime split(uint64_t nanoseconds) {
@@ -100,6 +104,7 @@ private:
   bool initialized_;
   uint32_t reference_us_;
   uint64_t epoch_ns_;
+  uint32_t generation_;
 };
 
 // Single-producer/single-consumer ISR mailbox.  The lower-priority GPIO ISR
@@ -175,12 +180,18 @@ enum class ExposureEdgeResult : uint8_t {
 template <uint8_t CameraCount>
 class ExposureFeedbackTracker {
 public:
-  ExposureFeedbackTracker() : pending_mask_(0), open_mask_(0), deadline_us_(0) {}
+  ExposureFeedbackTracker()
+      : pending_mask_(0), open_mask_(0), deadline_us_(0),
+        trigger_sequence_(0), trigger_sequence_valid_(false) {}
 
-  void arm(uint32_t now_us, uint32_t timeout_us) {
+  void arm(uint32_t now_us, uint32_t timeout_us,
+           uint32_t trigger_sequence = 0,
+           bool trigger_sequence_valid = false) {
     pending_mask_ = allMask();
     open_mask_ = 0;
     deadline_us_ = now_us + timeout_us;
+    trigger_sequence_ = trigger_sequence;
+    trigger_sequence_valid_ = trigger_sequence_valid;
   }
 
   ExposureEdgeResult onEdge(uint8_t channel, bool active) {
@@ -211,11 +222,15 @@ public:
   bool expired(uint32_t now_us) const { return pending_mask_ != 0 && reached(now_us, deadline_us_); }
 
   bool pending() const { return pending_mask_ != 0; }
+  uint32_t triggerSequence() const { return trigger_sequence_; }
+  bool triggerSequenceValid() const { return trigger_sequence_valid_; }
 
   void clear() {
     pending_mask_ = 0;
     open_mask_ = 0;
     deadline_us_ = 0;
+    trigger_sequence_ = 0;
+    trigger_sequence_valid_ = false;
   }
 
 private:
@@ -228,6 +243,8 @@ private:
   volatile uint8_t pending_mask_;
   volatile uint8_t open_mask_;
   volatile uint32_t deadline_us_;
+  volatile uint32_t trigger_sequence_;
+  volatile bool trigger_sequence_valid_;
 };
 
 class Scheduler {

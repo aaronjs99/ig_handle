@@ -2392,14 +2392,13 @@ class NatNetClient:
         return True
 
     def shutdown(self):
-        print("shutdown called")
         self.stop_threads = True
-        # closing sockets causes blocking recvfrom to throw
-        # an exception and break the loop
-        self.command_socket.close()
-        self.data_socket.close()
-        # attempt to join the threads back.
-        if self.command_thread.is_alive():
-            self.command_thread.join()
-        if self.data_thread.is_alive():
-            self.data_thread.join()
+        # A failed start can leave only one socket/thread initialized.
+        for name in ("command_socket", "data_socket"):
+            connection = getattr(self, name, None)
+            if connection is not None:
+                connection.close()
+        for name in ("command_thread", "data_thread"):
+            worker = getattr(self, name, None)
+            if worker is not None and worker is not threading.current_thread() and worker.is_alive():
+                worker.join()

@@ -9,6 +9,7 @@ set -euo pipefail
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 package_dir="$(cd "${script_dir}/../.." && pwd)"
 catkin_workspace="$(cd "${package_dir}/../../.." && pwd)"
+rosserial_source="${catkin_workspace}/src/drivers/rosserial"
 cli="${ARDUINO_CLI:-/snap/arduino-cli/current/usr/bin/arduino-cli}"
 data_dir="${ARDUINO_DATA_DIR:-${HOME}/.arduino15}"
 library_source="${ARDUINO_LIBRARY_SOURCE:-${HOME}/Arduino/libraries}"
@@ -41,12 +42,12 @@ cp -a "${library_source}/RTClib" "${user_dir}/libraries/"
 cp -a "${library_source}/Adafruit_BusIO" "${user_dir}/libraries/"
 cp -a "${library_source}/ros_lib" "${user_dir}/libraries/"
 
-rosserial_head="$(git -C "${catkin_workspace}/src/rosserial" rev-parse HEAD)"
+rosserial_head="$(git -C "${rosserial_source}" rev-parse HEAD)"
 [[ "${rosserial_head}" == "c169ae2173dcfda7cee567d64beae45198459400" ]] || {
   echo "rosserial must be exactly c169ae2173dcfda7cee567d64beae45198459400" >&2
   exit 2
 }
-[[ -z "$(git -C "${catkin_workspace}/src/rosserial" status --porcelain)" ]] || {
+[[ -z "$(git -C "${rosserial_source}" status --porcelain)" ]] || {
   echo "rosserial worktree must be clean" >&2; exit 2;
 }
 ros_lib_sha256="$(
@@ -59,12 +60,32 @@ ros_lib_sha256="$(
   echo "ros_lib content hash mismatch: ${ros_lib_sha256}" >&2; exit 2;
 }
 
+pinned_ros_lib_sha256="${ros_lib_sha256}"
+set +u
+source "${catkin_workspace}/devel/setup.bash"
+set -u
+generated_ros_lib="${tmp_dir}/generated/ros_lib"
+mkdir -p "${tmp_dir}/generated"
+if ! python3 "${rosserial_source}/rosserial_arduino/src/rosserial_arduino/make_libraries.py" \
+  "${tmp_dir}/generated" > "${tmp_dir}/rosserial_message_generation.log" 2>&1; then
+  cat "${tmp_dir}/rosserial_message_generation.log" >&2
+  exit 2
+fi
+generated_timing_header="${generated_ros_lib}/ig_handle/FirmwareTimingEvent.h"
+[[ -s "${generated_timing_header}" ]] || {
+  echo "rosserial did not generate ig_handle/FirmwareTimingEvent.h" >&2; exit 2;
+}
+mkdir -p "${user_dir}/libraries/ros_lib/ig_handle"
+cp "${generated_timing_header}" "${user_dir}/libraries/ros_lib/ig_handle/"
+firmware_event_header_sha256="$(sha256sum "${generated_timing_header}" | awk '{print $1}')"
+
 source_files=(
   "${package_dir}/config/teensy/firmware_config.h"
   "${package_dir}/main/firmware_pin_contract.h"
   "${package_dir}/main/main.ino"
   "${package_dir}/main/sensor_sync.h"
   "${package_dir}/main/sensor_sync_runtime.h"
+  "${package_dir}/msg/FirmwareTimingEvent.msg"
   "${package_dir}/main/telescope_control.h"
   "${package_dir}/main/telescope_runtime.h"
 )
@@ -123,7 +144,8 @@ done
   printf 'rtclib_version=2.1.4\n'
   printf 'adafruit_busio_version=1.17.4\n'
   printf 'rosserial_repository_head=%s\n' "${rosserial_head}"
-  printf 'generated_ros_lib_sha256=%s\n' "${ros_lib_sha256}"
+  printf 'pinned_ros_lib_sha256=%s\n' "${pinned_ros_lib_sha256}"
+  printf 'firmware_event_header_sha256=%s\n' "${firmware_event_header_sha256}"
   printf 'postbuild_helpers=disabled_glibc_2_31_incompatible_noncompile_hooks\n'
   sha256sum "${output_dir}/main.ino.elf" "${output_dir}/main.ino.hex"
 } > "${output_dir}/firmware_manifest.txt"

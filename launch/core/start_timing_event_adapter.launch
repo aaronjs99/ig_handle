@@ -1,0 +1,16 @@
+<launch>
+  <arg name="timing_status_topic" default=""/>
+  <arg name="firmware_event_topic" default=""/>
+  <arg name="timing_events_topic" default="/sensors/timing/events"/>
+  <arg name="camera_frame_timing_topics" default="/sensors/camera/f1/frame_timing,/sensors/camera/f2/frame_timing,/sensors/camera/f3/frame_timing,/sensors/camera/f4/frame_timing"/>
+  <arg name="clock_mappings_file" default=""/>
+
+  <node name="acquisition_timing_event_adapter"
+        pkg="ig_handle" type="timing_event_adapter.py" output="screen">
+    <param name="timing_status_topic" value="$(arg timing_status_topic)"/>
+    <param name="firmware_event_topic" value="$(arg firmware_event_topic)"/>
+    <param name="timing_events_topic" value="$(arg timing_events_topic)"/>
+    <param name="camera_frame_timing_topics" value="$(arg camera_frame_timing_topics)"/>
+    <param name="clock_mappings_file" value="$(arg clock_mappings_file)"/>
+  </node>
+</launch>

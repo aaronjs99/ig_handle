@@ -4,6 +4,7 @@
   <arg name="port"      default="2368" />
   <arg name="frame_id"  default="velodyne" />
   <arg name="topic"     default="velodyne_points" />
+  <arg name="timing_events_topic" default="/sensors/timing/events" />
   <arg name="gps_time"  default="false" />
   <arg name="laserscan" default="false"
        doc="Set true to enable the laserscan nodelet (unused by DLIO)" />
@@ -28,6 +29,18 @@
       <arg name="fixed_frame" value=""/>
       <arg name="target_frame" value=""/>
     </include>
+
+    <!-- Preserve the ROS cloud stamp and host receipt clocks as an explicitly
+         uncalibrated pair. This does not claim the cloud stamp is acquisition time. -->
+    <node pkg="ig_handle" type="timing_event_adapter.py"
+          name="lidar_timing_observer" output="screen">
+      <param name="firmware_event_topic" value=""/>
+      <param name="timing_status_topic" value=""/>
+      <param name="camera_frame_timing_topics" value=""/>
+      <param name="timing_events_topic" value="$(arg timing_events_topic)"/>
+      <param name="lidar_pointcloud_topic" value="$(arg topic)"/>
+      <param name="lidar_source_id" value="velodyne_$(arg name)"/>
+    </node>
 
     <!-- Laserscan nodelet (optional) -->
     <include if="$(arg laserscan)"

@@ -7,10 +7,10 @@ import time
 import threading
 import uuid
 
-import rospy
+from ig_handle_runtime import ros as rospy
 from geometry_msgs.msg import PoseStamped, TransformStamped
 from sensor_msgs.msg import PointCloud2
-import sensor_msgs.point_cloud2 as pc2
+from sensor_msgs_py import point_cloud2 as pc2
 from std_msgs.msg import Header, String
 from ig_handle.msg import AcquisitionTimingEvent
 from tf2_ros import TransformBroadcaster
@@ -101,7 +101,7 @@ class MocapBridge:
             self.potential_objects_topic, PointCloud2, queue_size=10
         )
         self.status_pub = rospy.Publisher(self.status_topic, String, queue_size=10)
-        self.tf_broadcaster = TransformBroadcaster() if self.publish_tf else None
+        self.tf_broadcaster = TransformBroadcaster(rospy.get_node()) if self.publish_tf else None
 
         self.client = None
         self._natnet_lock = threading.RLock()

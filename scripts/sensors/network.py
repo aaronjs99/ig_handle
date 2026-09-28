@@ -9,7 +9,7 @@ import os
 import socket
 import subprocess
 
-import rospkg
+from ament_index_python.packages import get_package_share_directory
 import yaml
 
 
@@ -19,7 +19,7 @@ def _package_root() -> Path:
             source_root / "config" / "network" / "sensor_network.yaml"
         ).is_file():
             return source_root
-    return Path(rospkg.RosPack().get_path("ig_handle")).resolve()
+    return Path(get_package_share_directory("ig_handle")).resolve()
 
 
 PACKAGE_ROOT = _package_root()

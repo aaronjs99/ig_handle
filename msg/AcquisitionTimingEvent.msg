@@ -53,13 +53,13 @@ string source_clock_domain
 string clock_mapping_source_instance_id
 string clock_mapping_source_epoch_id
 bool raw_source_time_valid
-time raw_source_time
+builtin_interfaces/Time raw_source_time
 # Preserve an original floating timestamp and unconverted device ticks when supplied.
 float64 raw_source_time_seconds
 string[] auxiliary_clock_names
 uint64[] auxiliary_clock_ticks
 float64[] auxiliary_clock_frequency_hz
-time receipt_ros_time
+builtin_interfaces/Time receipt_ros_time
 uint64 receipt_monotonic_ns
 string receipt_host_boot_id
 uint64 ros_time_epoch
@@ -83,7 +83,7 @@ uint64 mapped_continuity_epoch
 bool sensor_frame_counter_valid
 uint64 sensor_frame_counter
 bool mapped_acquisition_time_valid
-time mapped_acquisition_time
+builtin_interfaces/Time mapped_acquisition_time
 uint64 clock_mapping_revision
 float64 timing_uncertainty_sec
 bool clock_mapping_calibrated

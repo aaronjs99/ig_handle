@@ -62,7 +62,6 @@ select a configured device; it must not invent those facts.
 | --- | --- | --- | --- |
 | .gitattributes | Defines repository text and binary path handling. | Git | Repository contributors |
 | .gitignore | Applies the shared GRANDE exclusions and additionally keeps locally extracted NatNet SDK trees out of source control. | Git | Repository contributors |
-| CMakeLists.txt | Builds package-owned messages and installs sensor entrypoints, runtime modules, launch/configuration resources, persistent service definitions, and the pinned vendor executable across devel and install spaces. | catkin, ROS Noetic message generation, setup.py | catkin build and install spaces |
+| CMakeLists.txt | Generates package-owned ROS 2 interfaces and installs the ROS 2 frame exporter plus configuration resources. | ament_cmake, rosidl_default_generators, std_msgs | Colcon build and install spaces |
 | LICENSE | Provides the repository-level MIT license terms. | None | Repository users and redistributors |
-| package.xml | Declares ROS package metadata plus power, Bluetooth, and sensor dependencies. | ROS Noetic, BlueZ D-Bus, GLib | catkin and rosdep |
-| setup.py | Installs the reusable sensor, sonar, power, and motion-capture packages on the standard source, devel, and install Python paths. | catkin_pkg, scripts/sensors, scripts/sonar, scripts/power, scripts/mocap | CMakeLists.txt, IG Handle, and GRANDE Python consumers |
+| package.xml | Declares the ROS 2 interface package metadata and runtime dependencies. | ROS 2 Jazzy, BlueZ D-Bus, GLib | Colcon and rosdep |

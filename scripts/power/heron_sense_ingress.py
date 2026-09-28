@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Republish the raw Heron MCU contract on IG Handle's canonical topic."""
 
-import rospy
+from ig_handle_runtime import ros as rospy
 from heron_msgs.msg import Sense
 
 
@@ -37,14 +37,20 @@ class HeronSenseIngress:
         )
 
     def _callback(self, message: Sense) -> None:
-        header = getattr(message, "_connection_header", {}) or {}
-        caller = normalize_node_name(header.get("callerid", "unknown"))
-        if caller != self.expected_publisher:
+        publishers = rospy.publishers_info(self.input_topic)
+        matching = [
+            endpoint
+            for endpoint in publishers
+            if normalize_node_name(
+                f"{endpoint.node_namespace.rstrip('/')}/{endpoint.node_name}"
+            ) == self.expected_publisher
+        ]
+        if len(publishers) != 1 or len(matching) != 1:
             rospy.logerr_throttle(
                 2.0,
-                "Dropping raw Heron sense from unexpected publisher %s (expected %s)",
-                caller,
+                "Dropping raw Heron sense: expected sole publisher %s, observed %s",
                 self.expected_publisher,
+                [f"{p.node_namespace}/{p.node_name}" for p in publishers],
             )
             return
         # Preserve the MCU observation as a whole so RC takeover remains

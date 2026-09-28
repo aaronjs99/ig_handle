@@ -2,8 +2,12 @@
 """Publish selected Heron sensor TF edges from the shared YAML config."""
 
 import math
+from pathlib import Path
 
-import rospy
+import rclpy
+import yaml
+from ament_index_python.packages import get_package_share_directory
+from rclpy.node import Node
 import tf2_ros
 from geometry_msgs.msg import TransformStamped
 
@@ -32,7 +36,7 @@ def quaternion_from_euler(roll, pitch, yaw):
     )
 
 
-def make_transform(stamp, name, cfg):
+def make_transform(stamp, name, cfg, logger):
     transform = TransformStamped()
     transform.header.stamp = stamp
     transform.header.frame_id = str(cfg["parent"])
@@ -55,44 +59,76 @@ def make_transform(stamp, name, cfg):
     transform.transform.rotation.y = float(qy)
     transform.transform.rotation.z = float(qz)
     transform.transform.rotation.w = float(qw)
-    rospy.loginfo(
-        "sensor_tf_broadcaster: %s %s -> %s",
-        name,
-        transform.header.frame_id,
-        transform.child_frame_id,
+    logger.info(
+        "sensor_tf_broadcaster: %s %s -> %s"
+        % (
+            name,
+            transform.header.frame_id,
+            transform.child_frame_id,
+        )
     )
     return transform
 
 
-def main():
-    rospy.init_node("sensor_tf_broadcaster", anonymous=False)
-    config_ns = rospy.get_param("~config_ns", "/sensor_frames")
-    transforms = rospy.get_param(f"{config_ns}/transforms", {})
-    allowed_names = _csv_set(rospy.get_param("~allowed_transform_names", ""))
-    if not transforms:
-        rospy.logfatal("sensor_tf_broadcaster: no transforms found under %s", config_ns)
-        raise RuntimeError(f"missing transforms under {config_ns}")
-
-    selected = {
-        name: cfg
-        for name, cfg in transforms.items()
-        if not allowed_names or name in allowed_names
-    }
-    unknown = allowed_names - set(transforms)
-    if unknown:
-        raise RuntimeError(
-            "sensor_tf_broadcaster: configured transform names are unknown: {}".format(
-                sorted(unknown)
-            )
+class SensorTfBroadcaster(Node):
+    def __init__(self):
+        super().__init__("sensor_tf_broadcaster")
+        default_file = (
+            Path(get_package_share_directory("ig_handle"))
+            / "config"
+            / "sensors"
+            / "platform"
+            / "sensor_frames.yaml"
         )
-    if not selected:
-        raise RuntimeError("sensor_tf_broadcaster: transform selection is empty")
+        self.declare_parameter("sensor_frames_file", str(default_file))
+        self.declare_parameter("allowed_transform_names", "")
+        config_path = Path(self.get_parameter("sensor_frames_file").value)
+        with config_path.open("r", encoding="utf-8") as stream:
+            document = yaml.safe_load(stream) or {}
+        section = document.get("sensor_frames", {})
+        transforms = section.get("transforms", {}) if isinstance(section, dict) else {}
+        allowed_names = _csv_set(
+            self.get_parameter("allowed_transform_names").value
+        )
+        if not transforms:
+            raise RuntimeError(
+                "sensor_tf_broadcaster: no transforms found in %s" % config_path
+            )
 
-    stamp = rospy.Time.now()
-    broadcaster = tf2_ros.StaticTransformBroadcaster()
-    tf_msgs = [make_transform(stamp, name, cfg) for name, cfg in selected.items()]
-    broadcaster.sendTransform(tf_msgs)
-    rospy.spin()
+        selected = {
+            name: cfg
+            for name, cfg in transforms.items()
+            if not allowed_names or name in allowed_names
+        }
+        unknown = allowed_names - set(transforms)
+        if unknown:
+            raise RuntimeError(
+                "sensor_tf_broadcaster: configured transform names are unknown: {}".format(
+                    sorted(unknown)
+                )
+            )
+        if not selected:
+            raise RuntimeError("sensor_tf_broadcaster: transform selection is empty")
+
+        stamp = self.get_clock().now().to_msg()
+        self.broadcaster = tf2_ros.StaticTransformBroadcaster(self)
+        tf_msgs = [
+            make_transform(stamp, name, cfg, self.get_logger())
+            for name, cfg in selected.items()
+        ]
+        self.broadcaster.sendTransform(tf_msgs)
+
+
+def main(args=None):
+    rclpy.init(args=args)
+    node = SensorTfBroadcaster()
+    try:
+        rclpy.spin(node)
+    except KeyboardInterrupt:
+        pass
+    finally:
+        node.destroy_node()
+        rclpy.shutdown()
 
 
 if __name__ == "__main__":

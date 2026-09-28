@@ -9,8 +9,7 @@ import time
 from pathlib import Path
 from typing import Optional
 
-import rosgraph
-import rospy
+from ig_handle_runtime import ros as rospy
 from sensor_msgs.msg import BatteryState
 
 from ig_handle.msg import JkBmsDetails
@@ -29,7 +28,6 @@ from power.jk_bms_protocol import (
     response_kind,
 )
 from power.reconnect_guard import ConsecutiveErrorThreshold
-from sensors.ros_master import MasterLost, RosMasterLease
 
 
 def _required_text(name: str) -> str:
@@ -536,16 +534,9 @@ class JkBmsNode:
 def main() -> None:
     node = None
     try:
-        master_lease = RosMasterLease(rosgraph.get_master_uri(), "/ighandle_jk_bms")
         rospy.init_node("ighandle_jk_bms")
-        master_lease.check()
         node = JkBmsNode()
-        while not rospy.is_shutdown():
-            master_lease.check()
-            time.sleep(0.5)
-    except MasterLost as exc:
-        rospy.logfatal("%s", exc)
-        raise SystemExit(75)
+        rospy.spin()
     except (
         BatteryRegistryError,
         BluezError,

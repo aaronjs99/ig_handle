@@ -12,7 +12,7 @@ import uuid
 from dataclasses import dataclass
 from typing import Optional, Tuple
 
-import rospy
+from ig_handle_runtime import ros as rospy
 from ig_handle.msg import SonarRawPacket as SonarRawPacketMessage
 from sensors.network import network_value
 from sensors.parameters import strict_bool

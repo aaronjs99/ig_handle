@@ -10,10 +10,11 @@ uint64 source_instance_generation
 uint64 device_clock_epoch
 string clock_domain
 uint64 source_epoch
+bool source_sequence_valid
 uint64 source_sequence
 uint8 source_sequence_bits
-time source_time
-time receipt_time
+builtin_interfaces/Time source_time
+builtin_interfaces/Time receipt_time
 string receipt_host_boot_id
 uint64 receipt_monotonic_ns
 uint64 ros_time_epoch

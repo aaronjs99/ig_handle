@@ -1,7 +1,7 @@
 # ROS receipt time; acquisition time is carried separately when available.
 std_msgs/Header header
 bool acquisition_time_valid
-time acquisition_time
+builtin_interfaces/Time acquisition_time
 bool timing_uncertainty_known
 float64 timing_uncertainty_sec
 string provider

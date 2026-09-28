@@ -4,7 +4,7 @@ uint8 TIMESTAMP_SOURCE=0
 uint8 TIMESTAMP_RECEIPT=1
 uint8 TIMESTAMP_OFFSET_CORRECTED_ESTIMATE=2
 uint8 timestamp_semantics
-time receipt_time
+builtin_interfaces/Time receipt_time
 # Offset applied to receipt time for this product; not a transport-delay measurement.
 float64 timestamp_offset_from_receipt_sec
 # Stable only when source_identity_complete is true.

@@ -140,17 +140,16 @@ sensor_contract:
       required_topics:
         # Status-only checks may omit this channel. Canonical IMU normalization
         # cannot publish until Xsens samples and sample times are paired.
-        sample_time: false
+        sample_time: true
         clock_event: false
+        # The canonical IMU publisher requires matched device-clock references.
       launch:
-        file: package://ig_handle/launch/sensors/start_imu.launch
+        file: package://ig_handle/launch/sensors/start_imu.launch.py
         args:
           topic:
             field: topics.data
           sample_time_topic:
             field: topics.sample_time
-          clock_event_topic:
-            field: topics.clock_event
           timed_output_topic:
             field: topics.data_timed
           frame_id:

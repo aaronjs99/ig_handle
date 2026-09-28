@@ -10,7 +10,7 @@ import time
 import uuid
 from pathlib import Path
 
-import rospy
+from ig_handle_runtime import ros as rospy
 from ig_handle.msg import AcquisitionTimingEvent, FirmwareTimingEvent
 from sensor_msgs.msg import PointCloud2
 from std_msgs.msg import Header, String

@@ -5,7 +5,7 @@ import json
 import math
 import socket
 
-import rospy
+from ig_handle_runtime import ros as rospy
 
 from sensors.parameters import strict_bool
 

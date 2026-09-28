@@ -12,7 +12,7 @@ import uuid
 from dataclasses import dataclass
 from typing import Dict, Optional, Tuple
 
-import rospy
+from ig_handle_runtime import ros as rospy
 
 from ig_handle.msg import Ping360RawPacket, SonarDiagnostics, SonarProfile
 from sensors.parameters import strict_bool

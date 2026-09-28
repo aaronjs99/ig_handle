@@ -49,18 +49,18 @@ def main(argv: Optional[Sequence[str]] = None) -> None:
 
 def _app_args(argv: Sequence[str]) -> list[str]:
     try:
-        import rospy
+        from ig_handle_runtime import ros
 
-        return list(rospy.myargv(argv=list(argv))[1:])
+        return list(ros.myargv(argv=list(argv))[1:])
     except Exception:
         return [arg for arg in argv[1:] if ":=" not in arg]
 
 
 def _package_dir() -> Path:
     try:
-        import rospkg
+        from ament_index_python.packages import get_package_share_directory
 
-        return Path(rospkg.RosPack().get_path("ig_handle"))
+        return Path(get_package_share_directory("ig_handle"))
     except Exception:
         return Path(__file__).resolve().parents[2]
 

@@ -7,7 +7,6 @@ import argparse
 import json
 import math
 import os
-import subprocess
 import sys
 from pathlib import Path
 from typing import Any, Iterable, Mapping, Optional, Sequence
@@ -17,12 +16,12 @@ import yaml
 
 def _repo_default_path() -> Path:
     try:
-        package_dir = subprocess.check_output(
-            ["rospack", "find", "ig_handle"], text=True
-        ).strip()
-    except (OSError, subprocess.CalledProcessError):
-        package_dir = str(Path(__file__).resolve().parents[2])
-    return Path(package_dir) / "config" / "sensors" / "platform" / "sensor_frames.yaml"
+        from ament_index_python.packages import get_package_share_directory
+
+        package_dir = Path(get_package_share_directory("ig_handle"))
+    except (ImportError, LookupError):
+        package_dir = Path(__file__).resolve().parents[2]
+    return package_dir / "config" / "sensors" / "platform" / "sensor_frames.yaml"
 
 
 def _load(path: Path) -> dict:

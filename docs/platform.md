@@ -117,6 +117,13 @@ process identities and revalidates current ancestry before signaling anything.
 `sensor_bringup` observes this external owner for readiness but never opens or
 stops its serial port.
 
+The configured MTi-30 is a deployment target, not proof of the installed boat
+IMU model or its physical operation. Before the baseline, verify the device's
+model, serial, connection, source timestamps, frame, calibrated mounting and
+actual output. An unavailable serial-qualified device stays unavailable; do not
+select an arbitrary USB port or relabel the optional onboard MicroStrain stream
+as the Xsens.
+
 Internally owned providers are launched only when the ROS publisher graph is
 available and the required topics are unclaimed. The supervisor verifies each
 publisher against the current managed process tree before reporting it alive,
@@ -161,6 +168,31 @@ The Teensy timing design and its disabled-by-default electrical gates are
 specified in [`sensor_timing.md`](sensor_timing.md). Host camera, LiDAR, and IMU
 acquisition remains continuous; the firmware's trigger scheduler is a future
 commissioning surface rather than an enabled runtime claim.
+
+## Milestone 1 physical preparation
+
+The software baseline remains IGHandle's ROS 1 acquisition, DLiO and native
+mapping. Aaron's separate NUC ROS 2 port is independent. The first physical
+reference is mocap with one fixed alignment segment. Measure clock phase,
+latency, drift, gaps and discontinuities before defining acceptance thresholds;
+software fixtures cannot supply those measurements.
+
+Keep the failed vertical LiDAR off. Identify, select, integrate and qualify a
+replacement while retaining both software branches and their distinct timing
+and ray origins. Repair the failed unit only if practical as a backup. Retain
+the present calibration values until new measurements justify a change.
+
+Prepare the field kit around the declared device identities: sensor/clock
+configuration, labeled cables and pinouts, approved power and timing circuit,
+network adapters, the replacement-LiDAR mounting, reference/calibration setup,
+and enough storage for original recordings. Check the waterproof taller box and
+longer rod with the mechanical owners. Emma's tray and the ROV team remain
+separate workstreams. Sonar endpoints, sonar transmission and uncommissioned
+circuit outputs remain explicit commissioning operations.
+
+Software deployment, qualified measurements and field reliability are separate
+outcomes. With Heron powered off, its startup installation, cold boot, master
+reconnection and physical RC independence remain unverified.
 
 ## Battery Identity and Telemetry
 

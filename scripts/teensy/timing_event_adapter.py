@@ -2,6 +2,8 @@
 """Preserve identified sensor timing events without claiming clock calibration."""
 
 import json
+import hashlib
+import io
 import copy
 from collections import OrderedDict
 import math
@@ -145,6 +147,7 @@ class TimingEventAdapter:
             )
         self._state_lock = threading.RLock()
         self._event_history = OrderedDict()
+        self._source_capture_products = {}
         self._history_limit = int(rospy.get_param("~retained_timing_events", 10000))
         if self._history_limit <= 0:
             raise ValueError("retained_timing_events must be positive")
@@ -429,6 +432,7 @@ class TimingEventAdapter:
         raw_source_time_valid=True,
         raw_source_time_seconds=None,
         auxiliary_clocks=(),
+        source_capture_id="",
     ):
         sequence_mask = (1 << source_sequence_bits) - 1
         source_sequence = int(source_sequence) & sequence_mask
@@ -546,7 +550,7 @@ class TimingEventAdapter:
         event.correlation_sequence = (
             0 if correlation_sequence is None else int(correlation_sequence)
         )
-        event.correlated_capture_ids = []
+        event.correlated_capture_ids = [source_capture_id] if source_capture_id else []
         event.correlated_event_ids = []
         event.correlation_status = AcquisitionTimingEvent.CORRELATION_UNRESOLVED
         event.correlation_revision = 0
@@ -564,8 +568,12 @@ class TimingEventAdapter:
         event.clock_mapping_calibrated = False
         with self._state_lock:
             self._event_history[event.original_event_id] = copy.deepcopy(event)
+            self._source_capture_products[event.original_event_id] = (
+                (source_capture_id,) if source_capture_id else ()
+            )
             while len(self._event_history) > self._history_limit:
-                self._event_history.popitem(last=False)
+                retired_id, _ = self._event_history.popitem(last=False)
+                self._source_capture_products.pop(retired_id, None)
             self._derive_event(event)
             self._event_history[event.original_event_id] = copy.deepcopy(event)
             related = {
@@ -598,10 +606,22 @@ class TimingEventAdapter:
         event.clock_mapping_revision = 0
         event.timing_uncertainty_sec = math.nan
         event.clock_mapping_calibrated = False
-        event.correlated_capture_ids = []
+        # A LiDAR observer sees the original serialized cloud directly. Keep
+        # that product binding across clock-fit revisions; it does not establish
+        # acquisition phase or calibrated timestamp uncertainty.
+        source_products = (
+            list(self._source_capture_products.get(event.original_event_id, ()))
+            if event.kind == AcquisitionTimingEvent.KIND_LIDAR_CLOUD_HEADER
+            else []
+        )
+        event.correlated_capture_ids = source_products
         event.correlated_event_ids = []
-        event.correlation_revision = 0
-        event.correlation_status = AcquisitionTimingEvent.CORRELATION_UNRESOLVED
+        event.correlation_revision = 1 if source_products else 0
+        event.correlation_status = (
+            AcquisitionTimingEvent.CORRELATION_MEASURED
+            if source_products
+            else AcquisitionTimingEvent.CORRELATION_UNRESOLVED
+        )
         mapping_key = (
             event.source_clock_domain,
             event.clock_mapping_source_instance_id,
@@ -668,7 +688,7 @@ class TimingEventAdapter:
                 missing = True
         if complete:
             event.correlated_capture_ids = sorted(
-                {record["capture_id"] for record in complete}
+                set(source_products) | {record["capture_id"] for record in complete}
             )
             event.correlated_event_ids = sorted(
                 {identity for record in complete for identity in record["event_ids"]}
@@ -966,10 +986,18 @@ class TimingEventAdapter:
                 "LiDAR %s published a zero point-cloud header stamp; preserving it as unmapped",
                 self.lidar_source_id,
             )
+        product = io.BytesIO()
+        message.serialize(product)
+        capture_id = "lidar:{}:{}".format(
+            rospy.resolve_name(self.lidar_pointcloud_topic),
+            hashlib.sha256(product.getvalue()).hexdigest(),
+        )
         event_header = Header()
         event_header.stamp = receipt_ros_time
+        event_header.frame_id = message.header.frame_id
         self._publish_event(
             header=event_header,
+            source_capture_id=capture_id,
             source_id=self.lidar_source_id,
             source_epoch=0,
             source_sequence=int(message.header.seq),

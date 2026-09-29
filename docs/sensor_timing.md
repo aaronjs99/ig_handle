@@ -182,6 +182,24 @@ claim UTC. On the existing ``sensor_msgs/TimeReference`` diagnostics,
 unmapped relative MCU epoch. These topics are non-authoritative and are not a
 ROS-time calibration contract.
 
+## LiDAR product identity and timing links
+
+The cloud-header observer preserves the original serialized product identity in
+`AcquisitionTimingEvent.correlated_capture_ids`. A derived clock revision keeps
+that identity. MARINER archives the cloud and event separately and records their
+relationship with the original mapper context, timing-source lifetime and clock
+revision. An exact, unique product with matching frame, sequence, timestamp and
+context can establish a software identity link; it does not measure PPS phase,
+transport delay, acquisition-clock calibration or physical synchronization.
+
+A filtered cloud can retain a declared source-topic/header relationship without
+proving its parent payload identity. It remains unresolved. Repeated identical
+products in different odometry generations make the relationship ambiguous;
+an append-only revision supersedes the earlier unique claim. All candidate
+identities remain available after cache eviction and checkpoint reopening.
+Receipt time never substitutes for missing acquisition time, and these records
+cannot authorize navigation or outputs.
+
 ## Electrical boundary
 
 The installed-camera inventory must be checked against the physical labels.
@@ -378,7 +396,8 @@ uncommitted lighting image do not certify this timing-only source.
 Aaron owns the ROS 2 port on the separate NUC. IGHandle's deployed ROS 1
 acquisition and native mapping remain the baseline for timing and mocap work.
 This work does not modify the NUC checkout, Heron startup, or firmware output
-enablement. The faulty vertical LiDAR remains disabled pending repair.
+enablement. Keep the failed vertical LiDAR powered off. Select and qualify its
+replacement; repair the failed unit only if practical as a backup.
 
 The installed timing adapter and mocap bridge share `sensors.clock_mapping`.
 The helper parses and applies measured affine mappings while preserving raw
@@ -399,7 +418,7 @@ for the mocap/odometry baseline; the `raw` profile retains acquisition data but
 does not include local odometry. The resolved baseline topic list must include
 original firmware edges, acquisition timing, camera timing/captures, clocked
 IMU/sample time, LiDAR points and available packets, mocap timing/status, local
-odometry and transforms. Missing optional channels remain documented
+odometry, DLiO accepted-state continuity, and transforms. Missing optional channels remain documented
 limitations. A recording cannot enable triggers, acoustic transmission or drive.
 
 After recording closes, fit identified clock pairs with the existing offline

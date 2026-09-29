@@ -3,4 +3,6 @@
 | File | Relevance | Dependencies | Used by |
 | --- | --- | --- | --- |
 | battery.launch.py | Launches standalone JK BMS acquisition without a logger. | jk_bms_node.py, battery registry | Battery monitoring service and launch |
-| sensors.launch.py | Starts the required sensor supervisor; explicit use_external_sensor_provider also owns the required selected fixed-profile Xsens provider for a single test. Default false preserves standalone service composition. | sensor contract, sensor_bringup.py, external_sensor_provider.py | GRANDE bringup and standalone sensor observation |
+| battery.launch | ROS 1 compatibility launch for the standalone read-only JK BMS telemetry node. | jk_bms_node.py, battery registry | Legacy launch callers during migration |
+| battery.launch.py | Launches standalone JK BMS acquisition without a logger. | jk_bms_node.py, battery registry | ROS 2 battery monitoring |
+| sensors.launch | ROS 1 sensor composition retained for legacy callers while the sensor lifecycle owner is ported. | ROS 1 sensor drivers, sensor_bringup.py | Legacy sensor bringup |

@@ -46,10 +46,9 @@ investigation.
 GRANDE's canonical physical IMU is the serial-qualified Xsens MTi-30 on IG
 Handle. Sensor contract ID 1 binds serial `0368319D` to `/dev/sensors/imu`,
 publishes only below `/sensors/imu`, and is owned by exactly one persistent
-Xsens service. The standalone user service uses the independently owned local
-master at `http://127.0.0.1:11311` and advertises the sensor-LAN address
-`192.168.50.10`; the integrated system service explicitly uses the physical
-Heron master. Both values are validated from the canonical network contract.
+Xsens service. That service joins IGHandle's sole physical master at
+`http://192.168.131.10:11311`; both the master and advertised host address come
+from the canonical network contract.
 The provider waits without opening another device when its selected master or
 exact serial is unavailable, restarts after USB loss, stale output, driver exit,
 or master replacement, and refuses duplicate publishers. It records immutable
@@ -65,33 +64,25 @@ start time, and current ancestry are all revalidated. Publishers on disabled
 sensor topics remain untouched but are exposed explicitly in health output.
 Every `sensor_bringup` instance also holds the same advisory lease at
 `/run/lock/ig-handle-sensor-bringup.lock` for its full lifetime. Because both
-standalone and integrated launches pass through this process, cameras and
-LiDAR cannot be started on two ROS masters at once. The kernel releases the
+service and deliberate maintenance launches pass through this process, cameras
+and LiDAR cannot be started twice. The kernel releases the
 lease on exit or crash; stale file contents never establish ownership.
 
 ## Fixed ROS Graph Profiles
 
-The active deployment uses integrated sensing on the Heron graph:
-`ig-handle-xsens-integrated.service` owns the IMU and
-`ig-handle-sensors-integrated.service` owns camera/LiDAR supervision. These
-transient user units are not themselves a verified reboot-persistence guarantee.
-The separate `ig-handle-roscore-user.service` owns the loopback master used by
-`battery-ighandle-monitor.service`; that battery-only graph does not own physical
-IMU, camera, or LiDAR devices.
-
-The maintained standalone alternative consists of the core, Xsens-user, and
-sensor-bringup-user units under `systemd/`. Do not enable those sensor units while
-integrated sensing owns the devices. Both profiles use the same sensor leases,
-explicit master selection, publisher checks, and serial identity checks. A profile
-change requires stopping the current owner first; it never happens automatically.
+The active deployment consists of `ig-handle-roscore-user.service`,
+`ig-handle-xsens-user.service`, and `ig-handle-sensor-bringup-user.service`.
+IGHandle owns the physical master even when Heron is disconnected. The dependent
+services bind their lifecycle to that master, use the same sensor leases,
+publisher checks, and serial identity checks, and restart only their owned
+processes after a master replacement. There is no automatic master switch or
+second physical graph.
 
 User services source `GRANDE_WORKSPACE_SETUP` from the optional
 `~/.config/grande/environment` deployment configuration, with the conventional
 workspace below the current user's home as default. Network addresses come from
-`sensor_network.yaml`, accessed through `network_config.py`. The local master
-must remain loopback-only and its advertised sensor address must be assigned to
-a local interface. A battery service may use that core without starting the
-standalone physical sensor stack.
+`sensor_network.yaml`, accessed through `network_config.py`. The configured
+boat-facing address must remain assigned locally even when Heron is absent.
 
 The stock Heron `/imu/*` and `/cv5/ros_mscl_node` surfaces describe an optional
 onboard MicroStrain installation. They are not aliases for the IG Handle Xsens.
@@ -137,12 +128,11 @@ The installation ledger attributes selection and removal to the local
 as operator-entered provenance, not as authenticated user identity.
 
 Persistent selection state, installation history, normalized samples, and
-figures default to `~/.local/share/grande/battery`. The standalone IG Handle
-battery service depends on the independently owned local ROS master when the
-Heron is off; it never creates or stops that core. The combined service uses the
-physical Heron master and validated `/sense_heron` ingress. Both use the same
-data root and are mutually exclusive. Repository data remains retained
-historical evidence rather than live mutable state.
+figures default to `~/.local/share/grande/battery`. Boot infrastructure publishes
+compute-pack state on IGHandle's physical graph but does not start normalized
+battery logging. Deliberately started compute-only and combined loggers use the
+same graph and data root and are mutually exclusive. Repository data remains
+retained historical evidence rather than live mutable state.
 
 Energy integration is available only from contiguous, identity-qualified compute
 pack power. Propulsion motor-controller currents are preserved for diagnosis but

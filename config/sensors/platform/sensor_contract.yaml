@@ -140,6 +140,7 @@ sensor_contract:
       required_topics:
         # Status-only checks may omit this channel. Canonical IMU normalization
         # cannot publish until Xsens samples and sample times are paired.
+        data_timed: false
         sample_time: true
         clock_event: false
         # The canonical IMU publisher requires matched device-clock references.
@@ -199,7 +200,8 @@ sensor_contract:
       dashboard_kind: pointcloud
       dashboard_mode: ROS point cloud
       startup_order: 30
-      default_requested: true
+      # This physical branch remains disabled until the faulty unit is repaired.
+      default_requested: false
       reachability: network
       endpoint_key: lidar_v_ip
       frame: lidar_v_link

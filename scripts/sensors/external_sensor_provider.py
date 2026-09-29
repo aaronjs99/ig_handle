@@ -29,10 +29,9 @@ from sensors.contracts import load_contract, sensor_value
 
 
 TEMPORARY_FAILURE = 75
-PROFILE_INTEGRATED = "integrated"
-PROFILE_STANDALONE = "standalone"
+PROFILE_PHYSICAL = "physical"
 PROFILE_GROUND = "ground"
-SUPPORTED_PROFILES = (PROFILE_STANDALONE, PROFILE_INTEGRATED, PROFILE_GROUND)
+SUPPORTED_PROFILES = (PROFILE_PHYSICAL, PROFILE_GROUND)
 ProcessContext = Tuple[int, int, int, int]
 
 
@@ -534,16 +533,12 @@ def _stop_process_group(
 
 def _profile_network(package_root: str, profile: str) -> Tuple[str, str]:
     selected = str(profile or "").strip().lower()
-    if selected == PROFILE_STANDALONE:
-        master_uri = network_value("standalone_master_uri", package_root=package_root)
-        local_ip = network_value("sensor_lan_ip", package_root=package_root)
+    if selected == PROFILE_PHYSICAL:
+        master_uri = network_value("physical_master_uri", package_root=package_root)
+        local_ip = network_value("physical_ros_ip", package_root=package_root)
     elif selected == PROFILE_GROUND:
         master_uri = "http://127.0.0.1:11321"
         local_ip = network_value("sensor_lan_ip", package_root=package_root)
-    elif selected == PROFILE_INTEGRATED:
-        heron_ip = network_value("heron_ip", package_root=package_root)
-        master_uri = "http://{}:11311".format(heron_ip)
-        local_ip = network_value("heron_local_ip", package_root=package_root)
     else:
         raise RuntimeError("unsupported ROS profile: {}".format(profile))
 
@@ -577,10 +572,6 @@ def _profile_network(package_root: str, profile: str) -> Tuple[str, str]:
         or advertised_ip.is_multicast
     ):
         raise RuntimeError("unsafe ROS_IP for {} profile".format(selected))
-    if selected == PROFILE_STANDALONE and (
-        parsed.hostname != "127.0.0.1" or port != 11311
-    ):
-        raise RuntimeError("standalone profile requires http://127.0.0.1:11311")
     return str(master_uri), str(advertised_ip)
 
 
@@ -673,7 +664,7 @@ def main() -> int:
     parser.add_argument(
         "--profile",
         choices=SUPPORTED_PROFILES,
-        default=PROFILE_INTEGRATED,
+        default=PROFILE_PHYSICAL,
         help=(
             "fixed ROS graph profile; changing profiles requires restarting the "
             "provider and the rest of the sensing stack"

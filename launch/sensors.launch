@@ -3,10 +3,10 @@
   <arg name="extra_sensor_ids" default=""/>
   <arg name="disabled_sensor_ids" default=""/>
   <arg name="sensor_reachability_check" default="true"/>
-  <arg name="external_sensor_profile" default="integrated"/>
+  <arg name="external_sensor_profile" default="physical"/>
   <arg name="timing_events_topic" default="/sensors/timing/events"/>
   <arg name="use_external_sensor_provider" default="false"
-       doc="Own the integrated Xsens provider in this launch; exclude any separate provider first."/>
+       doc="Own the physical Xsens provider in this launch; exclude any separate provider first."/>
 
   <node if="$(arg use_external_sensor_provider)"
         pkg="ig_handle" type="external_sensor_provider.py"

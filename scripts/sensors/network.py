@@ -6,7 +6,6 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Dict, MutableMapping, Optional, Tuple
 import os
-import socket
 import subprocess
 
 import rospkg
@@ -35,8 +34,8 @@ KEY_PATHS: Dict[str, Tuple[str, ...]] = {
     "dt100_ip": ("endpoints", "dt100", "host"),
     "ping360_ip": ("endpoints", "ping360", "host"),
     "heron_ip": ("endpoints", "heron", "host"),
-    "heron_local_ip": ("ros", "heron_local_ip"),
-    "standalone_master_uri": ("ros", "standalone_master_uri"),
+    "physical_master_uri": ("ros", "physical_master_uri"),
+    "physical_ros_ip": ("ros", "physical_ros_ip"),
     "local_master_uri": ("ros", "local_master_uri"),
     "local_ros_ip": ("ros", "local_ros_ip"),
     "mocap_natnet_server_ip": ("mocap", "natnet_server_ip"),
@@ -90,22 +89,18 @@ def route_source_ip(target_ip: str) -> Optional[str]:
     return None
 
 
-def configure_heron_ros_environment(
+def configure_physical_ros_environment(
     enabled: bool,
-    host: str,
-    host_ip: str,
+    master_uri: str,
     local_ip: str,
     *,
     environ: Optional[MutableMapping[str, str]] = None,
 ) -> None:
-    """Select the Heron ROS master and local route when automatic setup is enabled."""
+    """Select the configured IGHandle-owned physical ROS graph."""
     if not enabled:
         return
-    try:
-        master_ip = socket.gethostbyname(host)
-    except OSError:
-        master_ip = host_ip
     env = os.environ if environ is None else environ
-    env["ROS_MASTER_URI"] = "http://{}:11311".format(master_ip)
-    env["ROS_IP"] = route_source_ip(master_ip) or local_ip
+    parsed_host = str(master_uri).split("://", 1)[-1].split(":", 1)[0]
+    env["ROS_MASTER_URI"] = str(master_uri)
+    env["ROS_IP"] = route_source_ip(parsed_host) or local_ip
     env.pop("ROS_HOSTNAME", None)

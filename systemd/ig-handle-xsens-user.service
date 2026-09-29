@@ -22,4 +22,4 @@ TimeoutStopSec=15
 NoNewPrivileges=true
 
 [Install]
-WantedBy=default.target
+WantedBy=default.target ig-handle-roscore-user.service

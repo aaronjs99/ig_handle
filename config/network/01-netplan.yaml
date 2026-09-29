@@ -3,10 +3,13 @@ network:
   renderer: networkd
 
   ethernets:
-
     enp2s0:
-      dhcp4: no
+      dhcp4: false
+      dhcp6: false
+      optional: true
+      ignore-carrier: true
       addresses:
-        - 192.168.131.10/24  # Heron network on PoE switch
-        - 192.168.50.10/24   # Cameras & LiDARs network on PoE switch
-        - 192.168.2.10/24    # Sonar network on PoE switch
+        - 192.168.131.10/24  # Heron computer
+        - 192.168.50.10/24   # Cameras and LiDARs
+        - 192.168.2.10/24    # Independent sonar devices
+        - 192.168.0.3/24     # Retained auxiliary sensor subnet

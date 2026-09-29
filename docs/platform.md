@@ -23,9 +23,12 @@ identity. The runtime network contract keeps separate DT100 and Ping360 endpoint
 the sensor subnet. Both sonar device addresses are unconfigured; the host-side address is
 `192.168.2.10`.
 The checked-in `01-netplan.yaml` template uses the same `192.168.2.0/24`
-subnet. Neither candidate address nor netplan is a commissioned wiring or
-network result. Applying netplan remains an explicit operator action after
-verifying switch wiring, endpoint identities, and link state.
+subnet. The networkd template retains the camera, LiDAR, sonar, and boat-facing
+addresses with `ignore-carrier: true`; Netplan 0.104 or later supports this
+setting. The protected deployed file is `/etc/netplan/99-heron-sensor-net.yaml`.
+Changes preserve its other settings and the disabled legacy `sensor-net.service`,
+which uses an obsolete boat address. Assigned host addresses do not establish
+sonar endpoint identity or commissioned wiring.
 The Heron-facing host address is `192.168.131.10`, matching the deployed
 networkd configuration; the base computer remains `192.168.131.1`.
 
@@ -40,6 +43,62 @@ for downstream estimation and records raw sensor evidence without turning
 acquisition health into mission or actuator authority. GRANDE normally owns
 integrated recording; IG Handle can collect isolated raw evidence for hardware
 investigation.
+
+## Heron hardware-client deployment
+
+Heron retains its existing Kinetic `robot_upstart` job and joins only IGHandle's
+physical master. The hardware composition retains rosserial, GPS and status
+functions while removing stock localization, model transforms and command
+publishers. MCU-owned RC remains a separate physical path; software inspection
+cannot establish its operation during ROS loss.
+
+From IGHandle's active install, copy the existing deployment helper, hardware
+launch and shared client module to Heron over the direct boat-facing LAN:
+
+```bash
+source ~/catkin_ws/heron_ws/install-native/setup.bash
+sensor_package=$(rospack find ig_handle)
+master_module=$(python3 -c 'import sensors.ros_master; print(sensors.ros_master.__file__)')
+scp -o ProxyCommand=none -o ProxyJump=none \
+  "$sensor_package/config/network/deploy_heron_ighandle_client.sh" \
+  "$sensor_package/config/network/heron_ighandle_client.launch" \
+  "$master_module" administrator@192.168.131.1:/tmp/
+```
+
+On Heron, use its authorized administrator session:
+
+```bash
+sudo bash /tmp/deploy_heron_ighandle_client.sh install \
+  /tmp/heron_ighandle_client.launch /tmp/ros_master.py \
+  http://192.168.131.10:11311 192.168.131.1 br0
+```
+
+The helper prepares all replacements before touching the deployed job. It
+preserves the existing workspace setup, log configuration and privilege prefix;
+an unsupported launch/PID/wait shape leaves the job untouched. It installs
+`base.launch`, `ros-start`, the shared master-client module and one `ros.service`
+override. The unique backup under `/var/backups/grande-heron-ros/` preserves the
+prior four managed files and records their original absence where applicable.
+No service is restarted by installation or rollback.
+
+The client waits for the fixed master before launching hardware. Master loss,
+changed PID or changed `/run_id` ends that client; the existing `ros.service`
+restarts its cgroup with fresh registrations. It creates no master and does not
+signal another service's processes. A deliberate service stop remains stopped.
+Only a separately approved stationary case may restart the actual boat job.
+
+Rollback uses the backup path printed by installation:
+
+```bash
+sudo bash /tmp/deploy_heron_ighandle_client.sh rollback \
+  /var/backups/grande-heron-ros/<saved-backup>
+```
+
+After rollback, review the restored files before deliberately restarting the
+job. A failed restoration reports the retained backup rather than claiming
+success. Actual launcher compatibility, authorized Heron sudo access, cold boot,
+master replacement and RC independence remain unverified until the boat is
+reachable and the corresponding cases are approved.
 
 ## IMU Ownership and Recovery
 
@@ -77,6 +136,11 @@ services bind their lifecycle to that master, use the same sensor leases,
 publisher checks, and serial identity checks, and restart only their owned
 processes after a master replacement. There is no automatic master switch or
 second physical graph.
+Core and sensor-launch services restart after unexpected clean exits as well as
+failures. Dependent install sections add master `.wants/` links when enabled,
+ensuring acquisition and GRANDE return after the master restarts. Explicit
+`systemctl --user stop` suppresses the unit's automatic restart. A later master
+restart or boot starts enabled dependent clients again.
 
 User services source `GRANDE_WORKSPACE_SETUP` from the optional
 `~/.config/grande/environment` deployment configuration, with the conventional

@@ -12,7 +12,7 @@ Environment=GRANDE_WORKSPACE_SETUP=%h/catkin_ws/heron_ws/install-native/setup.ba
 EnvironmentFile=-%h/.config/grande/environment
 ExecStart=/bin/bash -lc 'set -Ee -o pipefail; source /opt/ros/noetic/setup.bash; if [ -r "$${GRANDE_WORKSPACE_SETUP}" ]; then source "$${GRANDE_WORKSPACE_SETUP}"; fi; master_uri="$$(rosrun ig_handle network_config.py physical_master_uri)"; ros_ip="$$(rosrun ig_handle network_config.py physical_ros_ip)"; test "$${master_uri}" = "http://$${ros_ip}:11311"; ip -o -4 addr show | grep -Fq " $${ros_ip}/"; unset ROS_HOSTNAME; export ROS_MASTER_URI="$${master_uri}" ROS_IP="$${ros_ip}"; exec roscore -p 11311'
 ExecStartPost=/bin/bash -lc 'source /opt/ros/noetic/setup.bash; source "$${GRANDE_WORKSPACE_SETUP}"; master_uri="$$(rosrun ig_handle network_config.py physical_master_uri)"; for attempt in {1..20}; do ROS_MASTER_URI="$${master_uri}" timeout 1s rosparam list >/dev/null 2>&1 && exit 0; sleep 0.1; done; exit 1'
-Restart=on-failure
+Restart=always
 RestartSec=5
 KillSignal=SIGINT
 KillMode=control-group

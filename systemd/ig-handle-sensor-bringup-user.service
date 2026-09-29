@@ -13,7 +13,7 @@ Type=simple
 Environment=PYTHONDONTWRITEBYTECODE=1
 Environment=GRANDE_WORKSPACE_SETUP=%h/catkin_ws/heron_ws/install-native/setup.bash
 EnvironmentFile=-%h/.config/grande/environment
-ExecStart=/bin/bash -lc 'set -Ee -o pipefail; source /opt/ros/noetic/setup.bash; if [ -r "$${GRANDE_WORKSPACE_SETUP}" ]; then source "$${GRANDE_WORKSPACE_SETUP}"; fi; master_uri="$$(rosrun ig_handle network_config.py physical_master_uri)"; ros_ip="$$(rosrun ig_handle network_config.py physical_ros_ip)"; unset ROS_HOSTNAME; export ROS_MASTER_URI="$${master_uri}" ROS_IP="$${ros_ip}"; exec roslaunch --wait ig_handle sensors.launch use_external_sensor_provider:=false external_sensor_profile:=physical'
+ExecStart=/bin/bash -lc 'set -Ee -o pipefail; source /opt/ros/noetic/setup.bash; if [ -r "$${GRANDE_WORKSPACE_SETUP}" ]; then source "$${GRANDE_WORKSPACE_SETUP}"; fi; master_uri="$$(rosrun ig_handle network_config.py physical_master_uri)"; ros_ip="$$(rosrun ig_handle network_config.py physical_ros_ip)"; unset ROS_HOSTNAME; export ROS_MASTER_URI="$${master_uri}" ROS_IP="$${ros_ip}"; exec roslaunch --wait ig_handle sensors.launch use_external_sensor_provider:=false'
 Restart=always
 RestartSec=5
 KillSignal=SIGINT

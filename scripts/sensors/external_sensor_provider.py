@@ -29,9 +29,6 @@ from sensors.contracts import load_contract, sensor_value
 
 
 TEMPORARY_FAILURE = 75
-PROFILE_PHYSICAL = "physical"
-PROFILE_GROUND = "ground"
-SUPPORTED_PROFILES = (PROFILE_PHYSICAL, PROFILE_GROUND)
 ProcessContext = Tuple[int, int, int, int]
 
 
@@ -531,16 +528,9 @@ def _stop_process_group(
         raise RuntimeError("external sensor process group could not be reaped")
 
 
-def _profile_network(package_root: str, profile: str) -> Tuple[str, str]:
-    selected = str(profile or "").strip().lower()
-    if selected == PROFILE_PHYSICAL:
-        master_uri = network_value("physical_master_uri", package_root=package_root)
-        local_ip = network_value("physical_ros_ip", package_root=package_root)
-    elif selected == PROFILE_GROUND:
-        master_uri = "http://127.0.0.1:11321"
-        local_ip = network_value("sensor_lan_ip", package_root=package_root)
-    else:
-        raise RuntimeError("unsupported ROS profile: {}".format(profile))
+def _physical_network(package_root: str) -> Tuple[str, str]:
+    master_uri = network_value("physical_master_uri", package_root=package_root)
+    local_ip = network_value("physical_ros_ip", package_root=package_root)
 
     parsed = urlparse(str(master_uri or ""))
     if (
@@ -552,26 +542,24 @@ def _profile_network(package_root: str, profile: str) -> Tuple[str, str]:
         or parsed.fragment
         or parsed.path not in ("", "/")
     ):
-        raise RuntimeError("invalid ROS master URI for {} profile".format(selected))
+        raise RuntimeError("invalid physical ROS master URI")
     try:
         port = parsed.port
     except ValueError as exc:
-        raise RuntimeError(
-            "invalid ROS master port for {} profile".format(selected)
-        ) from exc
+        raise RuntimeError("invalid physical ROS master port") from exc
     if port is None or port <= 0 or port > 65535:
-        raise RuntimeError("invalid ROS master port for {} profile".format(selected))
+        raise RuntimeError("invalid physical ROS master port")
     try:
         advertised_ip = ipaddress.ip_address(str(local_ip or ""))
     except ValueError as exc:
-        raise RuntimeError("invalid ROS_IP for {} profile".format(selected)) from exc
+        raise RuntimeError("invalid physical ROS_IP") from exc
     if (
         advertised_ip.version != 4
         or advertised_ip.is_unspecified
         or advertised_ip.is_loopback
         or advertised_ip.is_multicast
     ):
-        raise RuntimeError("unsafe ROS_IP for {} profile".format(selected))
+        raise RuntimeError("unsafe physical ROS_IP")
     return str(master_uri), str(advertised_ip)
 
 
@@ -661,15 +649,6 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--sensor-id", default="1")
     parser.add_argument("--sensor-contract-file", default="")
-    parser.add_argument(
-        "--profile",
-        choices=SUPPORTED_PROFILES,
-        default=PROFILE_PHYSICAL,
-        help=(
-            "fixed ROS graph profile; changing profiles requires restarting the "
-            "provider and the rest of the sensing stack"
-        ),
-    )
     parser.add_argument("--startup-grace-sec", type=float, default=15.0)
     parser.add_argument("--topic-timeout-sec", type=float, default=2.0)
     parser.add_argument("--stamp-timeout-sec", type=float, default=0.5)
@@ -692,7 +671,7 @@ def main() -> int:
     if not all((expected_publisher, expected_frame, device_path, identity_path)):
         raise RuntimeError("external sensor identity contract is incomplete")
 
-    master_uri, local_ip = _profile_network(package_root, args.profile)
+    master_uri, local_ip = _physical_network(package_root)
     os.environ["ROS_MASTER_URI"] = master_uri
     os.environ["ROS_IP"] = local_ip
     os.environ.pop("ROS_HOSTNAME", None)

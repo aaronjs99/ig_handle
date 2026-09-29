@@ -3,7 +3,6 @@
   <arg name="extra_sensor_ids" default=""/>
   <arg name="disabled_sensor_ids" default=""/>
   <arg name="sensor_reachability_check" default="true"/>
-  <arg name="external_sensor_profile" default="physical"/>
   <arg name="timing_events_topic" default="/sensors/timing/events"/>
   <arg name="use_external_sensor_provider" default="false"
        doc="Own the physical Xsens provider in this launch; exclude any separate provider first."/>
@@ -11,7 +10,7 @@
   <node if="$(arg use_external_sensor_provider)"
         pkg="ig_handle" type="external_sensor_provider.py"
         name="external_sensor_provider_1" output="screen" required="true"
-        args="--sensor-id 1 --profile $(arg external_sensor_profile) --sensor-contract-file '$(arg sensor_contract_file)'"/>
+        args="--sensor-id 1 --sensor-contract-file '$(arg sensor_contract_file)'"/>
 
   <node pkg="ig_handle"
         type="sensor_bringup.py"

@@ -41,8 +41,10 @@ without product-name coupling.
 Device stamps are preserved when available. IG Handle publishes timing inputs
 for downstream estimation and records raw sensor evidence without turning
 acquisition health into mission or actuator authority. GRANDE normally owns
-integrated recording; IG Handle can collect isolated raw evidence for hardware
-investigation.
+integrated recording. Passive IGHandle captures use the same persistent physical
+graph and own only their recorder; ending a capture preserves acquisition,
+DLiO, native mapping and the dashboard. Configuration changes remain deliberate
+maintenance operations, independent of recording.
 
 ## Heron hardware-client deployment
 

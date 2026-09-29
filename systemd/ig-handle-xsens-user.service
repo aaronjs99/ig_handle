@@ -14,7 +14,7 @@ Type=simple
 Environment=PYTHONDONTWRITEBYTECODE=1
 Environment=GRANDE_WORKSPACE_SETUP=%h/catkin_ws/heron_ws/install-native/setup.bash
 EnvironmentFile=-%h/.config/grande/environment
-ExecStart=/bin/bash -lc 'set -Ee -o pipefail; source /opt/ros/noetic/setup.bash; if [ -r "$${GRANDE_WORKSPACE_SETUP}" ]; then source "$${GRANDE_WORKSPACE_SETUP}"; fi; exec rosrun ig_handle external_sensor_provider.py --sensor-id 1 --profile physical'
+ExecStart=/bin/bash -lc 'set -Ee -o pipefail; source /opt/ros/noetic/setup.bash; if [ -r "$${GRANDE_WORKSPACE_SETUP}" ]; then source "$${GRANDE_WORKSPACE_SETUP}"; fi; exec rosrun ig_handle external_sensor_provider.py --sensor-id 1'
 Restart=on-failure
 RestartSec=5
 KillMode=control-group

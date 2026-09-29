@@ -13,6 +13,7 @@ setup_args = generate_distutils_setup(
         "power",
         "sensors",
         "sonar",
+        "teensy",
     ],
     package_dir={"": "scripts"},
 )

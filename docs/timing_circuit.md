@@ -284,8 +284,9 @@ No knob or switch is currently justified. Add labeled test points for all rails 
 
 IGHandle now emits structured acquisition records with restart-safe identities,
 original clocks and sequence widths, mapping revisions, calibrated-state and
-known/unknown uncertainty. Camera counters correlate with their own trigger and
-exposure events; both VLP branches and IMU feedback remain independent.
+known/unknown uncertainty. Each camera retains its own frame/trigger/exposure
+records; a Teensy-to-camera counter correspondence is still uncommissioned.
+Both VLP branches and IMU feedback remain independent.
 DS3231 time remains local. The software fixtures and builds do not enable circuit
 outputs or establish PPS phase. Follow the sensor-timing characterization
 procedure under separate operation authorization, preserving raw records and

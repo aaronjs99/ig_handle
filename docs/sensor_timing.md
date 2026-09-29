@@ -322,9 +322,11 @@ retains its device sample identity alongside the mapped standard IMU message.
 The camera driver publishes CameraFrameCapture with its actual frame counter
 and device timestamp. Diagnostic text is not the identity authority.
 
-Each camera independently correlates frame, trigger, and exposure events.
-A shared electrical trigger can identify four camera captures; it does not
-merge their frame counters. Duplicate, reordered, dropped, ambiguous, or
+Each camera retains independent frame, trigger, and exposure identities.
+The adapter does not currently establish a hardware correspondence between a
+Teensy trigger counter and a Spinnaker frame counter. Such a correspondence must
+come from commissioned device readback and measured events; sharing an electrical
+trigger does not merge camera counters or prove the join. Duplicate, reordered, dropped, ambiguous, or
 counter-width-invalid events remain explicit. Unknown ordering preserves the
 established source generation rather than reusing generation zero.
 
@@ -339,7 +341,8 @@ For the separately authorized circuit characterization:
 
 1. Record original firmware edge events, camera frame counters/device clocks,
    ClockedImu/sample markers, both VLP timing records, and standard sensor data.
-   Use the runtime or raw recording profile with the required camera transport.
+   Use the runtime profile for the odometry baseline and the raw profile
+   for timing-only capture, with the required camera transport.
 2. Measure PPS phase, each trigger-to-exposure delay, four independent exposure
    feedback branches, and the IMU SyncIn/SyncOut-to-sample relationship.
 3. Save instrument timebase, wiring/polarity, source identities, device readback,
@@ -369,3 +372,60 @@ uncommitted lighting image do not certify this timing-only source.
 - Analog Devices, [DS3231 datasheet](https://www.analog.com/media/en/technical-documentation/data-sheets/DS3231.pdf), open-drain `INT/SQW` electrical contract.
 - Xsens, [MTi 10-series and MTi 100-series User Manual, MT0605P](https://www.xsens.com/hubfs/Downloads/usermanual/MTi_usermanual.pdf), encased MTi connector, SyncIn/SyncOut, and ClockSync electrical characteristics.
 - PJRC, [Teensy 4.1 technical specifications](https://www.pjrc.com/store/teensy41.html), MCU GPIO voltage and current limits.
+
+## M1 baseline preparation on IGHandle
+
+Aaron owns the ROS 2 port on the separate NUC. IGHandle's deployed ROS 1
+acquisition and native mapping remain the baseline for timing and mocap work.
+This work does not modify the NUC checkout, Heron startup, or firmware output
+enablement. The faulty vertical LiDAR remains disabled pending repair.
+
+The installed timing adapter and mocap bridge share `sensors.clock_mapping`.
+The helper parses and applies measured affine mappings while preserving raw
+clocks and unknown uncertainty; it does not derive phase from receipt delay.
+The existing `fit_clock_mapping.py` operates offline on uniquely identified
+event pairs. Fit each source/device epoch independently and retain unassociated
+or ambiguous events rather than fabricating pair identity.
+
+For each authorized measurement, preserve instrument timebase/uncertainty,
+source boot/session, original event IDs, device readback, frame, wiring revision
+and clock-mapping revision. Camera branches require their own measured
+trigger-to-exposure relation. The functioning LiDAR branch is characterized
+first; retain support for the second branch but do not power the faulty unit.
+The DS3231 epoch remains local, and existing VLP `gps_time=false` is unchanged.
+
+Prepare a recording only when explicitly requested. Use the `runtime` profile
+for the mocap/odometry baseline; the `raw` profile retains acquisition data but
+does not include local odometry. The resolved baseline topic list must include
+original firmware edges, acquisition timing, camera timing/captures, clocked
+IMU/sample time, LiDAR points and available packets, mocap timing/status, local
+odometry and transforms. Missing optional channels remain documented
+limitations. A recording cannot enable triggers, acoustic transmission or drive.
+
+After recording closes, fit identified clock pairs with the existing offline
+tool and compare odometry using `compare_mocap_odometry.py`. Use one declared
+initialization interval and score later motion, with no fitted trajectory shift
+or repeated alignment. Qualified bag/CSV fixtures cover duplicate products,
+tracking gaps, resets, clock revisions, producer identity, frame mismatch and
+unresolved events; they measure software behavior only. Physical phase, camera
+calibration, mocap accuracy and DLiO drift remain unmeasured.
+
+The installed offline fitter accepts identified event-pair CSV records:
+
+```bash
+rosrun ig_handle fit_clock_mapping.py IDENTIFIED_PAIRS.csv FIT.json \
+  --revision POSITIVE_REVISION
+```
+
+Use `--help` for the required pair identity, clock scope and uncertainty fields.
+A fitted file is an analysis result until its measured correspondence and
+uncertainty are reviewed; it never enables timing outputs automatically.
+
+![Identified affine-clock software fixture](assets/clock_mapping_fixture.png)
+
+**Software fixture, 2026-09-29.** Synthetic identified event pairs test the
+installed fitter and shared mapping helper at a declared 20 ppm rate and 2 ms
+pivot offset. Original event error, display-only smoothing, fitted mapping and
+analytical expectation are separate. Large absolute clock values remain integer
+nanoseconds. Conditional uncertainty uses the stated fixture pair uncertainty;
+unknown physical uncertainty remains unknown. This is not electrical timing data.

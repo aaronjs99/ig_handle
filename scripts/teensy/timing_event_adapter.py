@@ -5,6 +5,8 @@ import json
 import copy
 from collections import OrderedDict
 import math
+
+from sensors.clock_mapping import parse_clock_mappings, apply_clock_mapping
 import threading
 import time
 import uuid
@@ -49,101 +51,12 @@ _FIRMWARE_SOURCE_SPECS = {
 }
 
 
-def _parse_clock_mappings(document):
-    """Parse explicit fits scoped to one source and ROS clock epoch."""
-    records = document.get("mappings", [document]) if isinstance(document, dict) else None
-    if not isinstance(records, list):
-        raise ValueError("clock mapping file must contain one fit or a mappings list")
-    mappings = {}
-    for record in records:
-        if not isinstance(record, dict) or record.get("model") != "affine_clock_map":
-            raise ValueError("clock mapping entries must be affine_clock_map fits")
-        source_domain = str(record.get("source_clock_domain", "")).strip()
-        source_instance = str(record.get("source_clock_instance_id", "")).strip()
-        source_epoch = str(record.get("source_clock_epoch_id", "")).strip()
-        reference_domain = str(record.get("reference_clock_domain", "")).strip()
-        reference_instance = str(record.get("reference_clock_instance_id", "")).strip()
-        reference_epoch = str(record.get("reference_clock_epoch_id", "")).strip()
-        try:
-            revision = int(record["clock_mapping_revision"])
-            pivot_ns = int(record["source_pivot_ns"])
-            anchor_ns = int(record["reference_anchor_ns"])
-            offset_ns = float(record["reference_offset_at_source_pivot_ns"])
-            rate = float(record["reference_ns_per_source_ns"])
-            residual_rms_ns = float(record["residual_rms_ns"])
-            uncertainty_basis = str(record.get("uncertainty_basis", ""))
-            raw_covariance = record.get("parameter_covariance")
-            if raw_covariance is None:
-                if uncertainty_basis == "provided_pair_standard_uncertainties":
-                    raise ValueError(
-                        "a calibrated clock mapping needs parameter covariance"
-                    )
-                covariance = [[0.0, 0.0], [0.0, 0.0]]
-            else:
-                covariance = [
-                    [float(value) for value in row] for row in raw_covariance
-                ]
-        except (KeyError, TypeError, ValueError, OverflowError) as error:
-            raise ValueError("clock mapping is missing finite affine-fit parameters") from error
-        if (
-            not all((source_domain, source_instance, source_epoch,
-                     reference_domain, reference_instance, reference_epoch))
-            or revision <= 0
-            or not math.isfinite(offset_ns)
-            or not math.isfinite(rate)
-            or rate <= 0.0
-            or not math.isfinite(residual_rms_ns)
-            or residual_rms_ns < 0.0
-            or len(covariance) != 2
-            or any(len(row) != 2 for row in covariance)
-            or not all(math.isfinite(value) for row in covariance for value in row)
-        ):
-            raise ValueError("clock mapping has invalid identity, revision, or fit values")
-        covariance_scale = max(
-            1.0, *(abs(value) for row in covariance for value in row)
-        )
-        determinant = covariance[0][0] * covariance[1][1] - (
-            0.5 * (covariance[0][1] + covariance[1][0])
-        ) ** 2
-        if (
-            covariance[0][0] < 0.0
-            or covariance[1][1] < 0.0
-            or abs(covariance[0][1] - covariance[1][0])
-            > 1e-10 * covariance_scale
-            or determinant < -1e-12 * max(
-                1.0,
-                abs(covariance[0][0] * covariance[1][1]),
-                covariance[0][1] ** 2,
-            )
-        ):
-            raise ValueError("clock mapping covariance must be positive semidefinite")
-        covariance[0][1] = covariance[1][0] = (
-            0.5 * (covariance[0][1] + covariance[1][0])
-        )
-        key = (source_domain, source_instance, source_epoch,
-               reference_domain, reference_instance, reference_epoch)
-        if key in mappings:
-            raise ValueError("clock mapping file repeats a source/reference scope")
-        mappings[key] = {
-            "revision": revision,
-            "pivot_ns": pivot_ns,
-            "anchor_ns": anchor_ns,
-            "offset_ns": offset_ns,
-            "rate": rate,
-            "residual_rms_ns": residual_rms_ns,
-            "covariance": covariance,
-            "uncertainty_known": uncertainty_basis
-                == "provided_pair_standard_uncertainties",
-        }
-    return mappings
-
-
 def _load_timing_calibration(path):
     path = str(path or "").strip()
     if not path:
         return {}, {}
     document = json.loads(Path(path).expanduser().read_text(encoding="utf-8"))
-    mappings = _parse_clock_mappings(document)
+    mappings = parse_clock_mappings(document)
     correlations = {}
     unique_events = {}
     for record in document.get("correlations", []):
@@ -151,12 +64,23 @@ def _load_timing_calibration(path):
         event_ids = [str(value).strip() for value in record.get("event_ids", [])]
         shared = set(str(value) for value in record.get("shared_trigger_event_ids", []))
         revision = int(record.get("revision", 0))
-        if (not capture or revision <= 0 or len(event_ids) < 2 or
-                any(not value for value in event_ids) or len(set(event_ids)) != len(event_ids)
-                or not shared.issubset(event_ids)):
-            raise ValueError("measured correlation needs identity, revision and distinct event IDs")
-        normalized = {"capture_id": capture, "event_ids": event_ids,
-                      "shared_trigger_event_ids": sorted(shared), "revision": revision}
+        if (
+            not capture
+            or revision <= 0
+            or len(event_ids) < 2
+            or any(not value for value in event_ids)
+            or len(set(event_ids)) != len(event_ids)
+            or not shared.issubset(event_ids)
+        ):
+            raise ValueError(
+                "measured correlation needs identity, revision and distinct event IDs"
+            )
+        normalized = {
+            "capture_id": capture,
+            "event_ids": event_ids,
+            "shared_trigger_event_ids": sorted(shared),
+            "revision": revision,
+        }
         if capture in correlations and correlations[capture] != normalized:
             raise ValueError("one capture has conflicting measured correlations")
         for identity in set(event_ids) - shared:
@@ -171,36 +95,13 @@ def _merge_revisions(active, proposed):
     merged = dict(active)
     for identity, record in proposed.items():
         old = active.get(identity)
-        if old is not None and (record["revision"] < old["revision"] or
-                (record["revision"] == old["revision"] and record != old)):
+        if old is not None and (
+            record["revision"] < old["revision"]
+            or (record["revision"] == old["revision"] and record != old)
+        ):
             raise ValueError("calibration revision cannot roll back or change in place")
         merged[identity] = record
     return merged
-
-
-def _apply_clock_mapping(mapping, source_time_ns):
-    """Map one source event without converting large absolute times to float."""
-    delta_ns = int(source_time_ns) - mapping["pivot_ns"]
-    relative_ns = mapping["offset_ns"] + mapping["rate"] * delta_ns
-    if not math.isfinite(relative_ns):
-        return None
-    mapped_ns = mapping["anchor_ns"] + int(round(relative_ns))
-    if mapped_ns <= 0 or mapped_ns >= (1 << 32) * 1000000000:
-        return None
-    uncertainty_sec = math.nan
-    calibrated = False
-    if mapping["uncertainty_known"]:
-        covariance = mapping["covariance"]
-        variance_ns2 = (
-            covariance[0][0]
-            + 2.0 * delta_ns * covariance[0][1]
-            + delta_ns * delta_ns * covariance[1][1]
-            + mapping["residual_rms_ns"] ** 2
-        )
-        if math.isfinite(variance_ns2) and variance_ns2 >= 0.0:
-            uncertainty_sec = math.sqrt(variance_ns2) * 1e-9
-            calibrated = math.isfinite(uncertainty_sec)
-    return mapped_ns, uncertainty_sec, calibrated
 
 
 def _host_boot_id():
@@ -234,10 +135,14 @@ class TimingEventAdapter:
         self._ros_time_epoch = 0
         self.calibration_path = str(rospy.get_param("~clock_mappings_file", "") or "")
         try:
-            self.clock_mappings, self.correlations = _load_timing_calibration(self.calibration_path)
+            self.clock_mappings, self.correlations = _load_timing_calibration(
+                self.calibration_path
+            )
         except (OSError, TypeError, ValueError) as error:
             self.clock_mappings, self.correlations = {}, {}
-            rospy.logerr("timing calibration unavailable: %s; raw clocks remain unmapped", error)
+            rospy.logerr(
+                "timing calibration unavailable: %s; raw clocks remain unmapped", error
+            )
         self._state_lock = threading.RLock()
         self._event_history = OrderedDict()
         self._history_limit = int(rospy.get_param("~retained_timing_events", 10000))
@@ -249,7 +154,8 @@ class TimingEventAdapter:
             self.output_topic, AcquisitionTimingEvent, queue_size=1000
         )
         self._reload_service = rospy.Service(
-            "~reload_timing_calibration", Trigger, self._reload_calibration)
+            "~reload_timing_calibration", Trigger, self._reload_calibration
+        )
         if not listen:
             return
         camera_topics = rospy.get_param("~camera_frame_timing_topics", "")
@@ -372,7 +278,8 @@ class TimingEventAdapter:
                 candidate_raw_ns, previous_raw_ns
             )
             sequence_only_restart = (
-                epoch == previous_epoch and candidate_raw_ns > previous_raw_ns
+                epoch == previous_epoch
+                and candidate_raw_ns > previous_raw_ns
                 and delta >= (1 << (sequence_bits - 1))
                 and raw_ns > candidate_raw_ns
             )
@@ -381,10 +288,9 @@ class TimingEventAdapter:
                 and raw_ns < previous_raw_ns
                 and (publish_ns > previous_publish_ns or ros_epoch > previous_ros_epoch)
             )
-            if (
-                candidate_advances
-                and ((candidate_is_reset_scale and still_below_old_highwater)
-                     or sequence_only_restart)
+            if candidate_advances and (
+                (candidate_is_reset_scale and still_below_old_highwater)
+                or sequence_only_restart
             ):
                 generation += 1
                 self._restart_candidates.pop(source_id, None)
@@ -399,8 +305,11 @@ class TimingEventAdapter:
                 )
                 return (
                     generation,
-                    (AcquisitionTimingEvent.ORDER_SEQUENCE_RESTART_INFERRED if sequence_only_restart
-                     else AcquisitionTimingEvent.ORDER_SOURCE_RESTART_INFERRED),
+                    (
+                        AcquisitionTimingEvent.ORDER_SEQUENCE_RESTART_INFERRED
+                        if sequence_only_restart
+                        else AcquisitionTimingEvent.ORDER_SOURCE_RESTART_INFERRED
+                    ),
                     0,
                 )
 
@@ -436,7 +345,10 @@ class TimingEventAdapter:
             return generation, AcquisitionTimingEvent.ORDER_CLOCK_EPOCH, missing
 
         if epoch < previous_epoch:
-            rollback = self._is_restart_rollback(raw_ns, previous_raw_ns) and publish_ns > previous_publish_ns
+            rollback = (
+                self._is_restart_rollback(raw_ns, previous_raw_ns)
+                and publish_ns > previous_publish_ns
+            )
             if rollback:
                 self._restart_candidates[source_id] = (
                     epoch,
@@ -458,8 +370,10 @@ class TimingEventAdapter:
             return generation, AcquisitionTimingEvent.ORDER_DUPLICATE, 0
 
         if delta >= (1 << (sequence_bits - 1)):
-            rollback = (self._is_restart_rollback(raw_ns, previous_raw_ns)
-                        or raw_ns > previous_raw_ns) and publish_ns > previous_publish_ns
+            rollback = (
+                self._is_restart_rollback(raw_ns, previous_raw_ns)
+                or raw_ns > previous_raw_ns
+            ) and publish_ns > previous_publish_ns
             if rollback:
                 self._restart_candidates[source_id] = (
                     epoch,
@@ -470,9 +384,11 @@ class TimingEventAdapter:
             return generation, AcquisitionTimingEvent.ORDER_OUT_OF_ORDER, 0
 
         if raw_ns < previous_raw_ns:
-            if self._is_restart_rollback(raw_ns, previous_raw_ns) and 0 < delta < (
-                1 << (sequence_bits - 1)
-            ) and (publish_ns > previous_publish_ns or ros_epoch > previous_ros_epoch):
+            if (
+                self._is_restart_rollback(raw_ns, previous_raw_ns)
+                and 0 < delta < (1 << (sequence_bits - 1))
+                and (publish_ns > previous_publish_ns or ros_epoch > previous_ros_epoch)
+            ):
                 self._restart_candidates[source_id] = (
                     epoch,
                     sequence,
@@ -546,8 +462,13 @@ class TimingEventAdapter:
             )
             generation, disposition, missing = (
                 self._order(
-                    source_state_id, source_epoch, source_sequence, raw_ns,
-                    publish_ns, ros_time_epoch, sequence_bits=source_sequence_bits
+                    source_state_id,
+                    source_epoch,
+                    source_sequence,
+                    raw_ns,
+                    publish_ns,
+                    ros_time_epoch,
+                    sequence_bits=source_sequence_bits,
                 )
                 if source_sequence_valid and raw_source_time_valid
                 else (
@@ -592,18 +513,26 @@ class TimingEventAdapter:
         event.source_clock_epoch_valid = source_clock_epoch_valid
         event.source_sequence_bits = source_sequence_bits
         event.source_clock_domain = source_clock_domain
-        event.clock_mapping_source_instance_id = ":".join((
-            self.bridge_instance_id,source_id,source_instance_id))
+        event.clock_mapping_source_instance_id = ":".join(
+            (self.bridge_instance_id, source_id, source_instance_id)
+        )
         event.clock_mapping_source_epoch_id = "{}:generation-{}".format(
-            epoch_key,generation)
+            epoch_key, generation
+        )
         event.raw_source_time_valid = bool(raw_source_time_valid)
         event.raw_source_time = raw_source_time
         event.raw_source_time_seconds = (
-            math.nan if raw_source_time_seconds is None else float(raw_source_time_seconds)
+            math.nan
+            if raw_source_time_seconds is None
+            else float(raw_source_time_seconds)
         )
         event.auxiliary_clock_names = [name for name, ticks, rate in auxiliary_clocks]
-        event.auxiliary_clock_ticks = [int(ticks) for name, ticks, rate in auxiliary_clocks]
-        event.auxiliary_clock_frequency_hz = [float(rate) for name, ticks, rate in auxiliary_clocks]
+        event.auxiliary_clock_ticks = [
+            int(ticks) for name, ticks, rate in auxiliary_clocks
+        ]
+        event.auxiliary_clock_frequency_hz = [
+            float(rate) for name, ticks, rate in auxiliary_clocks
+        ]
         event.receipt_ros_time = receipt_ros
         event.receipt_monotonic_ns = receipt_monotonic_ns
         event.receipt_host_boot_id = self.receipt_host_boot_id
@@ -639,8 +568,12 @@ class TimingEventAdapter:
                 self._event_history.popitem(last=False)
             self._derive_event(event)
             self._event_history[event.original_event_id] = copy.deepcopy(event)
-            related = {identity for record in self._correlation_index.get(event.original_event_id, [])
-                       for identity in record["event_ids"] if identity != event.original_event_id}
+            related = {
+                identity
+                for record in self._correlation_index.get(event.original_event_id, [])
+                for identity in record["event_ids"]
+                if identity != event.original_event_id
+            }
             revisions = self._rederive_retained(related)
         self._publisher.publish(event)
         for revision in revisions:
@@ -670,32 +603,48 @@ class TimingEventAdapter:
         event.correlation_revision = 0
         event.correlation_status = AcquisitionTimingEvent.CORRELATION_UNRESOLVED
         mapping_key = (
-            event.source_clock_domain, event.clock_mapping_source_instance_id,
-            event.clock_mapping_source_epoch_id, "ros_time",
-            self.receipt_host_boot_id, str(event.ros_time_epoch))
+            event.source_clock_domain,
+            event.clock_mapping_source_instance_id,
+            event.clock_mapping_source_epoch_id,
+            "ros_time",
+            self.receipt_host_boot_id,
+            str(event.ros_time_epoch),
+        )
         mapping = self.clock_mappings.get(mapping_key)
         if mapping is not None:
             event.clock_mapping_revision = mapping["revision"]
-        if mapping is not None and event.raw_source_time_valid and event.order_disposition not in (
+        if (
+            mapping is not None
+            and event.raw_source_time_valid
+            and event.order_disposition
+            not in (
                 AcquisitionTimingEvent.ORDER_DUPLICATE,
-                AcquisitionTimingEvent.ORDER_OUT_OF_ORDER):
-            mapped = _apply_clock_mapping(mapping, event.raw_source_time.to_nsec())
+                AcquisitionTimingEvent.ORDER_OUT_OF_ORDER,
+            )
+        ):
+            mapped = apply_clock_mapping(mapping, event.raw_source_time.to_nsec())
             if mapped is not None:
                 mapped_ns, uncertainty, calibrated = mapped
                 event.mapped_acquisition_time_valid = True
                 event.mapped_acquisition_time = rospy.Time(
-                    mapped_ns // 1000000000, mapped_ns % 1000000000)
+                    mapped_ns // 1000000000, mapped_ns % 1000000000
+                )
                 event.clock_mapping_revision = mapping["revision"]
                 event.timing_uncertainty_sec = uncertainty
                 event.clock_mapping_calibrated = calibrated
                 timeline = self._mapped_sources.get(mapping_key)
                 continuity = 0 if timeline is None else timeline[2]
                 raw_ns = event.raw_source_time.to_nsec()
-                if not event.derived_revision and (timeline is None or raw_ns > timeline[0]):
+                if not event.derived_revision and (
+                    timeline is None or raw_ns > timeline[0]
+                ):
                     if timeline is not None and mapped_ns <= timeline[1]:
                         continuity += 1
-                        rospy.logwarn("mapped timing chronology changed for %s; continuity=%d",
-                                      event.source_id, continuity)
+                        rospy.logwarn(
+                            "mapped timing chronology changed for %s; continuity=%d",
+                            event.source_id,
+                            continuity,
+                        )
                     self._mapped_sources[mapping_key] = (raw_ns, mapped_ns, continuity)
                 event.mapped_continuity_epoch = continuity
 
@@ -705,18 +654,25 @@ class TimingEventAdapter:
         for record in links:
             if all(identity in self._event_history for identity in record["event_ids"]):
                 try:
-                    unresolved = self._check_correlation_sources({record["capture_id"]: record})
+                    unresolved = self._check_correlation_sources(
+                        {record["capture_id"]: record}
+                    )
                 except ValueError:
-                    event.correlation_status = AcquisitionTimingEvent.CORRELATION_CONFLICT
+                    event.correlation_status = (
+                        AcquisitionTimingEvent.CORRELATION_CONFLICT
+                    )
                     return
                 if record["capture_id"] not in unresolved:
                     complete.append(record)
             else:
                 missing = True
         if complete:
-            event.correlated_capture_ids = sorted({record["capture_id"] for record in complete})
-            event.correlated_event_ids = sorted({identity for record in complete
-                                                for identity in record["event_ids"]})
+            event.correlated_capture_ids = sorted(
+                {record["capture_id"] for record in complete}
+            )
+            event.correlated_event_ids = sorted(
+                {identity for record in complete for identity in record["event_ids"]}
+            )
             event.correlation_revision = max(record["revision"] for record in complete)
             event.correlation_status = AcquisitionTimingEvent.CORRELATION_MEASURED
         elif links and missing:
@@ -732,51 +688,89 @@ class TimingEventAdapter:
         owners = {}
         unresolved = set()
         for record in correlations.values():
-            for identity in set(record["event_ids"]) - set(record["shared_trigger_event_ids"]):
+            for identity in set(record["event_ids"]) - set(
+                record["shared_trigger_event_ids"]
+            ):
                 previous = owners.setdefault(identity, record["capture_id"])
                 if previous != record["capture_id"]:
-                    raise ValueError("one frame/exposure event has conflicting capture ownership")
-            events = [self._event_history.get(identity) for identity in record["event_ids"]]
+                    raise ValueError(
+                        "one frame/exposure event has conflicting capture ownership"
+                    )
+            events = [
+                self._event_history.get(identity) for identity in record["event_ids"]
+            ]
             if any(event is None for event in events):
                 continue
-            frames = [event for event in events
-                      if event.kind == AcquisitionTimingEvent.KIND_CAMERA_FRAME]
+            frames = [
+                event
+                for event in events
+                if event.kind == AcquisitionTimingEvent.KIND_CAMERA_FRAME
+            ]
             if frames:
                 if len(frames) != 1:
-                    raise ValueError("camera correspondence must contain exactly one frame")
+                    raise ValueError(
+                        "camera correspondence must contain exactly one frame"
+                    )
                 frame = frames[0]
                 prefix = "spinnaker_camera_"
                 if not frame.source_id.startswith(prefix):
-                    raise ValueError("camera correspondence has no identified camera source")
-                serial = frame.source_id[len(prefix):]
+                    raise ValueError(
+                        "camera correspondence has no identified camera source"
+                    )
+                serial = frame.source_id[len(prefix) :]
                 capture = "camera:{}:{}:{}".format(
-                    serial, frame.source_instance_id, frame.sensor_frame_counter)
+                    serial, frame.source_instance_id, frame.sensor_frame_counter
+                )
                 if capture != record["capture_id"]:
-                    raise ValueError("camera correspondence does not identify its original capture")
+                    raise ValueError(
+                        "camera correspondence does not identify its original capture"
+                    )
             for identity in record["shared_trigger_event_ids"]:
                 event = self._event_history[identity]
                 if event.kind != AcquisitionTimingEvent.KIND_SENSOR_TRIGGER_COMMAND:
-                    raise ValueError("only an identified trigger may be shared between captures")
+                    raise ValueError(
+                        "only an identified trigger may be shared between captures"
+                    )
             firmware = [event for event in events if event.correlation_sequence_valid]
-            scopes = {(event.bridge_instance_id, event.source_instance_id,
-                       event.correlation_source_id, event.correlation_sequence) for event in firmware}
-            epochs = {event.source_clock_epoch for event in firmware
-                      if event.source_clock_epoch_valid}
+            scopes = {
+                (
+                    event.bridge_instance_id,
+                    event.source_instance_id,
+                    event.correlation_source_id,
+                    event.correlation_sequence,
+                )
+                for event in firmware
+            }
+            epochs = {
+                event.source_clock_epoch
+                for event in firmware
+                if event.source_clock_epoch_valid
+            }
             if len(scopes) > 1 or len(epochs) > 1:
-                raise ValueError("trigger/exposure correspondence crosses a source epoch or trigger sequence")
-            if firmware and any(not event.source_clock_epoch_valid for event in firmware):
+                raise ValueError(
+                    "trigger/exposure correspondence crosses a source epoch or trigger sequence"
+                )
+            if firmware and any(
+                not event.source_clock_epoch_valid for event in firmware
+            ):
                 unresolved.add(record["capture_id"])
         return unresolved
 
     @staticmethod
     def _derived_signature(event):
         uncertainty = float(event.timing_uncertainty_sec)
-        return (event.mapped_acquisition_time_valid, event.mapped_acquisition_time.to_nsec(),
-                event.clock_mapping_revision, event.clock_mapping_calibrated,
-                uncertainty if math.isfinite(uncertainty) else None,
-                event.mapped_continuity_epoch, tuple(event.correlated_capture_ids),
-                tuple(event.correlated_event_ids), event.correlation_status,
-                event.correlation_revision)
+        return (
+            event.mapped_acquisition_time_valid,
+            event.mapped_acquisition_time.to_nsec(),
+            event.clock_mapping_revision,
+            event.clock_mapping_calibrated,
+            uncertainty if math.isfinite(uncertainty) else None,
+            event.mapped_continuity_epoch,
+            tuple(event.correlated_capture_ids),
+            tuple(event.correlated_event_ids),
+            event.correlation_status,
+            event.correlation_revision,
+        )
 
     def _rederive_retained(self, identities):
         revised = []
@@ -791,7 +785,9 @@ class TimingEventAdapter:
                 continue
             self._bridge_event_sequence += 1
             event.bridge_event_sequence = self._bridge_event_sequence
-            event.event_id = "{}:{}".format(self.bridge_instance_id, self._bridge_event_sequence)
+            event.event_id = "{}:{}".format(
+                self.bridge_instance_id, self._bridge_event_sequence
+            )
             self._event_history[event.original_event_id] = copy.deepcopy(event)
             revised.append(event)
         return revised
@@ -802,50 +798,82 @@ class TimingEventAdapter:
             if previous_mappings.get(key) == mapping:
                 continue
             timeline = self._mapped_sources.get(key)
-            eligible = [event for event in self._event_history.values()
-                        if event.raw_source_time_valid and event.order_disposition not in (
-                            AcquisitionTimingEvent.ORDER_DUPLICATE,
-                            AcquisitionTimingEvent.ORDER_OUT_OF_ORDER)
-                        and (event.source_clock_domain, event.clock_mapping_source_instance_id,
-                             event.clock_mapping_source_epoch_id, "ros_time",
-                             self.receipt_host_boot_id, str(event.ros_time_epoch)) == key]
-            raw_ns = max([event.raw_source_time.to_nsec() for event in eligible]
-                         + ([] if timeline is None else [timeline[0]]), default=None)
+            eligible = [
+                event
+                for event in self._event_history.values()
+                if event.raw_source_time_valid
+                and event.order_disposition
+                not in (
+                    AcquisitionTimingEvent.ORDER_DUPLICATE,
+                    AcquisitionTimingEvent.ORDER_OUT_OF_ORDER,
+                )
+                and (
+                    event.source_clock_domain,
+                    event.clock_mapping_source_instance_id,
+                    event.clock_mapping_source_epoch_id,
+                    "ros_time",
+                    self.receipt_host_boot_id,
+                    str(event.ros_time_epoch),
+                )
+                == key
+            ]
+            raw_ns = max(
+                [event.raw_source_time.to_nsec() for event in eligible]
+                + ([] if timeline is None else [timeline[0]]),
+                default=None,
+            )
             if raw_ns is None:
                 continue
-            mapped = _apply_clock_mapping(mapping, raw_ns)
+            mapped = apply_clock_mapping(mapping, raw_ns)
             if mapped is None:
                 continue
             continuity = 0 if timeline is None else timeline[2]
             if timeline is not None:
-                corrected_previous = _apply_clock_mapping(mapping, timeline[0])
-                if corrected_previous is not None and corrected_previous[0] < timeline[1]:
+                corrected_previous = apply_clock_mapping(mapping, timeline[0])
+                if (
+                    corrected_previous is not None
+                    and corrected_previous[0] < timeline[1]
+                ):
                     continuity += 1
             self._mapped_sources[key] = (raw_ns, mapped[0], continuity)
 
     def _reload_calibration(self, _request):
         try:
             mappings, correlations = _load_timing_calibration(
-                rospy.get_param("~clock_mappings_file", self.calibration_path))
+                rospy.get_param("~clock_mappings_file", self.calibration_path)
+            )
             with self._state_lock:
                 candidate = copy.copy(self)
-                candidate.clock_mappings = _merge_revisions(self.clock_mappings, mappings)
-                candidate.correlations = _merge_revisions(self.correlations, correlations)
+                candidate.clock_mappings = _merge_revisions(
+                    self.clock_mappings, mappings
+                )
+                candidate.correlations = _merge_revisions(
+                    self.correlations, correlations
+                )
                 candidate._event_history = copy.deepcopy(self._event_history)
                 candidate._mapped_sources = dict(self._mapped_sources)
                 candidate._check_correlation_sources(candidate.correlations)
                 candidate._index_correlations()
                 candidate._refresh_mapping_timelines(self.clock_mappings)
                 revised = candidate._rederive_retained(list(candidate._event_history))
-                for attribute in ("clock_mappings", "correlations", "_correlation_index",
-                                  "_event_history", "_mapped_sources", "_bridge_event_sequence"):
+                for attribute in (
+                    "clock_mappings",
+                    "correlations",
+                    "_correlation_index",
+                    "_event_history",
+                    "_mapped_sources",
+                    "_bridge_event_sequence",
+                ):
                     setattr(self, attribute, getattr(candidate, attribute))
             for event in revised:
                 self._publisher.publish(event)
-            return TriggerResponse(success=True, message=(
-                "installed measured timing revisions; {} mappings, {} correlations, "
-                "{} retained event revisions").format(
-                    len(mappings), len(correlations), len(revised)))
+            return TriggerResponse(
+                success=True,
+                message=(
+                    "installed measured timing revisions; {} mappings, {} correlations, "
+                    "{} retained event revisions"
+                ).format(len(mappings), len(correlations), len(revised)),
+            )
         except (OSError, TypeError, ValueError, OverflowError) as error:
             return TriggerResponse(success=False, message=str(error))
 
@@ -861,7 +889,10 @@ class TimingEventAdapter:
                 int(message.source_index),
             )
             return
-        if int(message.source_sequence_bits) != 32 or int(message.raw_time_nsec) >= 1000000000:
+        if (
+            int(message.source_sequence_bits) != 32
+            or int(message.raw_time_nsec) >= 1000000000
+        ):
             rospy.logwarn_throttle(
                 10.0,
                 "Ignoring malformed firmware timing event sequence width or timestamp",
@@ -894,11 +925,11 @@ class TimingEventAdapter:
             source_clock_epoch_valid=bool(message.source_clock_epoch_valid),
             correlation_sequence=(
                 int(message.correlation_sequence)
-                if message.correlation_sequence_valid else None
+                if message.correlation_sequence_valid
+                else None
             ),
             correlation_source_id=(
-                "teensy_sensor_trigger"
-                if message.correlation_sequence_valid else ""
+                "teensy_sensor_trigger" if message.correlation_sequence_valid else ""
             ),
         )
 

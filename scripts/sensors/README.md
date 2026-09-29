@@ -3,6 +3,7 @@
 | File | Relevance | Dependencies | Used by |
 | --- | --- | --- | --- |
 | __init__.py | Declares the installed sensor-support package. | Python standard library | Python packaging |
+| clock_mapping.py | Parses measured clock fits and applies their declared offset, rate, covariance, and lifetime scope without receipt-time calibration. | Python standard library | timing_event_adapter.py and offline mocap comparison |
 | contracts.py | Loads, validates, and queries the canonical sensor lifecycle contract. | PyYAML | sensor_bringup.py, external_sensor_provider.py, and launch integration |
 | external_sensor_provider.py | Owns serial-qualified Xsens on IGHandle's configured physical master; accepts roslaunch remappings and exits on master/device loss. | Sensor contract, ROS | Xsens services and explicitly owned sensors.launch |
 | network.py | Loads canonical host, interface, and sensor-network values, and configures an explicitly requested Heron ROS endpoint. | PyYAML, rospkg, Python networking | Sensor providers, telemetry, mocap, sonar, and network_config.py |

@@ -28,7 +28,9 @@ def quat_xyzw(q):
 
 def status_values(value):
     if isinstance(value, float) and not math.isfinite(value):
-        return "NaN" if math.isnan(value) else ("+Infinity" if value > 0 else "-Infinity")
+        return (
+            "NaN" if math.isnan(value) else ("+Infinity" if value > 0 else "-Infinity")
+        )
     if isinstance(value, dict):
         return {key: status_values(item) for key, item in value.items()}
     if isinstance(value, (list, tuple)):
@@ -164,7 +166,9 @@ class MocapBridge:
         if hasattr(client, "set_print_level"):
             client.set_print_level(0)
         session = str(uuid.uuid4())
-        client.new_frame_with_data_listener = lambda frame: self._natnet_frame(client, session, frame)
+        client.new_frame_with_data_listener = lambda frame: self._natnet_frame(
+            client, session, frame
+        )
         with self._natnet_lock:
             self.client, self._natnet_session = client, session
         try:
@@ -232,8 +236,16 @@ class MocapBridge:
         tfm.transform.rotation.w = qw
         self.tf_broadcaster.sendTransform(tfm)
 
-    def _reference_event(self, *, stamp, sequence, raw_seconds, clock_domain,
-                         source_instance="", auxiliary_clocks=()):
+    def _reference_event(
+        self,
+        *,
+        stamp,
+        sequence,
+        raw_seconds,
+        clock_domain,
+        source_instance="",
+        auxiliary_clocks=(),
+    ):
         try:
             sequence = int(sequence) if sequence is not None else None
             if sequence is not None and not 0 <= sequence < (1 << 32):
@@ -245,20 +257,29 @@ class MocapBridge:
         except (TypeError, ValueError, OverflowError):
             raw_seconds = None
         valid_sequence = sequence is not None
-        valid_time = (raw_seconds is not None and math.isfinite(raw_seconds)
-                      and 0 <= raw_seconds < (1 << 32))
+        valid_time = (
+            raw_seconds is not None
+            and math.isfinite(raw_seconds)
+            and 0 <= raw_seconds < (1 << 32)
+        )
         raw = rospy.Time.from_sec(float(raw_seconds)) if valid_time else rospy.Time()
         return self.timing._publish_event(
             header=Header(stamp=stamp, frame_id=self.frame_id),
             source_id="mocap_{}".format(self.transport),
-            source_epoch=0, source_sequence=0 if sequence is None else int(sequence),
-            source_sequence_bits=32, source_sequence_valid=valid_sequence,
-            raw_source_time=raw, raw_source_time_valid=valid_time,
-            raw_source_time_seconds=raw_seconds, source_clock_domain=clock_domain,
+            source_epoch=0,
+            source_sequence=0 if sequence is None else int(sequence),
+            source_sequence_bits=32,
+            source_sequence_valid=valid_sequence,
+            raw_source_time=raw,
+            raw_source_time_valid=valid_time,
+            raw_source_time_seconds=raw_seconds,
+            source_clock_domain=clock_domain,
             kind=AcquisitionTimingEvent.KIND_MOCAP_FRAME,
             source_instance_id=source_instance or self.timing.bridge_instance_id,
-            source_receipt_ros_time=stamp, source_receipt_monotonic_ns=time.monotonic_ns(),
-            auxiliary_clocks=auxiliary_clocks)
+            source_receipt_ros_time=stamp,
+            source_receipt_monotonic_ns=time.monotonic_ns(),
+            auxiliary_clocks=auxiliary_clocks,
+        )
 
     @staticmethod
     def _reference_stamp(event):
@@ -270,40 +291,72 @@ class MocapBridge:
         data = frame["mocap_data"]
         suffix = data.suffix_data
         auxiliary = []
-        for name in ("stamp_camera_mid_exposure", "stamp_data_received", "stamp_transmit",
-                     "prec_timestamp_secs", "prec_timestamp_frac_secs"):
+        for name in (
+            "stamp_camera_mid_exposure",
+            "stamp_data_received",
+            "stamp_transmit",
+            "prec_timestamp_secs",
+            "prec_timestamp_frac_secs",
+        ):
             value = getattr(suffix, name, -1)
             if int(value) >= 0:
                 auxiliary.append((name, int(value), math.nan))
         receipt = rospy.Time.now()
         event = self._reference_event(
-            stamp=receipt, sequence=int(frame["frame_number"]),
+            stamp=receipt,
+            sequence=int(frame["frame_number"]),
             raw_seconds=float(suffix.timestamp),
             clock_domain="natnet_server_relative_seconds_unmapped",
-            source_instance=source_instance, auxiliary_clocks=auxiliary)
+            source_instance=source_instance,
+            auxiliary_clocks=auxiliary,
+        )
         stamp = self._reference_stamp(event)
         bodies = []
         for body in data.rigid_body_data.rigid_body_list:
-            valid_pose = (all(math.isfinite(float(v)) for v in (*body.pos, *body.rot))
-                          and sum(float(v) ** 2 for v in body.rot) > 0)
+            valid_pose = (
+                all(math.isfinite(float(v)) for v in (*body.pos, *body.rot))
+                and sum(float(v) ** 2 for v in body.rot) > 0
+            )
             valid = bool(body.tracking_valid) and valid_pose
-            bodies.append({"id": int(body.id_num), "tracking_valid": bool(body.tracking_valid),
-                           "pose_finite": valid_pose, "marker_error": float(body.error),
-                           "position_m": list(body.pos), "orientation_xyzw": list(body.rot)})
+            bodies.append(
+                {
+                    "id": int(body.id_num),
+                    "tracking_valid": bool(body.tracking_valid),
+                    "pose_finite": valid_pose,
+                    "marker_error": float(body.error),
+                    "position_m": list(body.pos),
+                    "orientation_xyzw": list(body.rot),
+                }
+            )
             if not valid:
                 continue
             msg = self._pose_msg(stamp, body.pos, body.rot)
-            msg.header.seq = int(frame["frame_number"]) & 0xffffffff
+            msg.header.seq = int(frame["frame_number"]) & 0xFFFFFFFF
             self._pub_for_rb(int(body.id_num)).publish(msg)
             if int(body.id_num) == 1:
                 self.heron_pose_pub.publish(msg)
             self._publish_pose_tf(stamp, body.id_num, body.pos, body.rot)
-        self.status_pub.publish(String(data=json.dumps(status_values({
-            "transport": "natnet", "frame": int(frame["frame_number"]),
-            "timing_event_id": event.original_event_id,
-            "pose_stamp_semantics": "mapped_acquisition" if event.clock_mapping_calibrated
-                                    else "receipt_unmapped",
-            "rigid_bodies": bodies}), sort_keys=True, allow_nan=False)))
+        self.status_pub.publish(
+            String(
+                data=json.dumps(
+                    status_values(
+                        {
+                            "transport": "natnet",
+                            "frame": int(frame["frame_number"]),
+                            "timing_event_id": event.original_event_id,
+                            "pose_stamp_semantics": (
+                                "mapped_acquisition"
+                                if event.clock_mapping_calibrated
+                                else "receipt_unmapped"
+                            ),
+                            "rigid_bodies": bodies,
+                        }
+                    ),
+                    sort_keys=True,
+                    allow_nan=False,
+                )
+            )
+        )
 
     def _cloud_msg(self, stamp, points):
         header = Header(stamp=stamp, frame_id=self.frame_id)
@@ -318,10 +371,18 @@ class MocapBridge:
             if not isinstance(timing, dict):
                 timing = {}
             self._datacollect_event = self._reference_event(
-                stamp=stamp, sequence=packet.get("frame"),
+                stamp=stamp,
+                sequence=packet.get("frame"),
                 raw_seconds=timing.get("source_time_seconds"),
-                clock_domain=str(timing.get("source_clock_domain", "datacollect_source_time_unavailable")),
-                source_instance=str(timing.get("source_instance_id", packet.get("device", ""))))
+                clock_domain=str(
+                    timing.get(
+                        "source_clock_domain", "datacollect_source_time_unavailable"
+                    )
+                ),
+                source_instance=str(
+                    timing.get("source_instance_id", packet.get("device", ""))
+                ),
+            )
         status = {
             "schema": packet.get("schema"),
             "status": status_state,
@@ -329,11 +390,17 @@ class MocapBridge:
             "frame": packet.get("frame"),
             "stamp": stamp.to_sec(),
             "original_packet": packet,
-            "timing_event_id": (self._datacollect_event.original_event_id
-                                if self._datacollect_event is not None else ""),
-            "pose_stamp_semantics": ("mapped_acquisition"
-                if self._datacollect_event is not None and self._datacollect_event.clock_mapping_calibrated
-                else "receipt_unmapped"),
+            "timing_event_id": (
+                self._datacollect_event.original_event_id
+                if self._datacollect_event is not None
+                else ""
+            ),
+            "pose_stamp_semantics": (
+                "mapped_acquisition"
+                if self._datacollect_event is not None
+                and self._datacollect_event.clock_mapping_calibrated
+                else "receipt_unmapped"
+            ),
         }
         if self.datacollect_source_ip:
             status["expected_source_ip"] = self.datacollect_source_ip
@@ -342,14 +409,18 @@ class MocapBridge:
             status["source_port"] = source_address[1]
         if tracking_valid is not None:
             status["tracking_valid"] = bool(tracking_valid)
-        self.status_pub.publish(String(data=json.dumps(status_values(status), sort_keys=True, allow_nan=False)))
+        self.status_pub.publish(
+            String(
+                data=json.dumps(status_values(status), sort_keys=True, allow_nan=False)
+            )
+        )
 
     def _publish_datacollect_pose(self, stamp, rb_id, position, rotation):
         event = self._datacollect_event
         pose_stamp = self._reference_stamp(event) if event is not None else stamp
         msg = self._pose_msg(pose_stamp, position, rotation)
         if event is not None and event.source_sequence_valid:
-            msg.header.seq = int(event.source_sequence) & 0xffffffff
+            msg.header.seq = int(event.source_sequence) & 0xFFFFFFFF
         self.heron_pose_pub.publish(msg)
         self._publish_pose_tf(pose_stamp, rb_id, position, rotation)
 

@@ -410,7 +410,6 @@ class SampleClockNode:
             self.timed_publisher.publish(timed)
 
 
-
 def main():
     import rospy
 

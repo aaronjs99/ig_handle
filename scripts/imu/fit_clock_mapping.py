@@ -41,7 +41,9 @@ def fit_correspondences(rows, clock_mapping_revision=1):
     for row in rows:
         pair = {key: row.get(key) for key in _REQUIRED + _OPTIONAL}
         if any(pair[key] in (None, "") for key in _REQUIRED):
-            raise ValueError("each row needs every required identity, domain, and timestamp")
+            raise ValueError(
+                "each row needs every required identity, domain, and timestamp"
+            )
         for key in (
             "correspondence_id",
             "source_event_id",
@@ -85,29 +87,29 @@ def fit_correspondences(rows, clock_mapping_revision=1):
     source_domains = {p["source_clock_domain"] for p in pairs}
     reference_domains = {p["reference_clock_domain"] for p in pairs}
     source_scopes = {
-        (p["source_clock_instance_id"], p["source_clock_epoch_id"])
-        for p in pairs
+        (p["source_clock_instance_id"], p["source_clock_epoch_id"]) for p in pairs
     }
     reference_scopes = {
-        (p["reference_clock_instance_id"], p["reference_clock_epoch_id"])
-        for p in pairs
+        (p["reference_clock_instance_id"], p["reference_clock_epoch_id"]) for p in pairs
     }
     if len(source_domains) != 1 or len(reference_domains) != 1:
-        raise ValueError("one fit can contain only one source and one reference clock domain")
+        raise ValueError(
+            "one fit can contain only one source and one reference clock domain"
+        )
     if len(source_scopes) != 1:
-        raise ValueError(
-            "one fit cannot cross source clock instances or epochs"
-        )
+        raise ValueError("one fit cannot cross source clock instances or epochs")
     if len(reference_scopes) != 1:
-        raise ValueError(
-            "one fit cannot cross reference clock instances or epochs"
-        )
+        raise ValueError("one fit cannot cross reference clock instances or epochs")
     if len({p["source_time_ns"] for p in pairs}) < 2:
         raise ValueError("source clock times must span at least two distinct values")
 
     known_uncertainty = all(p["pair_uncertainty_ns"] is not None for p in pairs)
-    if not known_uncertainty and any(p["pair_uncertainty_ns"] is not None for p in pairs):
-        raise ValueError("provide pair uncertainty for every row or leave it blank for every row")
+    if not known_uncertainty and any(
+        p["pair_uncertainty_ns"] is not None for p in pairs
+    ):
+        raise ValueError(
+            "provide pair uncertainty for every row or leave it blank for every row"
+        )
 
     source_times = sorted(p["source_time_ns"] for p in pairs)
     pivot_ns = source_times[len(source_times) // 2]
@@ -123,8 +125,9 @@ def fit_correspondences(rows, clock_mapping_revision=1):
     mean_x = sum(w * x for w, x in zip(weights, dx)) / sum_w
     mean_y = sum(w * y for w, y in zip(weights, dy)) / sum_w
     centered_xx = sum(w * (x - mean_x) ** 2 for w, x in zip(weights, dx))
-    centered_xy = sum(w * (x - mean_x) * (y - mean_y)
-                      for w, x, y in zip(weights, dx, dy))
+    centered_xy = sum(
+        w * (x - mean_x) * (y - mean_y) for w, x, y in zip(weights, dx, dy)
+    )
     if not math.isfinite(centered_xx) or centered_xx <= 0.0:
         raise ValueError("source clock span is numerically degenerate")
     rate = centered_xy / centered_xx
@@ -175,7 +178,8 @@ def fit_correspondences(rows, clock_mapping_revision=1):
         "pair_count": len(pairs),
         "uncertainty_basis": (
             "provided_pair_standard_uncertainties"
-            if known_uncertainty else "unknown_equal_weight"
+            if known_uncertainty
+            else "unknown_equal_weight"
         ),
         "parameter_covariance": covariance,
         "residual_rms_ns": rms,
@@ -189,7 +193,9 @@ def fit_correspondences(rows, clock_mapping_revision=1):
 def read_pairs(path, clock_mapping_revision=1):
     with Path(path).open("r", newline="", encoding="utf-8-sig") as stream:
         reader = csv.DictReader(stream)
-        missing = [field for field in _REQUIRED if field not in (reader.fieldnames or [])]
+        missing = [
+            field for field in _REQUIRED if field not in (reader.fieldnames or [])
+        ]
         if missing:
             raise ValueError("CSV is missing columns: " + ", ".join(missing))
         return fit_correspondences(reader, clock_mapping_revision)
@@ -209,10 +215,14 @@ def main():
     fit = read_pairs(args.input_csv, args.revision)
     output = Path(args.output_json)
     output.parent.mkdir(parents=True, exist_ok=True)
-    output.write_text(json.dumps(fit, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    print("wrote {} ({} pairs; RMS residual {:.3f} ns)".format(
-        output, fit["pair_count"], fit["residual_rms_ns"]
-    ))
+    output.write_text(
+        json.dumps(fit, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
+    print(
+        "wrote {} ({} pairs; RMS residual {:.3f} ns)".format(
+            output, fit["pair_count"], fit["residual_rms_ns"]
+        )
+    )
 
 
 if __name__ == "__main__":

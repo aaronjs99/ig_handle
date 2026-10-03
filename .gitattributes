@@ -7,3 +7,6 @@
 *.pdf binary
 *.bag binary
 *.db binary
+*.pt binary
+*.pth binary
+*.onnx binary

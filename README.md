@@ -8,6 +8,18 @@ interface.
 It does not own navigation, mapping, mission planning, or simulation. MARINER
 consumes canonical sensor topics; GRANDE composes and records the runtime.
 
+## Quick start
+
+Bring up physical sensors through a reviewed, named campaign. See the [sensor platform guide](docs/platform.md) for this repository's configuration.
+
+## Documentation
+
+- [Sensor platform](docs/platform.md) covers inventory, network, cameras, supervision, recording, and stable device identity.
+- [Sensor timing firmware](docs/sensor_timing.md) covers raw and typed Teensy event records, clock-mapping limits, trigger/feedback wiring contracts, and bench acceptance.
+- [Telescoping arm](docs/telescope.md) covers the motor, driver, encoder, home switch, current sensing, packaging, and remaining measurements.
+
+Each narrative document has a matching PDF. Markdown is canonical.
+
 ## Responsibilities
 
 | Area | IG Handle owns |
@@ -19,14 +31,6 @@ consumes canonical sensor topics; GRANDE composes and records the runtime.
 | Sonar | Raw acquisition, Ping360 protocol provider, identity, and profile metadata. |
 | Telescope | Hardware configuration, homing, position feedback, and guarded motor interface. |
 | Heron hardware | Physical propulsion facts, inspection guidance, and commissioning boundaries. |
-
-## Documentation
-
-- [Sensor platform](docs/platform.md) covers inventory, network, cameras, supervision, recording, and stable device identity.
-- [Sensor timing firmware](docs/sensor_timing.md) covers raw and typed Teensy event records, clock-mapping limits, trigger/feedback wiring contracts, and bench acceptance.
-- [Telescoping arm](docs/telescope.md) covers the motor, driver, encoder, home switch, current sensing, packaging, and remaining measurements.
-
-Each narrative document has a matching PDF. Markdown is canonical.
 
 ## Independent sonar devices
 
@@ -50,19 +54,22 @@ state 22–32 V, while the [Ping360 Ethernet wiring guide](https://bluerobotics.
 states 11–18 V. Use separate regulated outputs after checking the installed
 revisions. This is a topology proposal, not a wiring or physical-readiness claim.
 
-
 Physical addresses, frames, serials, ports, polarity, geometry, and current
 scales must come from reviewed hardware records. Values marked provisional,
 placeholder, or unverified are not commissioned facts. A launch or session may
 select a configured device; it must not invent those facts.
 
-# File Structure
+## License
 
-| File | Relevance | Dependencies | Used by |
+IG Handle is licensed under MIT. See LICENSE.
+
+## File Structure
+
+| File | Purpose | Dependencies | Used by |
 | --- | --- | --- | --- |
-| .gitattributes | Defines repository text and binary path handling. | Git | Repository contributors |
-| .gitignore | Applies the shared GRANDE exclusions and additionally keeps locally extracted NatNet SDK trees out of source control. | Git | Repository contributors |
-| CMakeLists.txt | Builds package-owned messages and installs sensor entrypoints, runtime modules, launch/configuration resources, persistent service definitions, and the pinned vendor executable across devel and install spaces. | catkin, ROS Noetic message generation, setup.py | catkin build and install spaces |
-| LICENSE | Provides the repository-level MIT license terms. | None | Repository users and redistributors |
-| package.xml | Declares ROS package metadata plus power, Bluetooth, and sensor dependencies. | ROS Noetic, BlueZ D-Bus, GLib | catkin and rosdep |
-| setup.py | Installs the reusable sensor, sonar, power, and motion-capture packages on the standard source, devel, and install Python paths. | catkin_pkg, scripts/sensors, scripts/sonar, scripts/power, scripts/mocap | CMakeLists.txt, IG Handle, and GRANDE Python consumers |
+| `.gitattributes` | Defines repository text and binary path handling. | Git | Repository contributors |
+| `.gitignore` | Applies the shared GRANDE exclusions and additionally keeps locally extracted NatNet SDK trees out of source control. | Git | Repository contributors |
+| `CMakeLists.txt` | Builds package-owned messages and installs sensor entrypoints, runtime modules, launch/configuration resources, persistent service definitions, and the pinned vendor executable across devel and install spaces. | catkin, ROS Noetic message generation, setup.py | catkin build and install spaces |
+| `LICENSE` | Provides the repository-level MIT license terms. | None | Repository users and redistributors |
+| `package.xml` | Declares ROS package metadata plus power, Bluetooth, and sensor dependencies. | ROS Noetic, BlueZ D-Bus, GLib | catkin and rosdep |
+| `setup.py` | Installs the reusable sensor, sonar, power, and motion-capture packages on the standard source, devel, and install Python paths. | catkin_pkg, scripts/sensors, scripts/sonar, scripts/power, scripts/mocap | CMakeLists.txt, IG Handle, and GRANDE Python consumers |

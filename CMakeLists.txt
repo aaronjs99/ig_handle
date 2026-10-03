@@ -1,63 +1,47 @@
 cmake_minimum_required(VERSION 3.0.2)
 project(ig_handle)
 
-find_package(catkin REQUIRED COMPONENTS
-  message_generation
-  sensor_msgs
-  std_msgs
-)
+find_package(catkin REQUIRED COMPONENTS message_generation sensor_msgs std_msgs)
 catkin_python_setup()
 
 add_message_files(
   FILES
-    JkBmsDetails.msg
-    ClockedImu.msg
-    AcquisitionTimingEvent.msg
-    FirmwareTimingEvent.msg
-    Ping360RawPacket.msg
-    SonarDiagnostics.msg
-    SonarProfile.msg
-    SonarPlanarProfile.msg
-    SonarRawPacket.msg
-)
+  JkBmsDetails.msg
+  ClockedImu.msg
+  AcquisitionTimingEvent.msg
+  FirmwareTimingEvent.msg
+  Ping360RawPacket.msg
+  SonarDiagnostics.msg
+  SonarProfile.msg
+  SonarPlanarProfile.msg
+  SonarRawPacket.msg)
 
-generate_messages(
-  DEPENDENCIES
-    sensor_msgs
-    std_msgs
-)
+generate_messages(DEPENDENCIES sensor_msgs std_msgs)
 
-catkin_package(
-  CATKIN_DEPENDS message_runtime sensor_msgs std_msgs
-)
+catkin_package(CATKIN_DEPENDS message_runtime sensor_msgs std_msgs)
 
 catkin_install_python(
   PROGRAMS
-    scripts/sonar/provider.py
-    scripts/mocap/bridge.py
-    scripts/frames/export.py
-    scripts/frames/broadcast.py
-    scripts/imu/analyze_stationary_bag.py
-    scripts/imu/force_wakeup.py
-    scripts/imu/sample_clock.py
-    scripts/imu/fit_clock_mapping.py
-    scripts/sensors/external_sensor_provider.py
-    scripts/sensors/network_config.py
-    scripts/sensors/sensor_bringup.py
-    scripts/teensy/teensy_rosserial_launcher.py
-    scripts/teensy/timing_event_adapter.py
-    scripts/power/heron_sense_ingress.py
-    scripts/power/jk_bms_node.py
-  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
-)
+  scripts/sonar/provider.py
+  scripts/mocap/bridge.py
+  scripts/frames/export.py
+  scripts/frames/broadcast.py
+  scripts/imu/analyze_stationary_bag.py
+  scripts/imu/force_wakeup.py
+  scripts/imu/sample_clock.py
+  scripts/imu/fit_clock_mapping.py
+  scripts/sensors/external_sensor_provider.py
+  scripts/sensors/network_config.py
+  scripts/sensors/sensor_bringup.py
+  scripts/teensy/teensy_rosserial_launcher.py
+  scripts/teensy/timing_event_adapter.py
+  scripts/power/heron_sense_ingress.py
+  scripts/power/jk_bms_node.py
+  DESTINATION
+  ${CATKIN_PACKAGE_BIN_DESTINATION})
 
-install(
-  PROGRAMS
-    scripts/sonar/Linux_DeltaT_v1023_x86_64
-  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
-)
+install(PROGRAMS scripts/sonar/Linux_DeltaT_v1023_x86_64
+        DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 
-install(
-  DIRECTORY config launch systemd
-  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
-)
+install(DIRECTORY config launch systemd
+        DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})

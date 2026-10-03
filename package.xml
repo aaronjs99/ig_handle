@@ -3,27 +3,20 @@
   <name>ig_handle</name>
   <version>1.0.1</version>
   <description>Physical sensor, timing, networking, and raw-acquisition interface for GRANDE.</description>
-
   <author email="aaronjs@g.ucla.edu">Aaron John Sabu</author>
   <author email="adthoms@ucla.edu">Alexander Thoms</author>
   <author email="gearle@uwaterloo.ca">Gabriel Earle</author>
   <maintainer email="aaronjs@g.ucla.edu">Aaron John Sabu</maintainer>
   <maintainer email="adthoms@ucla.edu">Alex Thoms</maintainer>
   <maintainer email="gearle@uwaterloo.ca">Gabe Earle</maintainer>
-
   <license>MIT</license>
   <url type="repository">https://github.com/aaronjs99/ig_handle</url>
   <url type="bugtracker">https://github.com/aaronjs99/ig_handle/issues</url>
-
   <buildtool_depend>catkin</buildtool_depend>
-
   <build_depend>message_generation</build_depend>
-  <build_depend>sensor_msgs</build_depend>
-  <build_export_depend>sensor_msgs</build_export_depend>
-  <build_depend>std_msgs</build_depend>
+  <depend>sensor_msgs</depend>
+  <depend>std_msgs</depend>
   <build_export_depend>message_runtime</build_export_depend>
-  <build_export_depend>std_msgs</build_export_depend>
-
   <exec_depend>dt100_driver</exec_depend>
   <exec_depend>geometry_msgs</exec_depend>
   <exec_depend>message_runtime</exec_depend>
@@ -39,9 +32,7 @@
   <exec_depend>rosbag</exec_depend>
   <exec_depend>rosgraph</exec_depend>
   <exec_depend>rospy</exec_depend>
-  <exec_depend>sensor_msgs</exec_depend>
   <exec_depend>spinnaker_camera_driver</exec_depend>
-  <exec_depend>std_msgs</exec_depend>
   <exec_depend>std_srvs</exec_depend>
   <exec_depend>tf2_ros</exec_depend>
   <exec_depend>velodyne_driver</exec_depend>

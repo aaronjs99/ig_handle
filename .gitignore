@@ -1,5 +1,7 @@
-# BEGIN GRANDE SHARED IGNORE RULES
-# Keep this block identical across GRANDE-owned repositories.
+# Repository-specific rules
+
+# Generated demo artifacts
+/outputs/
 
 # Operating-system and editor state
 .DS_Store
@@ -95,9 +97,5 @@ compile_commands.json
 docs/_build/
 node_modules/
 
-# END GRANDE SHARED IGNORE RULES
-
-# Repository-specific rules
-
-# Vendor SDK extracted locally for motion-capture integration
+# Preserve project data and third-party exclusions.
 /scripts/mocap/natnet/natnet_sdk_*/
